@@ -1,0 +1,320 @@
+/* ==========================================================================
+   design.css - nouvelle apparence (v5.9.23)
+   --------------------------------------------------------------------------
+   Couche posee PAR-DESSUS style.css, chargee par app.js juste apres lui.
+   Elle ne change QUE l'apparence : couleurs, typographie, formes. Aucune
+   regle de mise en page sensible n'est touchee (marges de la page, hauteur
+   et position de la barre d'onglets, place reservee a la banniere, toast).
+   Pour revenir a l'ancien aspect : supprimer ce fichier, rien d'autre.
+
+   Idee directrice : "marine et laiton, precision de feuille de reponses".
+     . la marine porte la structure (titres, boutons, bandeau du jour) ;
+     . le laiton signale (progression, pastilles, element actif) ;
+     . chaque lettre de reponse est une bulle de feuille de reponses : elle
+       se remplit quand on choisit, puis passe au vert ou au rouge ;
+     . une police etroite de signalisation (Barlow Semi Condensed, licence
+       OFL, fournie dans www/fonts) pour les titres, chiffres et boutons ;
+       la police du telephone pour la lecture (questions, explications).
+   ========================================================================== */
+
+@font-face {
+  font-family:'Barlow Semi Condensed'; font-style:normal; font-weight:600; font-display:swap;
+  src:url('../fonts/barlow-semi-condensed-600.woff2') format('woff2');
+}
+@font-face {
+  font-family:'Barlow Semi Condensed'; font-style:normal; font-weight:700; font-display:swap;
+  src:url('../fonts/barlow-semi-condensed-700.woff2') format('woff2');
+}
+
+/* -------------------------------- THEMES -------------------------------- */
+/* Marine (theme sombre par defaut du code) */
+:root {
+  --display:'Barlow Semi Condensed', sans-serif-condensed, 'Roboto Condensed', 'Arial Narrow', sans-serif;
+  --bg:#0A1830; --bg2:#0D1F3B; --card:#13294C; --card2:#102443;
+  --line:#23416B; --ink:#EEF3FA; --mut:#A3B4CE;
+  --gold:#D9A441; --goldL:#EBC572; --onGold:#0A1830;
+  --ok:#3DB37A; --okL:#7FD3A4; --bad:#E36A5E;
+  --brass:#D9A441; --onBrass:#0A1830; --accentText:#EBC572;
+  --navyFill:#3B6BB8; --onNavy:#FFFFFF;
+  --hero:#183463; --heroInk:#FFFFFF; --heroMut:#BCCAE0; --heroTrack:rgba(255,255,255,.16);
+  --track:#1E3A63; --plate:#1B3560; --plateInk:#EBC572;
+  --badgeBg:#D9A441; --badgeInk:#0A1830;
+  --okBg:rgba(61,179,122,.16); --badBg:rgba(227,106,94,.15); --noteBg:#102443;
+  --kw:#5BD0F0; --kwBg:rgba(91,208,240,.16);
+  --btnBg:#D9A441; --btnInk:#0A1830;
+  --chipBg:#102443; --bubble:#A3B4CE; --tabBg:#0D1F3B;
+  --sheetShadow:0 8px 22px rgba(0,0,0,.28); --heroShadow:0 12px 28px rgba(0,0,0,.35);
+  --c1:#3E70C2; --c2:#24907F; --c3:#9064BE; --c4:#C8902A; --c5:#5F7391;
+  --adslot:#0D1F3B;
+}
+/* Nuit (noir integral, ecrans AMOLED) */
+body.t-ink {
+  --bg:#000000; --bg2:#08090B; --card:#111418; --card2:#0C0E11;
+  --line:#262B33; --ink:#F1F3F6; --mut:#9AA3AF;
+  --gold:#D9A441; --goldL:#EBC572; --onGold:#000000;
+  --ok:#3DB37A; --okL:#7FD3A4; --bad:#E36A5E;
+  --brass:#D9A441; --onBrass:#000000; --accentText:#EBC572;
+  --navyFill:#3B6BB8; --onNavy:#FFFFFF;
+  --hero:#121B2B; --heroInk:#FFFFFF; --heroMut:#B3BDCB; --heroTrack:rgba(255,255,255,.14);
+  --track:#22272F; --plate:#1A1F27; --plateInk:#EBC572;
+  --badgeBg:#D9A441; --badgeInk:#000000;
+  --okBg:rgba(61,179,122,.16); --badBg:rgba(227,106,94,.15); --noteBg:#0C0E11;
+  --kw:#5BD0F0; --kwBg:rgba(91,208,240,.15);
+  --btnBg:#D9A441; --btnInk:#000000;
+  --chipBg:#0C0E11; --bubble:#9AA3AF; --tabBg:#08090B;
+  --sheetShadow:none; --heroShadow:none;
+  --c1:#3E70C2; --c2:#24907F; --c3:#9064BE; --c4:#C8902A; --c5:#5F7391;
+  --adslot:#08090B;
+}
+/* Papier (theme clair, celui par defaut) : feuilles blanches sur fond
+   bleu-gris, encre marine. */
+body.t-paper {
+  --bg:#EDF1F6; --bg2:#E3E9F1; --card:#FFFFFF; --card2:#F4F6FA;
+  --line:#D3DCE8; --ink:#14243D; --mut:#5B6A80;
+  --gold:#C08A2E; --goldL:#8A5F14; --onGold:#FFFFFF;
+  --ok:#1E8657; --okL:#1E8657; --bad:#C0392B;
+  --paper:#FFFFFF; --paperInk:#14243D; --paperMut:#5B6A80;
+  --brass:#C08A2E; --onBrass:#2A1D05; --accentText:#8A5F14;
+  --navyFill:#142B4D; --onNavy:#FFFFFF;
+  --hero:#142B4D; --heroInk:#FFFFFF; --heroMut:#B9C6DA; --heroTrack:rgba(255,255,255,.16);
+  --track:#E1E7EF; --plate:#E8EDF5; --plateInk:#142B4D;
+  --badgeBg:#F3E5C8; --badgeInk:#6E4C10;
+  --okBg:#E6F4EC; --badBg:#FBEAE8; --noteBg:#F4F6FA;
+  --kw:#0B6E99; --kwBg:#E2F1F8;
+  --btnBg:#142B4D; --btnInk:#FFFFFF;
+  --chipBg:#F4F6FA; --bubble:#4D5E78; --tabBg:#FFFFFF;
+  --shadow:0 8px 22px rgba(20,36,61,.10);
+  --sheetShadow:0 1px 2px rgba(20,36,61,.06), 0 8px 20px rgba(20,36,61,.07);
+  --heroShadow:0 12px 26px rgba(20,43,77,.24);
+  --c1:#2F5DA8; --c2:#1D7A70; --c3:#7B4FA2; --c4:#B07A1E; --c5:#4F6078;
+  --adslot:#E3E9F1;
+}
+
+/* --------------------------------- BASE --------------------------------- */
+body { background:var(--bg); min-height:100vh; }
+
+/* Titres, chiffres et boutons : police de signalisation ; plus de
+   majuscules espacees. */
+.tb-title, .phead-lg h2, .gcard h3, .secttl, .tile-t, .lb-t, .resume .rl,
+.resumebox h3, .score-verdict, .icard .idm, .topbrand .tb-name, .onb h1,
+.hero h1, .quickrow .qa .qa-t, .focus-copy b, .btn, .lb-go {
+  font-family:var(--display); font-weight:600;
+}
+.score-big, .lb-num, .tile-n, .quickrow .qa .qa-b, .timer, .pts, .qmeta b,
+.prow .pv, .wbar .wv {
+  font-family:var(--display); font-weight:700; font-variant-numeric:tabular-nums;
+}
+.tb-title, .secttl, .eyebrow, .topbrand .tb-sub, .resume .rt, table.vtab th,
+.voice-default .vd-k {
+  text-transform:none; letter-spacing:normal;
+}
+
+/* ---------------------------- ACCUEIL : EN-TETE --------------------------- */
+.topbrand { background:none; border-color:transparent; box-shadow:none; }
+.topbrand .tb-mark { border-radius:12px; box-shadow:0 2px 8px rgba(10,24,48,.22); }
+.topbrand .tb-name { font-weight:700; font-size:23px; letter-spacing:.6px; color:var(--ink); }
+.topbrand .tb-sub { font-size:13px; color:var(--mut); margin-top:2px; }
+.topbrand .tb-set { background:var(--card); border:1px solid var(--line); color:var(--ink); border-radius:12px; }
+
+/* Bandeau du jour : le seul aplat sombre de l'ecran d'accueil */
+.logbook {
+  background:var(--hero); color:var(--heroInk); border:0; border-radius:20px;
+  box-shadow:var(--heroShadow);
+}
+.logbook .ring .rbg { stroke:var(--heroTrack); }
+.logbook .ring .rfg { stroke:var(--brass); }
+.logbook .lb-num { color:var(--heroInk); font-size:22px; }
+.logbook .lb-t { color:var(--heroInk); font-size:19px; line-height:1.22; }
+.logbook .lb-s { color:var(--heroMut); font-size:13px; }
+.logbook .lb-m { color:var(--brass); }
+
+.resume {
+  background:var(--card); border:1px solid var(--line); border-left:4px solid var(--brass);
+  border-radius:16px; color:var(--ink);
+}
+.resume .rt { font-family:var(--display); font-weight:600; font-size:14px; color:var(--accentText); }
+.resume .rl { font-size:17px; color:var(--ink); }
+.resume .rp { color:var(--mut); }
+.rbar { background:var(--track); }
+.rbar i { background:var(--brass); }
+
+.search-launch { background:var(--card); border:1px solid var(--line); border-radius:14px; color:var(--mut); }
+.search-launch .sl-i { color:var(--mut); }
+.search, .inp { background:var(--card); border-color:var(--line); color:var(--ink); border-radius:14px; }
+.search:focus, .inp:focus, .search:focus-visible, .inp:focus-visible {
+  border-color:var(--navyFill); box-shadow:0 0 0 3px var(--kwBg); outline:none;
+}
+
+/* Trois actions rapides : icone dans une pastille ronde */
+.quickrow .qa {
+  background:var(--card); border:1px solid var(--line); border-radius:18px; box-shadow:none;
+}
+.quickrow .qa .qa-i {
+  width:42px; height:42px; padding:10px; border-radius:50%;
+  background:var(--plate); color:var(--plateInk); stroke-width:1.8;
+}
+.quickrow .qa .qa-t { font-size:16px; color:var(--ink); letter-spacing:.2px; }
+.quickrow .qa .qa-s { font-size:11.5px; color:var(--mut); }
+.quickrow .qa.hot { border-color:var(--brass); }
+.quickrow .qa .qa-b { background:var(--brass); color:var(--onBrass); font-size:12px; }
+
+.focuscard { background:var(--card); border:1px solid var(--line); border-radius:18px; }
+.focus-ic { background:var(--plate); color:var(--plateInk); border:0; border-radius:12px; }
+.focus-copy b { font-size:16px; color:var(--ink); letter-spacing:.2px; }
+.focus-copy span { color:var(--mut); }
+.focus-go { color:var(--mut); }
+
+/* Titres de section : casse normale, filet fin */
+.secttl { font-size:17px; color:var(--ink); margin-top:24px; }
+.secttl::after { background:var(--line); }
+
+/* ------------------------------- TUILES --------------------------------- */
+.tile { background:var(--card); border:1px solid var(--line); border-radius:18px; box-shadow:none; }
+.tile::before { display:none; }
+.tile:active { border-color:var(--brass); }
+.tile-ic { background:var(--plate); border:0; color:var(--plateInk); border-radius:13px; }
+.tile-t { font-size:18px; color:var(--ink); letter-spacing:.2px; }
+.tile-n { background:var(--badgeBg); color:var(--badgeInk); font-size:12.5px; padding:2px 9px; }
+.tile-d { color:var(--mut); }
+.tile-bar { background:var(--track); height:4px; }
+.tile-bar i { background:var(--brass); }
+.tile-go { color:var(--mut); }
+/* Une couleur par domaine sur l'accueil : on retrouve vite le sien */
+.topbrand ~ .bigmenu > .tile .tile-ic { color:#FFFFFF; }
+.topbrand ~ .bigmenu > .tile:nth-child(1) .tile-ic { background:var(--c1); }
+.topbrand ~ .bigmenu > .tile:nth-child(2) .tile-ic { background:var(--c2); }
+.topbrand ~ .bigmenu > .tile:nth-child(3) .tile-ic { background:var(--c3); }
+.topbrand ~ .bigmenu > .tile:nth-child(4) .tile-ic { background:var(--c4); }
+.topbrand ~ .bigmenu > .tile:nth-child(5) .tile-ic { background:var(--c5); }
+
+/* ------------------------- LISTES, NOTES, CARTES ------------------------- */
+.row { background:var(--card); border-color:var(--line); border-radius:14px; color:var(--ink); }
+.row .rs { color:var(--mut); }
+.row .rb { color:var(--mut); }
+.hl { color:var(--accentText); }
+.note { background:var(--noteBg); border-left:3px solid var(--brass); color:var(--mut); }
+.note b { color:var(--ink); }
+.gcard { background:var(--card); border:1px solid var(--line); border-radius:18px; box-shadow:none; }
+.gcard h3 { font-size:18px; letter-spacing:.2px; color:var(--ink); }
+.gcard .fr { color:var(--mut); }
+.phead-lg h2 { font-weight:700; font-size:30px; letter-spacing:.2px; color:var(--ink); }
+.phead-lg p { color:var(--mut); }
+.empty .ei { color:var(--brass); }
+.quoted { border-left-color:var(--brass); }
+
+/* ----------------------------- BARRE HAUTE ------------------------------ */
+.topbar { background:linear-gradient(180deg,var(--bg) 80%,transparent); }
+.backbtn { background:var(--card); border:1px solid var(--line); color:var(--ink); border-radius:12px; }
+.tb-title { font-size:19px; letter-spacing:.2px; color:var(--ink); }
+.pts { color:var(--accentText); font-size:16px; }
+.timer { background:var(--card); border-color:var(--line); color:var(--ink); font-size:16px; letter-spacing:.5px; }
+.timer.low { color:#FFFFFF; background:var(--bad); border-color:var(--bad); }
+
+/* --------------------------------- QUIZ --------------------------------- */
+.pill { height:6px; background:var(--track); }
+.bar { background:var(--brass); }
+.qmeta { color:var(--mut); }
+.qmeta b { color:var(--ink); font-size:15px; }
+.qbox {
+  background:var(--card); border:1px solid var(--line); border-radius:18px;
+  padding:18px 16px 16px; box-shadow:var(--sheetShadow);
+}
+.qtext { font-size:1.09em; line-height:1.55; color:var(--ink); }
+.chip { background:var(--chipBg); border:1px solid var(--line); color:var(--ink); font-weight:600; }
+.chip.on { background:var(--navyFill); border-color:var(--navyFill); color:var(--onNavy); }
+.chip.star.on { background:var(--brass); border-color:var(--brass); color:var(--onBrass); }
+
+/* Bulles de feuille de reponses */
+.opt {
+  background:var(--card); border:1.5px solid var(--line); border-radius:14px;
+  color:var(--ink); padding:13px 14px; font-size:1em; line-height:1.45; gap:12px;
+}
+.opt .ol {
+  width:28px; height:28px; border-radius:50%; margin-top:-2px;
+  background:transparent; border:2px solid var(--bubble); color:var(--bubble);
+  font-family:var(--display); font-weight:700; font-size:14px;
+}
+.opt.sel { border-color:var(--navyFill); }
+.opt.sel .ol { background:var(--navyFill); border-color:var(--navyFill); color:var(--onNavy); }
+.opt.right { background:var(--okBg); border-color:var(--ok); }
+.opt.right .ol { background:var(--ok); border-color:var(--ok); color:#FFFFFF; }
+.opt.wrong { background:var(--badBg); border-color:var(--bad); }
+.opt.wrong .ol { background:var(--bad); border-color:var(--bad); color:#FFFFFF; }
+
+/* Mot teste : meme couleur partout (question, choix, correction) */
+.qtext .hl, .opt .hl, .verdict .hl, .rev .hl, .dr .dq b {
+  color:var(--kw); background:var(--kwBg); border-radius:4px; padding:0 3px;
+  font-weight:700; letter-spacing:.1px;
+}
+
+.verdict { font-size:.95em; border-radius:14px; }
+.verdict.ok { background:var(--okBg); border:0; border-left:4px solid var(--ok); }
+.verdict.bad { background:var(--badBg); border:0; border-left:4px solid var(--bad); }
+.verdict .rule2 { color:var(--mut); }
+.verdict .chip.mini { background:var(--card); color:var(--ink); border-color:var(--line); }
+
+/* -------------------------------- BOUTONS ------------------------------- */
+.btn {
+  background:var(--btnBg); color:var(--btnInk); border-radius:14px;
+  font-size:17px; letter-spacing:.3px;
+}
+.btn.ghost { background:var(--card); color:var(--ink); border:1.5px solid var(--line); }
+.btn.danger { color:var(--bad); border-color:var(--bad); }
+.btn:disabled { opacity:1; background:var(--track); color:var(--mut); border-color:var(--track); }
+
+/* ------------------------------- RESULTATS ------------------------------ */
+.score-ring .ring .rbg { stroke:var(--track); stroke-width:6; }
+.score-ring .ring .rfg { stroke:var(--brass); stroke-width:6; }
+.score-big { font-size:46px; color:var(--ink); }
+.score-big small { font-size:20px; color:var(--mut); }
+.score-sub { color:var(--mut); }
+.score-verdict { font-size:19px; color:var(--ink); }
+.rev { background:var(--card); border-color:var(--line); border-radius:16px; }
+.rev .rq { font-size:.95em; }
+.rev .ra .yes { color:var(--ok); }
+.rev .re { color:var(--mut); }
+
+/* -------------------------- BIBLIOTHEQUE, EXERCICES ---------------------- */
+.icard, .dr { background:var(--card); border-color:var(--line); border-radius:16px; }
+.icard .idm { font-size:18px; color:var(--ink); }
+.icard .ix { color:var(--mut); }
+.spk { border-color:var(--line); color:var(--ink); }
+.dr.open { border-color:var(--brass); }
+.dr .da { background:var(--okBg); border-left-color:var(--ok); }
+table.vtab th { color:var(--accentText); font-size:12px; }
+table.vtab td.b { color:var(--ink); }
+
+/* -------------------------- REGLAGES, ETATS ----------------------------- */
+.banner.ok { background:var(--okBg); border-color:var(--ok); color:var(--ok); }
+.banner.bad { background:var(--badBg); border-color:var(--bad); color:var(--bad); }
+.sel { background:var(--card); border-color:var(--line); color:var(--ink); }
+.rng, .switch input { accent-color:var(--navyFill); }
+.voice-default { background:var(--noteBg); border-color:var(--line); }
+.voice-default .vd-k { color:var(--accentText); font-size:12px; }
+.code { background:var(--card2); color:var(--ink); }
+
+/* ------------------------------ PROGRESSION ----------------------------- */
+.prow .pbar { background:var(--track); }
+.prow .pbar i { background:var(--brass); }
+.prow .pv { color:var(--ink); font-size:15px; }
+.wbar i { background:var(--track); }
+.wbar i.full { background:var(--brass); }
+.wbar .wv { color:var(--mut); }
+
+/* ------------------- BARRE D'ONGLETS (couleurs seulement) ---------------- */
+.tabbar { background:var(--tabBg); border-top:1px solid var(--line); box-shadow:0 -6px 18px rgba(10,24,48,.08); }
+.tab { position:relative; color:var(--mut); }
+.tab.on { background:transparent; color:var(--ink); font-weight:700; }
+.tab.on .ic { color:var(--brass); stroke-width:2.1; }
+.tab.on::before {
+  content:""; position:absolute; top:0; left:34%; right:34%; height:3px;
+  border-radius:3px; background:var(--brass);
+}
+
+/* --------------------------------- TOAST -------------------------------- */
+.toast { background:var(--navyFill); color:var(--onNavy); border:0; }
+
+/* Focus clavier visible */
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline:2px solid var(--navyFill); outline-offset:2px;
+}
