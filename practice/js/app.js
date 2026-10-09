@@ -10,7 +10,7 @@
      . Themes, confort de lecture, export / import des donnees
    =========================================================================== */
 
-var APP_VERSION = '5.9.24';
+var APP_VERSION = '5.9.25';
 
 /* Nouvelle apparence (v5.9.23) : css/design.css se pose par-dessus
    css/style.css (couleurs, polices, formes ; aucune fonction touchee).
@@ -647,7 +647,9 @@ var ICONS = {
   play:   '<path d="M7 4.5 19 12 7 19.5z"/>',
   stop:   '<rect x="6" y="6" width="12" height="12" rx="2"/>',
   pause:  '<path d="M9.5 5v14M14.5 5v14"/>',
-  share:  '<circle cx="18" cy="5.5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="18.5" r="2.6"/><path d="m8.3 10.7 7.4-4M8.3 13.3l7.4 4"/>'
+  share:  '<circle cx="18" cy="5.5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="18.5" r="2.6"/><path d="m8.3 10.7 7.4-4M8.3 13.3l7.4 4"/>',
+  /* Lecons (v5.9.25) : toque d'etudiant */
+  cap:    '<path d="M12 4 2.5 9 12 14l9.5-5z"/><path d="M6.5 11.2v4.3c0 1.4 2.5 3 5.5 3s5.5-1.6 5.5-3v-4.3"/><path d="M21.5 9v5.5"/>'
 };
 function ico(name, cls) {
   return '<svg class="ic' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" fill="none" ' +
@@ -719,6 +721,10 @@ VIEWS.home = function () {
   h += studyFocusCard();
   h += '<div class="secttl">Areas of study</div>';
   h += '<div class="bigmenu">' +
+    /* Lecons (v5.9.25) : seulement dans l'application, ou lessons-data.js
+       est charge ; le site a ses propres pages /lessons/. */
+    (window.LESSONS_DATA ? tile("go('lessons')", 'cap', 'Lessons',
+        'Grammar rules, phrasal verbs, ECL vocabulary', 'New').replace('class="tile"', 'class="tile ls-tile"') : '') +
     big('grammar', 'book', 'Grammar',
         'Tenses, structures, drills, verbs', sectionData('grammar').length, sectionMastery('grammar')) +
     big('vocab', 'speech', 'Vocabulary',
@@ -1849,6 +1855,9 @@ VIEWS.settings = function () {
   h += '<button class="btn ghost block" onclick="openVoiceSettings()">Install or enable Google voices</button>' +
     '<button class="btn ghost block" onclick="showDiag()">Detailed diagnostics</button><div id="dg"></div></div>';
 
+  /* -------- Traduction (v5.9.25, application seulement : tr.js) -------- */
+  if (window.AppTr && AppTr.settingsCard) h += AppTr.settingsCard();
+
   /* -------- Display -------- */
   var th = LSget('theme', 'paper'), fs = LSget('fontsize', '');
   h += '<div class="gcard"><h3>Display</h3><p class="fr">Theme</p><div class="chips">' +
@@ -2022,6 +2031,8 @@ function renderVoiceBox() {
         opts + '</select>';
     }
     h += '<p class="fr vsel-now" id="voiceNow"></p>';
+    if (flat.length && flat[0].native) h += '<p class="fr">A voice that stays silent is not installed on this phone yet: ' +
+      'install it with the button below, or choose another one.</p>';
     if (nOther) h += '<label class="switch"><input type="checkbox"' + (showAll ? ' checked' : '') +
       ' onchange="LSset(\'voice_all\',this.checked?1:0);renderVoiceBox()"> Other languages too (they read English with their own accent)</label>';
     box.innerHTML = h;
@@ -2129,7 +2140,7 @@ function applySkin() {
 }
 
 /* ------------------------------ donnees --------------------------------- */
-var KEYS = ['best', 'hist', 'fav', 'box', 'daily', 'streak', 'goal', 'theme', 'fontsize', 'haptic'];
+var KEYS = ['best', 'hist', 'fav', 'box', 'daily', 'streak', 'goal', 'theme', 'fontsize', 'haptic', 'les_done'];
 function exportData() {
   var o = { v: APP_VERSION, d: nowMs(), data: {} };
   KEYS.forEach(function (k) { var v = LSget(k, null); if (v !== null) o.data[k] = v; });
@@ -2336,7 +2347,7 @@ document.addEventListener('deviceready', function () {
   }
   if (window.Speech) setTimeout(function () {
     // Default: exact preferred Google US network voice when Android exposes it.
-    // Other selectable voices are restricted to English (United States).
+    // Settings > Audio lists every voice of the phone (v5.9.25).
     try { Speech.autoSelectGoogle(function () {}); } catch (e) { }
     if (S.view === 'home') VIEWS.home();
   }, 800);
@@ -2344,6 +2355,8 @@ document.addEventListener('deviceready', function () {
 
 document.addEventListener('backbutton', function (e) {
   e.preventDefault();
+  /* v5.9.25 : Retour ferme d'abord la fenetre de traduction (tr.js) */
+  if (window.AppTr && AppTr.dismiss && AppTr.dismiss()) return;
   if (S.view === 'home' || S.view === 'welcome') { if (navigator.app) navigator.app.exitApp(); }
   else if (S.view === 'quiz') quitQuiz();
   else back();
