@@ -101,7 +101,8 @@ p{margin:0 0 1em}
 .menu-btn svg{width:22px;height:22px}
 @media (max-width:900px){
   .site-header .wrap{height:60px;gap:12px}
-  .brand span{font-size:1.06rem}
+  .brand span{font-size:1.06rem;white-space:normal}
+  .brand .nw{white-space:nowrap}
   .brand small{display:none}
   .menu-btn{display:inline-grid;place-items:center}
   .nav{display:none;position:absolute;left:0;right:0;top:60px;flex-direction:column;align-items:stretch;
@@ -654,3 +655,4 @@ html.no-voice .qc-hint::before{content:"Audio is not available in this browser. 
 .page-faq h2{margin-bottom:.2em}
 .show-text{min-height:36px}
 
+.qc-audio .show-text[hidden]{display:none}

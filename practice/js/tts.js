@@ -1,6 +1,10 @@
 /* =========================================================================
-   tts.js  —  Moteur audio  (ECL English Trainer v5.9.3, edition web)
+   tts.js  —  Moteur audio  (ECL English Trainer v5.9.26)
    -------------------------------------------------------------------------
+   UN SEUL FICHIER pour l'application Android ET le site web (v5.9.26) :
+   le site charge web-shims.js avant ce fichier (window.ECL_WEB), ce qui
+   suffit a distinguer les deux editions.
+
    Deux moteurs, un seul comportement visible :
 
      1. cordova-plugin-tts-advanced  (window.TTS)   -> PRIORITAIRE en APK
@@ -19,18 +23,37 @@
      7. speak() ignore si deja en cours  -> cancel() systematique avant
      8. Aucune voix anglaise installee   -> plugin natif puis message clair
 
-   Nouveautes v4 :
-     - lecture sequencee avec suivi du fragment lu (surlignage)
-     - pause / reprise reelles
-     - liberation propre du focus audio (publicite video, appel entrant)
-     - fragments plus longs quand le moteur natif est present
+   v5.9.26 — VOIX DES QUESTIONS D'ECOUTE
+     speak(lignes, { roles: ['M','W',...], gap: 450, rateMul: 0.8 })
+     . M = l'homme, W = la femme. Application : en-us-x-iol-network (homme)
+       et en-us-x-tpc-network (femme) par defaut, changeables dans Settings.
+       Voix absente : variante -local, puis une autre voix du meme sexe.
+     . Site : la voix d'homme et la voix de femme les plus naturelles du
+       navigateur (Edge : Andrew, Aria ; Chrome : Google US English ;
+       Apple : Aaron, Samantha...). Une seule voix : hauteur differente.
+     . gap : silence entre deux repliques ; rateMul : lecture ralentie.
+     . Site, voix de lecture par defaut : la plus NATURELLE (et non plus
+       la premiere voix d'homme : Microsoft David sous Chrome Windows).
    ========================================================================= */
 (function (global) {
   'use strict';
 
+  var WEB = !!global.ECL_WEB;                 // edition site web
   var VOICE_KEY = 'et_voice', RATE_KEY = 'et_rate', PITCH_KEY = 'et_pitch';
   var DEFAULT_US_VOICE = 'en-us-x-iol-network';
   var NVOICE_KEY = 'et_nvoice';   // voix du moteur Android natif
+
+  /* voix des questions d'ecoute : M = homme, W = femme */
+  var LV_NATIVE = { M: 'et_lv_m', W: 'et_lv_w' };     // identifiants Android
+  var LV_WEB = { M: 'et_lvw_m', W: 'et_lvw_w' };      // voix du navigateur
+  var LV_DEF = { M: 'en-us-x-iol-network', W: 'en-us-x-tpc-network' };
+  var LV_CHAIN = {
+    M: ['en-us-x-iol-network', 'en-us-x-iol-local', 'en-us-x-iom-network', 'en-us-x-iom-local',
+        'en-us-x-tpd-network', 'en-us-x-tpd-local', 'en-us-x-sfg#male_1-local', 'en-us-x-sfg#male_2-local'],
+    W: ['en-us-x-tpc-network', 'en-us-x-tpc-local', 'en-us-x-sfg-network', 'en-us-x-sfg-local',
+        'en-us-x-tpf-network', 'en-us-x-tpf-local', 'en-us-x-iob-network', 'en-us-x-iob-local',
+        'en-us-x-iog-network', 'en-us-x-iog-local', 'en-us-x-sfg#female_1-local', 'en-us-x-sfg#female_2-local']
+  };
 
   var synth = global.speechSynthesis || null;
   var voices = [];
@@ -42,7 +65,7 @@
   var paused = false;
   /* Position courante de la lecture native : le plugin ne sait pas reprendre
      apres un stop(), il faut donc pouvoir relancer le segment interrompu.  */
-  var curSegs = null, curSi = 0, curNext = null, playGen = 0;
+  var curSegs = null, curSi = 0, curNext = null, curRole = '', playGen = 0;
   var nativeResume = null;   // relance la boucle native au segment courant
   var keepAlive = [];
   var guardTimer = null;
@@ -51,6 +74,13 @@
   var nativeTTS = null;
   var lastError = null;
   var currentMeta = null;
+  /* lecture en cours : voix de chaque fragment, silence avant chaque
+     fragment, facteur de vitesse */
+  var curRoles = null, curGaps = null, curRateMul = 1;
+  /* numero de la lecture web en cours : un minuteur programme pendant une
+     lecture precedente (silence entre deux repliques, blanc a trous) ne
+     peut plus relancer quoi que ce soit dans la suivante */
+  var webGen = 0;
 
   /* ---------------------------------------------------------------- utils */
   function emit(name, payload) {
@@ -81,11 +111,78 @@
     if (voicesReady || tries <= 0) { cb(voices); return; }
     setTimeout(function () { waitForVoices(cb, tries - 1); }, 150);
   }
-  function englishVoices() {
-    return voices.filter(function (v) {
-      return /en[-_]US/i.test(v.lang || '') || /^en-us/i.test(v.voiceURI || v.name || '');
-    });
+  function isUS(v) { return /en[-_]US/i.test(v.lang || '') || /^en-us/i.test(v.voiceURI || v.name || ''); }
+  function englishVoices() { return voices.filter(isUS); }
+  function anyEnglish() { return voices.filter(function (v) { return /^en([-_]|$)/i.test(v.lang || ''); }); }
+
+  /* ---------------------- qualite des voix du navigateur ------------------
+     Note de 0 a 100 par sexe. Les voix « naturelles » de Microsoft Edge
+     (Andrew, Guy, Aria, Jenny...) sont les plus proches des voix Google de
+     l'application ; viennent ensuite les voix Google du telephone, les voix
+     Apple ameliorees, « Google US English » (Chrome), les voix Apple
+     ordinaires, et en dernier les voix Windows (David, Mark, Zira).       */
+  var NOVELTY = /\b(Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Junior|Ralph|Kathy|Princess|Deranged|Hysterical|Grandpa|Grandma|Rocko|Shelley|Sandy|Flo|Eddy|Reed)\b/i;
+  function vname(v) { return String(v.name || '') + ' ' + String(v.voiceURI || ''); }
+  function natural(n) { return /natural|neural|online|premium|enhanced/i.test(n); }
+  function maleRank(v) {
+    var n = vname(v);
+    if (NOVELTY.test(n)) return 0;
+    var nat = natural(n), r = 0;
+    if (/\bAndrew\b/i.test(n)) r = 100;
+    else if (/\bGuy\b/i.test(n)) r = 99;
+    else if (/\bChristopher\b/i.test(n)) r = 98;
+    else if (/\bBrian(Multilingual)?\b/i.test(n)) r = 97;
+    else if (/AndrewMultilingual/i.test(n)) r = 97;
+    else if (/\bEric\b/i.test(n)) r = 96;
+    else if (/\b(Roger|Steffan|Davis|Tony|Jason|Brandon|Kai|Ryan)\b/i.test(n)) r = 95;
+    if (r) return nat ? r : r - 30;
+    if (/en-us-x-(iol|iom|tpd)/i.test(n) || /#male/i.test(n)) return 92;      // voix Google (Android)
+    if (/\b(Evan|Nathan|Tom|Aaron|Alex)\b/i.test(n) && /premium|enhanced/i.test(n)) return 90;
+    if (/\bAlex\b/i.test(n)) return 85;
+    if (/\bAaron\b/i.test(n)) return 84;
+    if (/\b(Evan|Nathan)\b/i.test(n)) return 83;
+    if (/\bTom\b/i.test(n)) return 82;
+    if (/Microsoft (Mark|David)/i.test(n)) return 55;                        // voix Windows
+    if (/\bFred\b/i.test(n)) return 10;
+    if (/\bmale\b/i.test(n) && !/female/i.test(n)) return 40;
+    return 0;
   }
+  function femaleRank(v) {
+    var n = vname(v);
+    if (NOVELTY.test(n)) return 0;
+    var nat = natural(n), r = 0;
+    if (/\bAria\b/i.test(n)) r = 100;
+    else if (/\bJenny\b/i.test(n)) r = 99;
+    else if (/\b(Ava|Emma)(Multilingual)?\b/i.test(n) && /Microsoft/i.test(n)) r = 98;
+    else if (/\b(Michelle|Nancy|Sara|Jane|Amber|Ashley|Cora|Elizabeth|Monica)\b/i.test(n)) r = 96;
+    if (r) return nat ? r : r - 30;
+    if (/en-us-x-(tpc|sfg|tpf|iob|iog)/i.test(n) || /#female/i.test(n)) return 92;
+    if (/\b(Ava|Allison|Samantha|Susan|Zoe|Joelle|Noelle)\b/i.test(n) && /premium|enhanced/i.test(n)) return 90;
+    if (/Google US English/i.test(n)) return 88;
+    if (/\bSamantha\b/i.test(n)) return 84;
+    if (/\b(Allison|Ava)\b/i.test(n)) return 83;
+    if (/\b(Susan|Zoe)\b/i.test(n)) return 82;
+    if (/\b(Nicky|Joelle|Noelle|Victoria)\b/i.test(n)) return 79;
+    if (/Microsoft Zira/i.test(n)) return 52;
+    if (/\bfemale\b/i.test(n)) return 40;
+    return 0;
+  }
+  /* voix de lecture : la plus naturelle ; a egalite, une voix d'homme */
+  function quality(v) {
+    var q = Math.max(maleRank(v), femaleRank(v) - 1);
+    if (q > 0) return q;
+    return v.localService ? 20 : 15;
+  }
+  function bestOf(list, f) {
+    var best = null, bs = 0;
+    (list || []).forEach(function (v) { var s = f(v); if (s > bs) { bs = s; best = v; } });
+    return best;
+  }
+  function bestWebVoice(list) {
+    list = list || englishVoices();
+    return bestOf(list, quality) || list[0] || null;
+  }
+
   function pickVoice() {
     var wanted = pref(VOICE_KEY, ''), all = englishVoices(), i;
     /* the voice chosen in Settings, whatever its accent or language */
@@ -94,42 +191,30 @@
         if (voices[i].voiceURI === wanted || voices[i].name === wanted) return voices[i];
       }
     }
-    for (i = 0; i < all.length; i++) {
-      var wid = String(all[i].voiceURI || all[i].name || '').toLowerCase();
-      if (wid.indexOf(DEFAULT_US_VOICE) >= 0) return all[i];
+    if (!WEB) {
+      for (i = 0; i < all.length; i++) {
+        var wid = String(all[i].voiceURI || all[i].name || '').toLowerCase();
+        if (wid.indexOf(DEFAULT_US_VOICE) >= 0) return all[i];
+      }
     }
-    /* Web edition: the best MALE American voice first, close to the Google
-       male voice of the Android app (natural Microsoft voices in Edge,
-       Google male voices on Android, Apple male voices, then Windows
-       voices). Female voices come after; novelty voices last. */
     return bestWebVoice(all);
   }
-  function bestWebVoice(list) {
-    var ranked = (list || englishVoices()).slice().sort(function (a, b) { return voiceRank(b) - voiceRank(a); });
-    return ranked[0] || null;
+  /* voix d'un personnage (M, W) dans le navigateur */
+  function bestRoleWeb(role) {
+    var f = role === 'W' ? femaleRank : maleRank;
+    return bestOf(englishVoices(), f) || bestOf(anyEnglish(), f);
   }
-  function voiceRank(v) {
-    var n = String(v.name || '') + ' ' + String(v.voiceURI || '');
-    if (/\b(Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Junior|Ralph|Kathy|Princess|Deranged|Hysterical|Grandpa|Grandma|Rocko|Shelley|Sandy|Flo|Eddy|Reed)\b/i.test(n)) return 1;
-    var nat = /natural|neural|online|premium|enhanced/i.test(n), r = 0;
-    if (/\bAndrew\b/i.test(n)) r = 100;
-    else if (/\bGuy\b/i.test(n)) r = 99;
-    else if (/\bChristopher\b/i.test(n)) r = 98;
-    else if (/AndrewMultilingual/i.test(n)) r = 97;
-    else if (/\bBrian\b|BrianMultilingual/i.test(n)) r = 96;
-    else if (/\bEric\b/i.test(n)) r = 95;
-    else if (/\b(Roger|Steffan|Davis|Tony|Jason|Brandon|Kai)\b/i.test(n)) r = 94;
-    if (r) return nat ? r : r - 12;
-    if (/en-us-x-(iol|iom|tpd)/i.test(n)) return 92;            // Google male voices (Android)
-    if (/\b(Evan|Nathan|Tom|Aaron)\b/i.test(n)) return nat ? 90 : 86;   // Apple male voices
-    if (/\bAlex\b/i.test(n)) return 88;
-    if (/Microsoft (Mark|David)/i.test(n)) return 80;            // Windows male voices
-    if (/\bFred\b/i.test(n)) return 40;
-    if (nat && /Microsoft/i.test(n)) return 60;                  // natural female voices
-    if (/Google US English/i.test(n)) return 58;
-    if (isGoogle(v.name, v.voiceURI)) return 55;
-    if (/Samantha|Ava|Allison|Susan|Zoe|Nicky|Joelle|Noelle/i.test(n)) return 50;
-    return v.localService ? 20 : 15;
+  function roleVoiceWeb(role) {
+    var want = pref(LV_WEB[role], ''), i;
+    if (want) {
+      for (i = 0; i < voices.length; i++) if (voices[i].voiceURI === want || voices[i].name === want) return voices[i];
+    }
+    return bestRoleWeb(role) || pickVoice();
+  }
+  function rolePitchWeb(role) {
+    var m = roleVoiceWeb('M'), w = roleVoiceWeb('W');
+    if (m && w && m !== w) return 1;
+    return role === 'W' ? 1.25 : 0.9;           // une seule voix : la femme plus aigue
   }
 
   /* -------------------------------------------------- (2) deverrouillage */
@@ -156,10 +241,10 @@
 
   function normalize(text) {
     return String(text || '')
-      .replace(/[\u2018\u2019]/g, "'")
-      .replace(/[\u201C\u201D]/g, '"')
-      .replace(/[\u2013\u2014]/g, ', ')
-      .replace(/[\u2026]+|\.{3,}/g, ' ' + BLANK + ' ')   // ……… -> silence
+      .replace(/[‘’]/g, "'")
+      .replace(/[“”]/g, '"')
+      .replace(/[–—]/g, ', ')
+      .replace(/[…]+|\.{3,}/g, ' ' + BLANK + ' ')   // ……… -> silence
       .replace(/_{2,}/g, ' ' + BLANK + ' ')              // _____ -> silence
       .replace(/\s+/g, ' ')
       .trim();
@@ -219,54 +304,63 @@
   }
   function clearGuard() { if (guardTimer) { clearTimeout(guardTimer); guardTimer = null; } }
 
+  function baseRate() { return parseFloat(pref(RATE_KEY, '0.92')) || 0.92; }
+
   /* --------------------------------------------------------- lecture web */
   /* Chaque entree de `queue` est un fragment surlignable (une phrase, un
      paragraphe, un choix). On le decoupe en segments say/pause : les say sont
      prononces, les pause sont de vrais silences (setTimeout), jamais confies
      au moteur.                                                              */
-  function speakChunk() {
+  function speakChunk(g0) {
+    if (g0 !== undefined && g0 !== webGen) return;     // minuteur d'une lecture terminee
     if (!speaking || paused) return;
     if (idx >= queue.length) { finish(); return; }
 
     emit('chunk', { index: idx, total: queue.length, text: queue[idx], meta: currentMeta });
     var segs = toSegments(normalize(queue[idx]));
+    var role = curRoles ? (curRoles[idx] || '') : '';
+    var gen = webGen;
     playSegmentsWeb(segs, 0, function () {
+      if (gen !== webGen) return;
       idx++;
-      setTimeout(speakChunk, 40);
-    });
+      setTimeout(function () { speakChunk(gen); }, 40 + ((curGaps && curGaps[idx]) || 0));
+    }, role, gen);
   }
 
-  function playSegmentsWeb(segs, si, done) {
-    if (!speaking) return;
-    if (paused) { setTimeout(function () { playSegmentsWeb(segs, si, done); }, 200); return; }
+  function playSegmentsWeb(segs, si, done, role, gen) {
+    if (gen !== webGen || !speaking) return;
+    if (paused) { setTimeout(function () { playSegmentsWeb(segs, si, done, role, gen); }, 200); return; }
     if (si >= segs.length) { done(); return; }
 
     var seg = segs[si];
     if (seg.pause) {                       // vrai silence, rien n'est prononce
-      guardTimer = setTimeout(function () { playSegmentsWeb(segs, si + 1, done); }, seg.pause);
+      guardTimer = setTimeout(function () { playSegmentsWeb(segs, si + 1, done, role, gen); }, seg.pause);
       return;
     }
 
     var u = new SpeechSynthesisUtterance(seg.say);
-    var v = pickVoice();
+    var v = role ? roleVoiceWeb(role) : pickVoice();
     if (v) { u.voice = v; u.lang = v.lang || 'en-US'; } else { u.lang = 'en-US'; }
-    u.rate = parseFloat(pref(RATE_KEY, '0.92')) || 0.92;
-    u.pitch = parseFloat(pref(PITCH_KEY, '1')) || 1;
+    u.rate = Math.max(0.4, Math.min(2, baseRate() * (curRateMul || 1)));
+    u.pitch = role ? rolePitchWeb(role) : (parseFloat(pref(PITCH_KEY, '1')) || 1);
     u.volume = 1;
 
     keepAlive.push(u);
     if (keepAlive.length > 30) keepAlive.shift();
 
-    var advanced = false;
+    var advanced = false, myGuard = null;
     function next() {
       if (advanced) return;
-      advanced = true; clearGuard();
-      playSegmentsWeb(segs, si + 1, done);
+      advanced = true;
+      if (myGuard) { clearTimeout(myGuard); if (guardTimer === myGuard) guardTimer = null; }
+      playSegmentsWeb(segs, si + 1, done, role, gen);
     }
     u.onend = next;
     u.onerror = function (e) {
       lastError = (e && e.error) || 'unknown';
-      if (lastError === 'interrupted' || lastError === 'canceled') { advanced = true; clearGuard(); return; }
+      /* phrase coupee par une nouvelle lecture : on s'arrete, sans toucher
+         au minuteur de securite de la nouvelle lecture */
+      if (lastError === 'interrupted' || lastError === 'canceled') { advanced = true; if (myGuard) clearTimeout(myGuard); return; }
       next();
     };
     try { synth.cancel(); synth.speak(u); }
@@ -274,14 +368,15 @@
 
     var est = Math.max(2500, seg.say.length * 62 / (u.rate || 1) + 1800);
     clearGuard();
-    guardTimer = setTimeout(function () {
-      if (!advanced) { try { synth.cancel(); } catch (e) { } next(); }
+    myGuard = guardTimer = setTimeout(function () {
+      if (!advanced && gen === webGen) { try { synth.cancel(); } catch (e) { } next(); }
     }, est);
   }
 
   function finish() {
     speaking = false; paused = false;
     queue = []; idx = 0; currentMeta = null;
+    curRoles = null; curGaps = null; curRateMul = 1;
     clearGuard(); stopResumeWatchdog();
     emit('end', {});
   }
@@ -338,6 +433,8 @@
 
   /* Every voice of the engine, all languages (Settings > Audio). */
   var nativeAllCache = null;
+  var badVoice = {};          // voix qui ont echoue pendant cette session
+  var badToast = false;
   function fetchNativeAll(cb) {
     if (nativeAllCache) { cb(nativeAllCache); return; }
     if (!detectNative() || typeof nativeTTS.getVoices !== 'function') { cb([]); return; }
@@ -374,6 +471,35 @@
     }
     return nativeTTS;
   }
+  /* la voix est-elle connue du telephone ? (liste inconnue : on essaie) */
+  function nativeKnown(id) {
+    if (!nativeAllCache || !nativeAllCache.length) return true;
+    for (var i = 0; i < nativeAllCache.length; i++) if (nativeAllCache[i].id === id) return true;
+    return false;
+  }
+  /* voix Android d'un personnage : le choix des reglages (ou iol / tpc),
+     sa variante hors ligne, puis une autre voix Google du meme sexe. Toutes
+     en echec : '' (aucun nom envoye, le plugin prend la voix anglaise
+     americaine du telephone). */
+  function roleNative(role) {
+    var first = pref(LV_NATIVE[role], '') || LV_DEF[role];
+    var chain = [first, first.replace(/-network$/, '-local')].concat(LV_CHAIN[role] || []);
+    for (var i = 0; i < chain.length; i++) {
+      if (!badVoice[chain[i]] && nativeKnown(chain[i])) return chain[i];
+    }
+    return '';
+  }
+  /* voix de lecture : celle des reglages, sa variante hors ligne, puis la
+     voix par defaut et sa variante hors ligne */
+  function readNative() {
+    var first = pref(NVOICE_KEY, '') || DEFAULT_US_VOICE;
+    var chain = [first, first.replace(/-network$/, '-local'), DEFAULT_US_VOICE, DEFAULT_US_VOICE.replace(/-network$/, '-local')];
+    for (var i = 0; i < chain.length; i++) if (!badVoice[chain[i]]) return chain[i];
+    return '';
+  }
+  function rolePitchNative(role) {
+    return roleNative('M') === roleNative('W') ? (role === 'W' ? 1.2 : 0.9) : 1;
+  }
 
   function speakNative(parts, done) {
     var i = 0, first = true;
@@ -385,27 +511,31 @@
 
       emit('chunk', { index: i, total: parts.length, text: parts[i], meta: currentMeta });
       var segs = toSegments(normalize(parts[i]));
+      var role = curRoles ? (curRoles[i] || '') : '';
+      var gap = (curGaps && curGaps[i]) || 0;
+      var gen0 = playGen;
       i++;
-      playSegmentsNative(segs, 0, step);
+      if (gap) setTimeout(function () { if (gen0 === playGen) playSegmentsNative(segs, 0, step, role); }, gap);
+      else playSegmentsNative(segs, 0, step, role);
     }
 
     nativeResume = playSegmentsNative;
-    function playSegmentsNative(segs, si, next) {
+    function playSegmentsNative(segs, si, next, role) {
       if (!speaking) { done(); return; }
-      curSegs = segs; curSi = si; curNext = next;      // point de reprise
+      curSegs = segs; curSi = si; curNext = next; curRole = role || '';   // point de reprise
       if (paused) return;                              // resume() relancera
       if (si >= segs.length) { next(); return; }
       var gen = playGen;
 
       var seg = segs[si];
       if (seg.pause) {                    // VRAI silence : rien n'est envoye au moteur
-        setTimeout(function () { playSegmentsNative(segs, si + 1, next); }, seg.pause);
+        setTimeout(function () { if (gen === playGen) playSegmentsNative(segs, si + 1, next, role); }, seg.pause);
         return;
       }
 
-      var chosen = pref(NVOICE_KEY, '') || DEFAULT_US_VOICE;
-      var rate = parseFloat(pref(RATE_KEY, '0.92')) || 0.92;
-      var opt = { text: seg.say, locale: 'en-US', rate: rate, cancel: first };
+      var chosen = role ? roleNative(role) : readNative();   // voix absente : la suivante
+      var rate = baseRate() * (curRateMul || 1);
+      var opt = { text: seg.say, locale: 'en-US', rate: rate, cancel: first, pitch: role ? rolePitchNative(role) : 1 };
       if (chosen) opt.identifier = chosen;
       first = false;
 
@@ -413,12 +543,31 @@
       function cont() {
         if (advanced || gen !== playGen) return;       // lecture annulee entre-temps
         advanced = true;
-        playSegmentsNative(segs, si + 1, next);
+        playSegmentsNative(segs, si + 1, next, role);
+      }
+
+      /* Echec avec une voix choisie dans les reglages (souvent une voix
+         listee par Android mais pas encore telechargee, ou une voix
+         « network » sans connexion) : on relit le meme morceau avec la voix
+         suivante, et on le signale une fois.                            */
+      function fail() {
+        if (advanced || gen !== playGen) return;
+        if (opt.identifier && !badVoice[opt.identifier]) {
+          badVoice[opt.identifier] = true;
+          advanced = true;
+          if (!badToast && typeof global.toast === 'function') {
+            badToast = true;
+            global.toast('A voice is not installed yet: another voice is used');
+          }
+          playSegmentsNative(segs, si, next, role);
+          return;
+        }
+        cont();
       }
 
       var p;
       try { p = nativeTTS.speak(opt); } catch (e) { p = null; }
-      if (p && typeof p.then === 'function') p.then(cont, cont);
+      if (p && typeof p.then === 'function') p.then(cont, fail);
       else setTimeout(cont, seg.say.length * 62 / rate + 300);
     }
 
@@ -454,6 +603,8 @@
         detectNative();
         collectVoices();
         emit('engine', { native: !!nativeTTS });
+        /* liste des voix du telephone : sert a choisir les voix d'ecoute */
+        setTimeout(function () { try { fetchNativeAll(function () { }); } catch (e) { } }, 1500);
       }, false);
       return this;
     },
@@ -517,13 +668,14 @@
     /* Enregistre la voix choisie. `native` indique la source.
        Une chaine vide remet la selection automatique.                     */
     setVoiceId: function (id, native) {
+      badVoice = {};                     // un nouveau choix merite un nouvel essai
       if (!id) { setPref(NVOICE_KEY, ''); setPref(VOICE_KEY, ''); return; }
       if (native) { setPref(NVOICE_KEY, id); setPref(VOICE_KEY, ''); }
       else { setPref(VOICE_KEY, id); setPref(NVOICE_KEY, ''); }
     },
 
     defaultVoiceId: function () {
-      if (detectNative()) return DEFAULT_US_VOICE;
+      if (detectNative() || !WEB) return DEFAULT_US_VOICE;
       collectVoices();
       var b = bestWebVoice();
       return b ? (b.voiceURI || b.name) : DEFAULT_US_VOICE;
@@ -531,6 +683,39 @@
     useDefaultVoice: function () {
       if (detectNative()) { setPref(NVOICE_KEY, DEFAULT_US_VOICE); setPref(VOICE_KEY, ''); }
       else { setPref(NVOICE_KEY, ''); setPref(VOICE_KEY, ''); }
+    },
+
+    /* ---- voix des questions d'ecoute (v5.9.26) ----
+       getRoleVoice(role)  -> choix enregistre ('' = automatique)
+       roleDefault(role)   -> la voix automatique (identifiant ou nom)
+       roleVoiceId(role)   -> la voix qui sera vraiment utilisee           */
+    getRoleVoice: function (role) {
+      return pref((detectNative() ? LV_NATIVE : LV_WEB)[role === 'W' ? 'W' : 'M'], '');
+    },
+    setRoleVoice: function (role, id) {
+      role = role === 'W' ? 'W' : 'M';
+      badVoice = {}; badToast = false;
+      setPref((detectNative() ? LV_NATIVE : LV_WEB)[role], id || '');
+    },
+    roleDefault: function (role) {
+      role = role === 'W' ? 'W' : 'M';
+      if (detectNative()) return LV_DEF[role];
+      collectVoices();
+      var v = bestRoleWeb(role);
+      return v ? (v.voiceURI || v.name) : '';
+    },
+    roleVoiceId: function (role) {
+      role = role === 'W' ? 'W' : 'M';
+      if (detectNative()) return roleNative(role);
+      collectVoices();
+      var v = roleVoiceWeb(role);
+      return v ? (v.voiceURI || v.name) : '';
+    },
+    /* une seule voix pour les deux personnages : la hauteur les distingue */
+    rolesShareVoice: function () {
+      if (detectNative()) return roleNative('M') === roleNative('W');
+      collectVoices();
+      return rolePitchWeb('M') !== 1;
     },
 
     setBlankMs: function (ms) { setBlankMs(ms); },
@@ -544,12 +729,6 @@
 
       var migrated = pref('et_voice_forced_v3', '');
       var native = !!detectNative();
-      /* Earlier website builds saved "Google US English" automatically:
-         forget that once, so the male American default applies.          */
-      if (!native && !pref('et_voice_web_male', '')) {
-        setPref(VOICE_KEY, '');
-        setPref('et_voice_web_male', '1');
-      }
       if (!migrated) {
         if (native) {
           setPref(NVOICE_KEY, DEFAULT_US_VOICE);
@@ -562,6 +741,13 @@
         setPref(NVOICE_KEY, '');
         setPref('et_voice_forced_v3', '1');
       }
+      /* Website: builds before 5.9.26 saved a voice automatically ("Google
+         US English", then a male voice): forget it once, so the most
+         natural voice of the browser applies.                            */
+      if (WEB && !native && !pref('et_voice_web_q', '')) {
+        setPref(VOICE_KEY, '');
+        setPref('et_voice_web_q', '1');
+      }
 
       var currentNative = pref(NVOICE_KEY, '');
       var currentWeb = pref(VOICE_KEY, '');
@@ -573,9 +759,9 @@
         cb({ id: DEFAULT_US_VOICE, native: true });
         return;
       }
-
-      /* Website: nothing is saved, so the automatic choice (the best male
-         American voice of this browser) is made again on every visit.     */
+      /* Website and browser preview: nothing is saved, so the automatic
+         choice (the most natural voice of this browser) is made again on
+         every visit. */
       waitForVoices(function () {
         var b = bestWebVoice();
         cb(b ? { id: b.voiceURI || b.name, name: b.name, native: false } : false);
@@ -584,28 +770,43 @@
 
     /* Ouvre l'ecran Android de gestion de la synthese vocale. */
     openVoiceSettings: function () {
-      nativeVoiceCache = null;
+      nativeVoiceCache = null; nativeAllCache = null;
       return Speech.openInstall();
     },
     setRate: function (r) { setPref(RATE_KEY, String(r)); },
-    getRate: function () { return parseFloat(pref(RATE_KEY, '0.92')) || 0.92; },
+    getRate: function () { return baseRate(); },
     setPitch: function (p) { setPref(PITCH_KEY, String(p)); },
     getPitch: function () { return parseFloat(pref(PITCH_KEY, '1')) || 1; },
 
     /* speak(texte)               -> lecture simple
        speak(tableau,{keepUnits}) -> un fragment par entree, l'evenement
-                                     'chunk' renvoie l'index (surlignage) */
+                                     'chunk' renvoie l'index (surlignage)
+       speak(tableau,{roles,gap,rateMul}) -> repliques d'une question
+                                     d'ecoute, chacune avec sa voix      */
     speak: function (text, opts) {
       opts = opts || {};
       this.stop();
 
-      var parts;
+      var parts, roles = null, gaps = null;
       if (Object.prototype.toString.call(text) === '[object Array]') {
         parts = [];
-        text.forEach(function (t) {
-          if (opts.keepUnits) { var n = normalize(t); if (n) parts.push(n); }
-          else parts = parts.concat(chunk(t, opts.max));
-        });
+        if (opts.roles) {
+          roles = []; gaps = [];
+          text.forEach(function (t, k) {
+            /* une longue replique (annonce) est decoupee en phrases, chacune
+               gardant la voix de la replique */
+            chunk(t, opts.max).forEach(function (b, j) {
+              gaps.push(parts.length && j === 0 ? (opts.gap || 0) : 0);
+              parts.push(b);
+              roles.push(opts.roles[k] === 'W' ? 'W' : 'M');
+            });
+          });
+        } else {
+          text.forEach(function (t) {
+            if (opts.keepUnits) { var n = normalize(t); if (n) parts.push(n); }
+            else parts = parts.concat(chunk(t, opts.max));
+          });
+        }
       } else {
         parts = chunk(text, opts.max);
       }
@@ -614,6 +815,8 @@
       unlock();
       speaking = true; paused = false;
       currentMeta = opts.meta || null;
+      curRoles = roles; curGaps = gaps;
+      curRateMul = (opts.rateMul > 0) ? opts.rateMul : 1;
       emit('start', { parts: parts.length, meta: currentMeta });
 
       if (detectNative() && opts.preferNative !== false) {
@@ -623,9 +826,10 @@
       if (!synth) { emit('error', 'no-engine'); finish(); return; }
 
       queue = parts; idx = 0;
+      var g0 = ++webGen;
       startResumeWatchdog();
-      if (!voicesReady) waitForVoices(function () { speakChunk(); }, 20);
-      else speakChunk();
+      if (!voicesReady) waitForVoices(function () { speakChunk(g0); }, 20);
+      else speakChunk(g0);
     },
 
     pause: function () {
@@ -643,14 +847,14 @@
       paused = false;
       if (nativeTTS && curSegs) {
         /* Le moteur natif ne reprend pas : on relit la phrase interrompue. */
-        var segs = curSegs, si = curSi, next = curNext;
+        var segs = curSegs, si = curSi, next = curNext, role = curRole;
         curSegs = null;
         emit('resume', {});
-        if (nativeResume) nativeResume(segs, si, next);
+        if (nativeResume) nativeResume(segs, si, next, role);
         return;
       }
       if (synth && synth.paused) { try { synth.resume(); } catch (e) { } }
-      else if (!nativeTTS) speakChunk();
+      else if (!nativeTTS) speakChunk(webGen);
       emit('resume', {});
     },
 
@@ -659,6 +863,8 @@
     stop: function () {
       speaking = false; paused = false;
       queue = []; idx = 0; currentMeta = null;
+      curRoles = null; curGaps = null; curRateMul = 1;
+      playGen++; webGen++;             // un silence programme ne relance plus rien
       clearGuard(); stopResumeWatchdog();
       if (nativeTTS) {
         try {
@@ -672,6 +878,14 @@
 
     isSpeaking: function () { return speaking; },
 
+    /* duree probable d'une lecture (ms) : sert de filet si le moteur ne
+       signale jamais la fin. Le plugin Android lit a 0,7 x la vitesse
+       demandee (Android 8.1 et plus). */
+    estimateMs: function (chars, rateMul) {
+      var r = baseRate() * (rateMul || 1) * (detectNative() ? 0.7 : 1);
+      return Math.round(chars / (12 * Math.max(0.3, r)) * 1000);
+    },
+
     diagnose: function () {
       return {
         webSpeech: !!synth,
@@ -680,6 +894,7 @@
         voicesLoaded: voices.length,
         usEnglishVoices: englishVoices().map(function (v) { return v.name + ' (' + v.lang + ')'; }),
         preferredVoice: DEFAULT_US_VOICE,
+        listeningVoices: Speech.roleVoiceId('M') + ' / ' + Speech.roleVoiceId('W'),
         unlocked: unlocked,
         chunkSize: defaultMax(),
         lastError: lastError

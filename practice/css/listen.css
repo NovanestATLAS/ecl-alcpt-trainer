@@ -1,0 +1,69 @@
+/* =========================================================================
+   listen.css - ECL English Trainer v5.9.26 (application ET site web)
+   Questions d'ecoute, examens chronometres ECL / ALCPT, voix d'ecoute dans
+   les reglages, bouton Lessons au-dessus de « Areas of study ».
+   Couleurs : jetons de design.css (--card, --line, --brass...), avec des
+   valeurs de repli pour l'ancien theme.
+   ========================================================================= */
+
+/* ---------------------------- carte d'ecoute ---------------------------- */
+.lcard{border:1px solid var(--line);background:var(--card2,var(--card));border-radius:14px;padding:12px 13px;margin:0 0 14px}
+.lc-top{display:flex;align-items:center;gap:10px;min-height:38px}
+.lc-ic{flex:none;display:grid;place-items:center;width:38px;height:38px;border-radius:12px;
+  background:var(--plate,var(--card));color:var(--plateInk,var(--goldL,#E9CA6C))}
+.lc-ic .ic{width:21px;height:21px}
+.lc-k{font-weight:700;font-size:.95em;color:var(--ink)}
+.lc-st{margin-left:auto;text-align:right;font-size:.82em;line-height:1.3;color:var(--mut)}
+.lc-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px}
+.lc-btns .btn{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;padding:10px 14px;font-size:14.5px;line-height:1.1}
+.lc-btns .btn[hidden]{display:none}
+.lc-btns .btn .ic{width:17px;height:17px}
+#listenBtn.on{box-shadow:0 0 0 3px color-mix(in srgb,var(--brass,#C9A227) 35%,transparent)}
+.lc-tx{margin-top:11px;padding:10px 12px;border-radius:12px;background:var(--card);border:1px solid var(--line);
+  font-size:.97em;line-height:1.55;color:var(--ink)}
+.lc-tx[hidden]{display:none}
+.lc-tx p{margin:3px 0}
+.lsp{font-weight:700;margin-right:2px}
+.lsp.m{color:var(--accentText,var(--goldL,#E9CA6C))}
+.lsp.w{color:var(--c3,#9064BE)}
+.qbox.lq .qtext{font-weight:600}
+
+/* examen : barre du temps de reponse */
+.lc-time{height:7px;margin-top:11px;border-radius:99px;background:var(--track,var(--card));overflow:hidden;opacity:.45;transition:opacity .2s}
+.lc-time.on{opacity:1}
+.lc-time i{display:block;height:100%;width:100%;border-radius:99px;background:var(--brass,#C9A227);transition:width .2s linear}
+.lc-exam .lc-st{font-weight:700;color:var(--ink)}
+
+/* --------------------------------- examens ------------------------------ */
+.exam-card .eyebrow,.exam-break .eyebrow{margin-bottom:6px}
+.exam-parts{margin:10px 0 6px;padding-left:20px;line-height:1.5;color:var(--ink)}
+.exam-parts li{margin:7px 0}
+.exam-break{margin-top:8px}
+.exam-break h3{margin-top:2px}
+.exam-rep .prow .pn{min-width:150px}
+.rev-part{display:inline-block;margin-bottom:6px;padding:2px 9px;border-radius:99px;font-size:11.5px;font-weight:700;letter-spacing:.4px;
+  text-transform:uppercase;background:var(--badgeBg,var(--card2));color:var(--badgeInk,var(--mut))}
+.rev-tx{margin:0 0 8px;padding:9px 11px;border-radius:11px;background:var(--card2,var(--bg2));border:1px solid var(--line);font-size:.93em;line-height:1.5}
+.rev-tx p{margin:2px 0}
+.rev-tx .chip.mini{margin-top:6px;padding:6px 12px;font-size:12px}
+
+/* ------------------------------ voix d'ecoute --------------------------- */
+.lv-box{margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}
+.lv-row{display:flex;align-items:center;gap:10px;margin:8px 0}
+.lv-row span{flex:none;width:64px;font-weight:700;color:var(--ink)}
+.lv-row .sel{flex:1;min-width:0;margin:0}
+
+/* ----------------- Lessons au-dessus de « Areas of study » -------------- */
+.bigmenu.ls-top{margin-top:14px}
+.topbrand ~ .bigmenu.ls-top > .tile.ls-tile .tile-ic{background:var(--brass,#C9A227);color:var(--onBrass,#161A22)}
+/* six domaines depuis l'ajout de Listening */
+.topbrand ~ .bigmenu > .tile:nth-child(6) .tile-ic{background:#B4545A;color:#FFFFFF}
+
+/* ------------- traduction dans la fenetre (application, tr.js) ---------- */
+.trp-out{margin:0 0 10px;font-size:1.25em;line-height:1.45;color:#FFD98A;overflow-wrap:anywhere}
+.trp-out[dir="rtl"]{text-align:right;font-size:1.35em}
+.trp-out.wait{font-size:.9em;color:#9FB0C6}
+.trp-out.err{font-size:.9em;color:#F2B8B0}
+.trp-sout{padding-top:8px;border-top:1px solid rgba(255,255,255,.15);font-size:1.05em;color:#E8EEF7}
+.trp-sout[hidden],.trp .trp-sent[hidden]{display:none}
+.trp-ext{min-height:0;padding:0;border:0;background:none;color:#EBC572;font-weight:600;text-decoration:underline}

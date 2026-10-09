@@ -10,6 +10,10 @@
                      rail    : right-hand column of the trainer (laptop/PC)
                      results : results screen of the trainer, under the score
                      article : inside guides and topic pages
+   ga4           : Google Analytics 4. Paste the "Measurement ID" of your web
+                   data stream between the quotes, for example 'G-AB12CD34EF'
+                   (Analytics > Admin > Data streams > ecl-alcpt-trainer.com).
+                   Leave '' to switch Google Analytics off.
    ========================================================================== */
 window.ECL_CONFIG = {
   adsenseClient: 'ca-pub-3709043100488694',
@@ -17,5 +21,6 @@ window.ECL_CONFIG = {
     rail: '',
     results: '',
     article: ''
-  }
+  },
+  ga4: ''
 };

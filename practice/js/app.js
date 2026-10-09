@@ -10,7 +10,15 @@
      . Themes, confort de lecture, export / import des donnees
    =========================================================================== */
 
-var APP_VERSION = '5.9.25';
+var APP_VERSION = '5.9.26';
+
+/* v5.9.26
+     . Ecoute : 155 questions (js/listening-data.js), une voix d'homme et une
+       voix de femme, « Show the text », lecture ralentie ;
+     . Practice test (timed) : examens ECL et ALCPT complets (ecoute puis
+       lecture, minutage reel, correction par partie a la fin) ;
+     . Lessons au-dessus de « Areas of study » ;
+     . traduction affichee dans l'application (tr.js).                     */
 
 /* Nouvelle apparence (v5.9.23) : css/design.css se pose par-dessus
    css/style.css (couleurs, polices, formes ; aucune fonction touchee).
@@ -81,6 +89,10 @@ function LSdel(k) { try { localStorage.removeItem('ecl_' + k); } catch (e) { } }
 function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
 function dayKey(off) { var d = new Date(); d.setDate(d.getDate() - (off || 0)); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
 function nowMs() { return Date.now(); }
+/* Mesure d'audience du SITE (Google Analytics, assets/analytics.js) :
+   quelques evenements anonymes. Dans l'application, ECL_TRACK n'existe pas
+   et rien n'est envoye. */
+function track(name, params, once) { try { if (window.ECL_TRACK) window.ECL_TRACK(name, params, once); } catch (e) { } }
 
 /* ======================== NUMERO DE LANCEMENT ===========================
    Compte les demarrages reels de l'application : ouverture apres une
@@ -203,7 +215,7 @@ function L(html) { return (window.I18N ? I18N.t(html) : html); }
 function fmt(t) { return esc(t).replace(/\*([^*]+)\*/g, '<b class="hl">$1</b>'); }
 function plainTxt(t) { return String(t == null ? '' : t).replace(/\*/g, ''); }
 
-function spkNow(t) { if (audioOK() && t) { Speech.stop(); Speech.speak(t); } }
+function spkNow(t) { if (audioOK() && t) { autoCancel(); Speech.stop(); Speech.speak(t); } }
 /* Toute interruption volontaire annule aussi l'enchainement automatique. */
 function stopSpeak() { autoCancel(); if (window.Speech) Speech.stop(); }
 
@@ -263,6 +275,7 @@ function readQuestion(q) { return q; }
    dans le mot suivant.                                                       */
 function speakQuestionAndChoices(q, playIntro) {
   if (!audioOK()) { toast('Audio unavailable: see Settings'); return; }
+  autoCancel();                         // lecture demandee : la lecture automatique s'efface
   var parts = [];
   if (playIntro !== false) parts.push(plainTxt(q.q));
   q.o.forEach(function (opt, i) {
@@ -277,6 +290,7 @@ function speakQuestionAndChoices(q, playIntro) {
    si elle est en anglais, l'explication.                                     */
 function speakAnswer(q) {
   if (!audioOK()) return;
+  autoCancel();
   var parts = ['The correct answer is: ' + plainTxt(q.c) + '.'];
   var ex = enExplanation(q.e);
   if (ex) parts.push(ex);
@@ -330,21 +344,32 @@ function autoFire() {
 
 /* Lit `parts` puis execute `cb`. Le pending est pose APRES speak() : le
    'end' emis par le stop() interne de speak() tombe ainsi dans le vide. */
-function speakThen(parts, cb) {
+function speakThen(parts, cb, opts) {
   autoCancel();
   if (AD_OPEN) return;                  // annonce a l'ecran : ni lecture, ni suite
   if (!audioOK()) { if (cb) autoTimer = setTimeout(cb, 400); return; }
   var my = AUTO_SEQ;
-  try { Speech.speak(parts, { keepUnits: true }); }
+  var o = { keepUnits: true };
+  if (opts) for (var k in opts) if (opts.hasOwnProperty(k)) o[k] = opts[k];
+  try { Speech.speak(parts, o); }
   catch (e) { logError(e, 'speakThen'); if (cb) autoTimer = setTimeout(cb, 400); return; }
   autoPending = { seq: my, fn: cb || null };
   /* Si le moteur reste muet, on enchaine tout de meme au bout d'un delai
-     calcule sur la longueur du texte. */
-  var chars = parts.join(' ').length;
-  autoWatch = setTimeout(function () {
-    if (APP_PAUSED || AD_OPEN || document.hidden) { autoCancel(); return; }
-    if (autoPending && autoPending.seq === my && my === AUTO_SEQ) autoFire();
-  }, Math.max(7000, chars * 95 + 5000));
+     calcule sur la longueur du texte, la vitesse choisie et les pauses
+     entre deux personnes ; tant que la voix parle encore, on attend (au
+     plus trois fois la duree prevue). */
+  var chars = parts.join(' ').length, mul = (opts && opts.rateMul) || 1;
+  var est = (Speech.estimateMs ? Speech.estimateMs(chars, mul) : chars * 95 / mul) + parts.length * ((opts && opts.gap) || 0);
+  var hardEnd = nowMs() + Math.max(15000, est * 3 + 10000);
+  function watch(ms) {
+    autoWatch = setTimeout(function () {
+      if (APP_PAUSED || AD_OPEN || document.hidden) { autoCancel(); return; }
+      if (!(autoPending && autoPending.seq === my && my === AUTO_SEQ)) return;
+      if (Speech.isSpeaking && Speech.isSpeaking() && nowMs() < hardEnd) { watch(1500); return; }
+      autoFire();
+    }, ms);
+  }
+  watch(Math.max(7000, Math.round(est * 1.3) + 4000));
 }
 
 /* Branchement unique sur la fin de lecture. Le setTimeout(0) laisse passer
@@ -353,6 +378,10 @@ function speakThen(parts, cb) {
    decider d'enchainer. */
 function autoBind() {
   if (!window.Speech || !Speech.on) return;
+  /* question d'ecoute : le bouton Stop redevient Replay quand la voix se tait */
+  Speech.on('end', function () {
+    setTimeout(function () { if (LP.on && !Speech.isSpeaking()) lPaint(false); }, 80);
+  });
   Speech.on('end', function () {
     if (!autoPending || autoPending.seq !== AUTO_SEQ) return;
     var my = AUTO_SEQ;
@@ -412,8 +441,14 @@ function autoReadAnswer(cb) {
    (retour en arriere), on relit aussi sa correction, mais SANS repartir
    vers la question suivante : l'utilisateur est revenu volontairement. */
 function autoStartQuestion() {
-  if (AD_OPEN || !autoOn() || !audioOK() || S.view !== 'quiz') return;
+  if (AD_OPEN || !autoOn() || !audioOK() || S.view !== 'quiz' || S.exam) return;
+  var q = S.pool[S.idx]; if (!q) return;
   var answered = !S.sim && S.answers && S.answers[S.idx];
+  /* question d'ecoute : on rejoue l'enregistrement, jamais les choix */
+  if (q.L) {
+    if (!S.exam && !(LP.on && !answered)) lPlay(false, answered ? function () { autoReadAnswer(null); } : null);
+    return;
+  }
   autoReadQuestion(answered ? function () { autoReadAnswer(null); } : null);
 }
 
@@ -438,6 +473,19 @@ function paintAutoBtn() {
 var BASE_GRAMMAR = [], GRAMMAR_PLUS = [], EXPRESS_QCM = [], BASE_VOCAB = [], VOCAB_AM = [],
   PHRASALS = [], IDIOMS_QUIZ = [], IDIOMS_LIB = [], MODULE_TEST = [], DRILLS = [];
 
+/* Questions d'ecoute (v5.9.26), chargees par js/listening-data.js :
+   { id, k, L: [['M'|'W', texte], ...], q, o (bonne reponse en premier), a: 0, e }
+   k : s enonce, r question-reponse, d dialogue court, c conversation,
+       k annonce (une seule personne, plusieurs phrases).                  */
+var LISTEN = [];
+var LKIND = { s: 'Short statements', r: 'Questions and answers', d: 'Short dialogs', c: 'Conversations', k: 'Short talks' };
+var LKIND_ONE = { s: 'Short statement', r: 'Question and answer', d: 'Short dialog', c: 'Conversation', k: 'Short talk' };
+var LKIND_DESC = { s: 'One or two sentences: numbers, times, comparisons',
+  r: 'A question or a request: choose the best reply',
+  d: 'Two lines: what does the speaker mean?',
+  c: 'A longer conversation between a man and a woman',
+  k: 'An announcement, a briefing or a message' };
+
 var BANKS = {};
 function buildBanks() {
   BANKS = {};
@@ -456,13 +504,24 @@ function buildBanks() {
   add('i_idm', 'American Idioms', 'idiom', IDIOMS_QUIZ);
   add('i_pv', 'Phrasal Verbs', 'idiom', PHRASALS);
   add('t_mod', 'Module test', 'test', MODULE_TEST);
+  /* Ecoute : un bloc par type de question (section 'listen'). Ces questions
+     restent en dehors du Quick test, des tests chronometres classiques et de
+     la recherche : elles ont leur propre rubrique et les examens. */
+  LISTEN = (window.LISTEN_DATA && LISTEN_DATA.items) || [];
+  var byK = {};
+  LISTEN.forEach(function (x) { if (x && x.L && x.o) (byK[x.k] = byK[x.k] || []).push(x); });
+  ['s', 'r', 'd', 'c', 'k'].forEach(function (k) { add('l_' + k, LKIND[k], 'listen', byK[k]); });
 }
 function section(s) {
   return Object.keys(BANKS).map(function (k) { return BANKS[k]; })
     .filter(function (b) { return b.section === s; });
 }
 function sectionData(s) { var a = []; section(s).forEach(function (b) { a = a.concat(b.data); }); return a; }
-function allQuestions() { var a = []; Object.keys(BANKS).forEach(function (k) { a = a.concat(BANKS[k].data); }); return a; }
+function allQuestions() {
+  var a = [];
+  Object.keys(BANKS).forEach(function (k) { if (BANKS[k].section !== 'listen') a = a.concat(BANKS[k].data); });
+  return a;
+}
 function sectionOfQuestion(q) {
   var keys = Object.keys(BANKS);
   for (var i = 0; i < keys.length; i++) {
@@ -474,13 +533,21 @@ function sectionOfQuestion(q) {
 
 /* ========================= FAVORIS ET BOITE A FAUTES ==================== */
 function qid(q) { return String(q).slice(0, 70); }
+/* Une question d'ecoute se reconnait a son numero (L56...) : beaucoup
+   partagent la meme question imprimee (« What does the man mean? »).
+   Sa fiche garde aussi l'enregistrement (L) pour la revision.           */
+function qkey(q, id) { return qid(id ? '#' + id : q); }
+function withListen(o, x) {
+  if (x && x.L) { o.id = x.id; o.L = x.L; o.k = x.k; }
+  return o;
+}
 
 function favs() { return LSget('fav', {}); }
-function isFav(q) { return !!favs()[qid(q)]; }
-function toggleFav(q, o, a, e) {
-  var f = favs(), k = qid(q);
+function isFav(q, id) { return !!favs()[qkey(q, id)]; }
+function toggleFav(q, o, a, e, x) {
+  var f = favs(), k = qkey(q, x && x.id);
   if (f[k]) { delete f[k]; toast('Removed from favourites'); }
-  else { f[k] = { q: q, o: o, a: a, e: e || '', d: nowMs() }; toast('Added to favourites'); }
+  else { f[k] = withListen({ q: q, o: o, a: a, e: e || '', d: nowMs() }, x); toast('Added to favourites'); }
   LSset('fav', f); buzz(10);
   return !!f[k];
 }
@@ -490,13 +557,13 @@ function favList() { var f = favs(); return Object.keys(f).map(function (k) { re
    Une faute revient le lendemain, puis a 3 jours, puis a 7 jours, puis sort. */
 var LEITNER_DAYS = [0, 1, 3, 7];
 function box() { return LSget('box', {}); }
-function boxAdd(q, o, a, e) {
-  var bx = box(), k = qid(q);
-  bx[k] = { q: q, o: o, a: a, e: e || '', lvl: 0, due: nowMs(), d: nowMs() };
+function boxAdd(q, o, a, e, x) {
+  var bx = box(), k = qkey(q, x && x.id);
+  bx[k] = withListen({ q: q, o: o, a: a, e: e || '', lvl: 0, due: nowMs(), d: nowMs() }, x);
   LSset('box', bx);
 }
-function boxPromote(q, ok) {
-  var bx = box(), k = qid(q), it = bx[k];
+function boxPromote(q, ok, id) {
+  var bx = box(), k = qkey(q, id), it = bx[k];
   if (!it) return;
   if (ok) {
     it.lvl = (it.lvl || 0) + 1;
@@ -571,7 +638,7 @@ function anyRun() {
   Object.keys(BANKS).forEach(function (k) {
     var r = getRun(k); if (r && r.i > 0 && (!best || r.d > best.r.d)) best = { k: k, r: r };
   });
-  ['all_grammar', 'all_vocab', 'all_idiom'].forEach(function (k) {
+  ['all_grammar', 'all_vocab', 'all_idiom', 'all_listen'].forEach(function (k) {
     var r = getRun(k); if (r && r.i > 0 && (!best || r.d > best.r.d)) best = { k: k, r: r };
   });
   return best;
@@ -649,7 +716,11 @@ var ICONS = {
   pause:  '<path d="M9.5 5v14M14.5 5v14"/>',
   share:  '<circle cx="18" cy="5.5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="18.5" r="2.6"/><path d="m8.3 10.7 7.4-4M8.3 13.3l7.4 4"/>',
   /* Lecons (v5.9.25) : toque d'etudiant */
-  cap:    '<path d="M12 4 2.5 9 12 14l9.5-5z"/><path d="M6.5 11.2v4.3c0 1.4 2.5 3 5.5 3s5.5-1.6 5.5-3v-4.3"/><path d="M21.5 9v5.5"/>'
+  cap:    '<path d="M12 4 2.5 9 12 14l9.5-5z"/><path d="M6.5 11.2v4.3c0 1.4 2.5 3 5.5 3s5.5-1.6 5.5-3v-4.3"/><path d="M21.5 9v5.5"/>',
+  /* Ecoute (v5.9.26) : casque, oeil (afficher le texte) */
+  headset: '<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="2.8" y="14" width="4.4" height="6.6" rx="1.6"/><rect x="16.8" y="14" width="4.4" height="6.6" rx="1.6"/>',
+  eye:    '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/>',
+  slow:   '<path d="M12 6.5V12l3 2"/><circle cx="12" cy="12" r="8.5"/><path d="M4.6 4.6 7 7"/>'
 };
 function ico(name, cls) {
   return '<svg class="ic' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" fill="none" ' +
@@ -719,20 +790,24 @@ VIEWS.home = function () {
     '</div>';
 
   h += studyFocusCard();
+  /* Lecons (v5.9.26) : un bouton a part, juste au-dessus de « Areas of
+     study ». Application : les lecons integrees (lessons-data.js) ; site :
+     les pages /lessons/ du site. */
+  var lesTile = window.LESSONS_DATA ? tile("go('lessons')", 'cap', 'Lessons', 'Grammar rules, phrasal verbs, ECL vocabulary', '')
+    : (window.ECL_WEB ? tile("location.href='../lessons/'", 'cap', 'Lessons', 'Grammar rules, phrasal verbs, ECL vocabulary', '') : '');
+  if (lesTile) h += '<div class="bigmenu ls-top">' + lesTile.replace('class="tile"', 'class="tile ls-tile" id="lessonsTile"') + '</div>';
   h += '<div class="secttl">Areas of study</div>';
   h += '<div class="bigmenu">' +
-    /* Lecons (v5.9.25) : seulement dans l'application, ou lessons-data.js
-       est charge ; le site a ses propres pages /lessons/. */
-    (window.LESSONS_DATA ? tile("go('lessons')", 'cap', 'Lessons',
-        'Grammar rules, phrasal verbs, ECL vocabulary', 'New').replace('class="tile"', 'class="tile ls-tile"') : '') +
     big('grammar', 'book', 'Grammar',
         'Tenses, structures, drills, verbs', sectionData('grammar').length, sectionMastery('grammar')) +
     big('vocab', 'speech', 'Vocabulary',
         'Vocabulary in context, American register', sectionData('vocab').length, sectionMastery('vocab')) +
     big('idiom', 'star', 'Idioms &amp; Phrasal',
         'Idiomatic expressions and phrasal verbs', sectionData('idiom').length, sectionMastery('idiom')) +
+    (LISTEN.length ? big('listen', 'headset', 'Listening',
+        'Statements, dialogs, conversations, talks', LISTEN.length, sectionMastery('listen')) : '') +
     big('test', 'target', 'Tests',
-        'Module test and timed practice test', MODULE_TEST.length, sectionMastery('test')) +
+        'Module test, ECL and ALCPT timed exams', MODULE_TEST.length, sectionMastery('test')) +
     big('reference', 'layers', 'Reference Library',
         'Idioms and corrected drills',
         IDIOMS_LIB.length + DRILLS.reduce(function (a, d) { return a + d.items.length; }, 0)) +
@@ -773,7 +848,8 @@ function studyFocusCard() {
   var areas = [
     { k: 'grammar', t: 'Grammar', icon: 'book' },
     { k: 'vocab', t: 'Vocabulary', icon: 'speech' },
-    { k: 'idiom', t: 'Idioms & Phrasal', icon: 'star' }
+    { k: 'idiom', t: 'Idioms & Phrasal', icon: 'star' },
+    { k: 'listen', t: 'Listening', icon: 'headset' }
   ];
   var chosen = null;
   areas.forEach(function (a) {
@@ -797,9 +873,9 @@ function entry(onclick, title, sub, badge) {
     (sub ? '<span class="rs">' + sub + '</span>' : '') + '</span>' +
     (badge ? '<span class="rb">' + badge + '</span>' : '<span class="rb">&rsaquo;</span>') + '</button>';
 }
-function bankEntry(b) {
+function bankEntry(b, desc) {
   var best = LSget('best', {}), r = getRun(b.key);
-  var sub = b.data.length + ' questions' + (best[b.key] !== undefined ? ' &middot; record ' + best[b.key] + '%' : '');
+  var sub = (desc ? desc + ' &middot; ' : '') + b.data.length + ' questions' + (best[b.key] !== undefined ? ' &middot; record ' + best[b.key] + '%' : '');
   if (r && r.i > 0) sub += ' &middot; <b class="hl">reprise Q' + (r.i + 1) + '</b>';
   return entry("startBank('" + b.key + "')", esc(b.label), sub, '');
 }
@@ -824,7 +900,8 @@ VIEWS.revise = function () {
     big2("go('grammar')", 'book', 'Grammar', 'Tenses, structures and drills', sectionData('grammar').length) +
     big2("go('vocab')", 'speech', 'Vocabulary', 'Vocabulary in context', sectionData('vocab').length) +
     big2("go('idiom')", 'star', 'Idioms &amp; Phrasal', 'Expressions and phrasal verbs', sectionData('idiom').length) +
-    big2("go('test')", 'target', 'Tests', 'Module test and timed practice test', MODULE_TEST.length) +
+    (LISTEN.length ? big2("go('listen')", 'headset', 'Listening', 'Statements, dialogs, conversations, talks', LISTEN.length) : '') +
+    big2("go('test')", 'target', 'Tests', 'Module test, ECL and ALCPT timed exams', MODULE_TEST.length) +
     '</div>';
 
   if (tot) {
@@ -895,15 +972,27 @@ VIEWS.test = function () {
     big2("startBank('t_mod')", 'board', 'Module test',
       'Graded questions' + (best.t_mod !== undefined ? ', record ' + best.t_mod + '%' : '') +
       (r && r.i > 0 ? ', resume at Q' + (r.i + 1) : ''), MODULE_TEST.length) +
-    big2("go('sim')", 'clock', 'ECL practice test', 'Timed, feedback at the end') +
+    big2("go('sim')", 'clock', 'Practice test (timed)', 'ECL and ALCPT exams, quick timed tests') +
     '</div>';
   h += '<div class="note">The module test resumes where you left off. ' +
-    'The practice test is always taken in one sitting, as in the real exam.</div>';
+    'The practice tests are always taken in one sitting, as in the real exam.</div>';
   root.innerHTML = L(h + tabbar('revise'));
 };
 
 VIEWS.sim = function () {
-  var h = bar('ECL practice test');
+  var h = bar('Practice test (timed)');
+  /* Examens complets (v5.9.26) : ecoute puis lecture, minutage reel. */
+  if (LISTEN.length) {
+    var eb = LSget('exam_best', {});
+    h += '<div class="secttl">Full exams, real timing</div><div class="bigmenu sm">' +
+      big2("go('exam','ecl')", 'headset', 'ECL exam',
+        'Listening + reading &middot; ' + EXAMS.ecl.testMin + ' min' +
+        (eb.ecl !== undefined ? ' &middot; best ' + eb.ecl + '%' : '')) +
+      big2("go('exam','alcpt')", 'headset', 'ALCPT exam',
+        'Listening + reading &middot; ' + EXAMS.alcpt.testMin + ' min' +
+        (eb.alcpt !== undefined ? ' &middot; best ' + eb.alcpt + '%' : '')) +
+      '</div><div class="secttl">Quick timed tests</div>';
+  }
   h += '<div class="note">Questions drawn at random from the ' + allQuestions().length +
     ' questions in the app. No feedback during the test: ' +
     'select, confirm, and the full report comes at the end.</div>';
@@ -916,6 +1005,58 @@ VIEWS.sim = function () {
   root.innerHTML = L(h + tabbar('revise'));
 };
 
+
+/* ============================ HUB : ECOUTE (v5.9.26) ===================== */
+VIEWS.listen = function () {
+  var h = bar('Listening');
+  h += '<div class="note">' + LISTEN.length + ' recordings in American English, with a man\'s voice and a woman\'s voice, ' +
+    'as in the ECL and the ALCPT. Each one plays by itself: replay it, slow it down or show its text whenever you need. ' +
+    'After your answer, you see the text and the explanation.</div>';
+  h += '<div class="bigmenu sm">' +
+    big2("quickListen()", 'zap', 'Quick listening', quickN() + ' random recordings') +
+    big2("startAll('listen','Listening - full set')", 'target', 'Full set', 'All the recordings, in a new order', LISTEN.length) +
+    '</div><div class="secttl">By type</div>';
+  ['s', 'r', 'd', 'c', 'k'].forEach(function (k) { var b = BANKS['l_' + k]; if (b) h += bankEntry(b, LKIND_DESC[k]); });
+  h += '<div class="secttl">Timed exams</div>' +
+    entry("go('sim')", 'ECL and ALCPT exams', 'Listening, then reading, with the real timing', '');
+  h += '<div class="note">The man\'s and the woman\'s voices can be changed in <b>Settings &rsaquo; Audio</b>.</div>';
+  root.innerHTML = L(h + tabbar('revise'));
+};
+function quickListen() { launch(null, 'Quick listening', makePool(LISTEN).slice(0, quickN()), false); }
+
+/* ===================== EXAMENS CHRONOMETRES (v5.9.26) ======================
+   Comme les vrais tests : 100 questions, la partie ecoute d'abord (chaque
+   enregistrement une seule fois, un temps de reponse fixe, puis la question
+   suivante arrive seule), la partie lecture ensuite avec son propre
+   chronometre. Aucune correction pendant l'examen ; a la fin, le score par
+   partie et toutes les fautes avec leur explication et le texte entendu.
+     ECL   : 50 ecoute + 50 lecture, environ 65 min (75 min avec les
+             consignes, DLIELC) ; lecture 40 min, 15 s pour repondre.
+     ALCPT : 50 ecoute + 50 lecture, environ 55 min (70 min avec les
+             consignes) ; lecture 35 min, 12 s pour repondre.             */
+var EXAMS = {
+  ecl: { t: 'ecl', name: 'ECL', title: 'ECL timed exam', nL: 50, nR: 50, readMin: 40, win: 15, listenMin: 25, testMin: 65, realMin: 75 },
+  alcpt: { t: 'alcpt', name: 'ALCPT', title: 'ALCPT timed exam', nL: 50, nR: 50, readMin: 35, win: 12, listenMin: 20, testMin: 55, realMin: 70 }
+};
+VIEWS.exam = function (t) {
+  var c = EXAMS[t] || EXAMS.ecl, best = LSget('exam_best', {})[c.t];
+  var h = bar(c.title);
+  h += '<div class="gcard exam-card"><div class="eyebrow">Real exam timing</div>' +
+    '<h3>' + c.name + ': 100 questions in about ' + c.testMin + ' minutes</h3>' +
+    '<ol class="exam-parts">' +
+    '<li><b>Part 1, Listening</b>: ' + c.nL + ' questions, about ' + c.listenMin + ' minutes. Each recording plays <b>once</b>. ' +
+      'When it ends you have ' + c.win + ' seconds to answer, then the next one starts by itself. No going back.</li>' +
+    '<li><b>Part 2, Reading</b>: ' + c.nR + ' questions on grammar, vocabulary and idioms in <b>' + c.readMin + ' minutes</b>.</li></ol>' +
+    '<p class="fr">No feedback during the exam. At the end: your score by part, then every mistake with its explanation ' +
+    'and the text of the recording.</p>' +
+    '<p class="fr">The real ' + c.name + ' takes about ' + c.realMin + ' minutes with the instructions. ' +
+    'Your percentage is a practice result, not an official ' + c.name + ' score.</p>' +
+    (best !== undefined ? '<p class="fr">Your best result: <b>' + best + '%</b></p>' : '') + '</div>';
+  h += audioOK() ? '<div class="note">Use headphones in a quiet place. The voices can be changed in <b>Settings &rsaquo; Audio</b>.</div>'
+    : '<div class="banner bad">No audio on this device: in Part 1 the text of each recording is shown instead.</div>';
+  h += '<div class="navrow"><button class="btn" id="examStart" onclick="startExam(\'' + c.t + '\')">Start the exam</button></div>';
+  root.innerHTML = L(h + tabbar('revise'));
+};
 
 /* ------------------------- RECHERCHE : SAISIE STABLE ---------------------
    Les vues de recherche redessinaient tout l'ecran a chaque lettre tapee.
@@ -984,10 +1125,13 @@ function focusSearch(id, v) {
 }
 
 /* ================================= QUIZ ================================= */
+/* Une question de la serie : choix melanges, bonne reponse retenue, et pour
+   une question d'ecoute ses repliques (L), son numero et son type.       */
+function poolItem(it) {
+  return withListen({ q: it.q, o: shuffle(it.o.slice()), c: it.o[it.a], e: it.e || '' }, it);
+}
 function makePool(data) {
-  return shuffle(data).map(function (it) {
-    return { q: it.q, o: shuffle(it.o.slice()), c: it.o[it.a], e: it.e || '' };
-  });
+  return shuffle(data).map(poolItem);
 }
 function startBank(key) {
   var b = BANKS[key]; if (!b) return;
@@ -1043,7 +1187,8 @@ function simMinutes(n) { return Math.round(n * secPerQ() / 60); }
 function startSim(n, min) {
   var mn = (typeof min === 'number' && min > 0) ? min : simMinutes(n);
   launch(null, 'ECL practice test - ' + n + ' questions', makePool(allQuestions()).slice(0, n), true);
-  S.timeLeft = mn * 60; tick(); S.timerId = setInterval(tick, 1000);
+  /* le chronometre s'affiche tout de suite (avant : apres une seconde) */
+  S.timeLeft = mn * 60; S.timerId = setInterval(tick, 1000); paintTimer();
 }
 function resumeRun(key) {
   var r = getRun(key); if (!r) return;
@@ -1051,6 +1196,7 @@ function resumeRun(key) {
   S.sim = false; S.locked = false; S.simSel = -1; S.reviewMode = false; S.lastGood = false;
   S.runAnswered = 0; S.runCorrect = 0;
   S.answers = r.a || []; S.listenUsed = false;
+  S.exam = null; S.partScore = { L: 0, R: 0 }; S.lrev = {};
   S.view = 'quiz'; adScreen('normal'); renderQ();
 }
 function askResume(key, title, r) {
@@ -1068,62 +1214,316 @@ function restartBank(key) {
   if (BANKS[key]) launch(key, BANKS[key].label, makePool(BANKS[key].data), false);
   else { var sec = key.slice(4); launch(key, 'Full set', makePool(sectionData(sec)), false); }
 }
-function launch(key, title, pool, sim) {
+function launch(key, title, pool, sim, exam) {
   stopSpeak(); if (key) clearRun(key);
+  clearTimer();
   S.key = key; S.title = title; S.pool = pool; S.idx = 0; S.score = 0; S.wrongs = [];
   S.locked = false; S.sim = !!sim; S.simSel = -1; S.paused = false;
   S.lastGood = false; S.shareData = null; S.runAnswered = 0; S.runCorrect = 0;
   S.answers = [];        // etat par question en entrainement (pour revenir en arriere)
   S.listenUsed = false;  // l'utilisateur a-t-il demande la lecture audio ?
+  S.exam = exam || null; // examen chronometre ECL / ALCPT (v5.9.26)
+  S.partScore = { L: 0, R: 0 };
+  S.lrev = {};           // textes d'ecoute affiches avant la reponse
   if (VIEWS[S.view]) NAV.push({ v: S.view, a: S.viewArg });
   S.view = 'quiz';
   adScreen(sim ? 'sim' : 'normal');
+  if (!sim && pool[0] && pool[0].L) track('listening_start', { set: String(title || '').slice(0, 60) });
   renderQ();
   window.scrollTo(0, 0);
 }
 
-function clearTimer() { if (S.timerId) { clearInterval(S.timerId); S.timerId = null; } }
+/* ------------------------------ examens --------------------------------- */
+/* Partie ecoute : des questions de chaque type, dans l'ordre des vrais tests
+   (enonces et questions courtes, puis dialogues, conversations, annonces). */
+function examListening(n) {
+  var share = { s: 0.3, r: 0.24, d: 0.28, c: 0.1, k: 0.08 }, order = ['s', 'r', 'd', 'c', 'k'];
+  var byK = {}, all = [], want = {}, tot = 0;
+  LISTEN.forEach(function (x) { (byK[x.k] = byK[x.k] || []).push(x); });
+  order.forEach(function (k) { want[k] = Math.round(n * share[k]); tot += want[k]; });
+  want.s += n - tot;
+  order.forEach(function (k) { all = all.concat(shuffle(byK[k] || []).slice(0, Math.max(0, want[k]))); });
+  if (all.length < n) {
+    all = all.concat(shuffle(LISTEN.filter(function (x) { return all.indexOf(x) < 0; })).slice(0, n - all.length));
+  }
+  var out = shuffle(all.filter(function (x) { return x.k === 's' || x.k === 'r'; }));
+  ['d', 'c', 'k'].forEach(function (k) { out = out.concat(shuffle(all.filter(function (x) { return x.k === k; }))); });
+  out = out.concat(all.filter(function (x) { return order.indexOf(x.k) < 0; }));
+  return out.slice(0, n).map(function (x) { var p = poolItem(x); p.part = 'L'; return p; });
+}
+/* Partie lecture : moitie grammaire, 30 % vocabulaire, 20 % idiomes. */
+function examReading(n) {
+  var ng = Math.round(n * 0.5), nv = Math.round(n * 0.3), ni = n - ng - nv;
+  var pick = shuffle(sectionData('grammar')).slice(0, ng)
+    .concat(shuffle(sectionData('vocab')).slice(0, nv), shuffle(sectionData('idiom')).slice(0, ni));
+  if (pick.length < n) {
+    pick = pick.concat(shuffle(allQuestions().filter(function (x) { return pick.indexOf(x) < 0; })).slice(0, n - pick.length));
+  }
+  return shuffle(pick).slice(0, n).map(function (x) { var p = poolItem(x); p.part = 'R'; return p; });
+}
+function startExam(t) {
+  var c = EXAMS[t]; if (!c) return;
+  if (!LISTEN.length) { toast('The listening questions are missing'); return; }
+  var Lp = examListening(c.nL), Rp = examReading(c.nR);
+  var ex = { t: c.t, name: c.name, nL: Lp.length, nR: Rp.length, readMin: c.readMin, win: c.win,
+    part: Lp.length ? 'L' : 'R', start: nowMs() };
+  launch(null, c.title, Lp.concat(Rp), true, ex);
+  if (ex.part === 'R') { S.timeLeft = c.readMin * 60; ex.endAt = nowMs() + S.timeLeft * 1000; S.timerId = setInterval(tick, 1000); paintTimer(); }
+  track('exam_start', { exam: c.t });
+}
+
+/* Ecoute en examen : l'enregistrement une fois, puis le temps de reponse,
+   puis la question suivante. EX.gen perime toute suite restee en vol. */
+var EX = { timer: null, gen: 0 };
+function examClear() { if (EX.timer) { clearInterval(EX.timer); EX.timer = null; } }
+function examStop() { EX.gen++; examClear(); }
+function examStatus(t) { var st = document.getElementById('lcSt'); if (st) st.textContent = t; }
+function examBar(f, on) {
+  var w = document.getElementById('lcTime'), b = document.getElementById('lcBar');
+  if (w) w.classList.toggle('on', !!on);
+  if (b) b.style.width = (Math.round(Math.max(0, Math.min(1, f)) * 1000) / 10) + '%';
+}
+function examItemStart() {
+  examStop();
+  var gen = EX.gen, q = S.pool[S.idx];
+  if (!S.exam || S.exam.part !== 'L' || !q || !q.L || S.view !== 'quiz') return;
+  if (S.paused) { examStatus('Paused. Tap Resume to hear the recording again.'); return; }
+  examBar(1, false);
+  if (!audioOK()) {
+    examStatus('Read the text, then answer.');
+    examWindow(gen, S.exam.win + Math.min(25, Math.round(lLines(q.L).join(' ').length / 14)));
+    return;
+  }
+  examStatus('Get ready…');
+  setTimeout(function () {
+    if (gen !== EX.gen || S.paused || S.view !== 'quiz') return;
+    examStatus('Listen…');
+    lSay(q.L, function () { if (gen === EX.gen && !S.paused) examWindow(gen, S.exam.win); });
+  }, 700);
+}
+function examWindow(gen, secs) {
+  examClear();
+  if (gen !== EX.gen || !S.exam) return;
+  var end = nowMs() + secs * 1000;
+  examStatus('Answer now: ' + secs + ' s');
+  examBar(1, true);
+  EX.timer = setInterval(function () {
+    if (gen !== EX.gen || !S.exam || S.view !== 'quiz') { examClear(); return; }
+    var left = (end - nowMs()) / 1000;
+    examBar(left / secs, true);
+    examStatus('Answer now: ' + Math.max(0, Math.ceil(left)) + ' s');
+    if (left <= 0) { examClear(); nextQ(); }
+  }, 200);
+}
+/* Pause (bouton, appel, application en arriere-plan) : a la reprise,
+   l'enregistrement repart du debut, avec un temps de reponse complet. */
+function examPause(silent) {
+  if (!S.exam || S.exam.part !== 'L' || S.paused) return;
+  S.paused = true;
+  examStop(); stopSpeak();
+  examStatus('Paused. Tap Resume to hear the recording again.');
+  examBar(1, false);
+  paintTimer();
+  if (!silent) toast('Exam paused');
+}
+function examResume() {
+  if (!S.exam || !S.paused) return;
+  S.paused = false;
+  paintTimer();
+  if (S.exam.part === 'L') { toast('The recording starts again'); examItemStart(); }
+}
+function examAway() {
+  if (S.view === 'quiz' && S.exam && S.exam.part === 'L' && !S.paused) examPause(true);
+}
+/* Fin de la partie ecoute : un ecran de transition, puis la lecture avec
+   son chronometre, lance par l'utilisateur. */
+function examBreak() {
+  examStop(); stopSpeak();
+  var ex = S.exam;
+  ex.part = 'break'; S.paused = false;
+  var h = bar(S.title, '', 'quitQuiz()');
+  h += '<div class="pill"><div class="bar" style="width:' + pct(S.idx, S.pool.length) + '%"></div></div>';
+  h += '<div class="gcard exam-break"><div class="eyebrow">Part 1 is over</div>' +
+    '<h3>Part 2: Reading</h3>' +
+    '<p class="fr">' + ex.nR + ' questions on grammar, vocabulary and idioms in <b>' + ex.readMin + ' minutes</b>. ' +
+    'Choose an answer, then press <b>Next</b>: you can change your choice until you move on. ' +
+    'The clock starts when you press the button and does not stop, as in the real test.</p>' +
+    '<div class="navrow"><button class="btn" id="examGo" onclick="examStartReading()">Start Part 2</button></div></div>' +
+    '<div class="navrow"><button class="btn ghost" onclick="quitQuiz()">Give up</button></div>';
+  root.innerHTML = L(h);
+  window.scrollTo(0, 0);
+}
+function examStartReading() {
+  if (!S.exam || S.exam.part !== 'break') return;
+  S.exam.part = 'R'; S.paused = false;
+  clearTimer();
+  S.timeLeft = S.exam.readMin * 60;
+  S.exam.endAt = nowMs() + S.timeLeft * 1000;
+  S.timerId = setInterval(tick, 1000);
+  renderQ();
+  window.scrollTo(0, 0);
+}
+
+function clearTimer() { if (S.timerId) { clearInterval(S.timerId); S.timerId = null; } examStop(); }
 function tick() {
-  if (S.paused) return;
-  S.timeLeft--; paintTimer();
+  if (S.exam && S.exam.part === 'R' && S.exam.endAt) {
+    /* examen : l'horloge suit l'heure reelle (onglet en arriere-plan,
+       telephone en veille : le temps passe comme dans la salle d'examen) */
+    S.timeLeft = Math.max(0, Math.ceil((S.exam.endAt - nowMs()) / 1000));
+  } else {
+    if (S.paused) return;
+    S.timeLeft--;
+  }
+  paintTimer();
   if (S.timeLeft <= 0) { clearTimer(); finish(true); }
 }
 function paintTimer() {
   var el = document.getElementById('tbRight');
-  if (el && S.timerId) {
+  if (!el) return;
+  if (S.exam && S.exam.part === 'L' && S.view === 'quiz') {
+    el.innerHTML = '<button class="timer' + (S.paused ? ' low' : '') + '" id="examPauseBtn" onclick="togglePause()">' +
+      (S.paused ? '▸ Resume' : '❚❚ Pause') + '</button>';
+    return;
+  }
+  if (S.timerId) {
     var m = Math.floor(S.timeLeft / 60), s = S.timeLeft % 60;
     el.innerHTML = '<button class="timer' + (S.timeLeft < 60 ? ' low' : '') + '" onclick="togglePause()">' +
-      (S.paused ? '\u25B8 ' : '') + m + ':' + (s < 10 ? '0' : '') + s + '</button>';
+      (S.paused ? '▸ ' : '') + m + ':' + (s < 10 ? '0' : '') + s + '</button>';
   }
 }
 function togglePause() {
+  if (S.exam && S.exam.part === 'L') { if (S.paused) examResume(); else examPause(); return; }
+  if (S.exam) { toast('The exam clock does not stop, as in the real test'); return; }
   if (!S.timerId) return;
   S.paused = !S.paused; paintTimer();
   toast(S.paused ? 'Test paused' : 'Timer resumed');
 }
 function quitQuiz() {
   if (S.sim && S.idx < S.pool.length - 1) {
-    if (!confirm('Give up the practice test? Your result will not be saved.')) return;
+    var listening = S.exam && S.exam.part === 'L' && !S.paused;
+    if (listening) examPause(true);
+    if (!confirm(S.exam ? 'Give up the exam? Your result will not be saved.'
+                        : 'Give up the practice test? Your result will not be saved.')) {
+      if (listening) examResume();
+      return;
+    }
   }
+  examStop(); S.exam = null; S.paused = false;
   saveRun(); clearTimer(); stopSpeak(); adScreen('normal'); back();
 }
+
+/* ------------------------- questions d'ecoute ---------------------------- */
+function lLines(L) { return L.map(function (l) { return l[1]; }); }
+function lRoles(L) { return L.map(function (l) { return l[0] === 'W' ? 'W' : 'M'; }); }
+/* Lit les repliques avec la voix de l'homme et celle de la femme, une
+   courte pause entre deux personnes ; slow = un peu plus lentement. */
+function lSay(L, cb, slow) {
+  var o = { roles: lRoles(L), gap: 450 };
+  if (slow) o.rateMul = 0.8;
+  speakThen(lLines(L), cb || null, o);
+}
+function transcriptHtml(L) {
+  var who = { M: 'Man', W: 'Woman' };
+  return L.map(function (l) {
+    var w = l[0] === 'W' ? 'W' : 'M';
+    return '<p><b class="lsp ' + w.toLowerCase() + '">' + who[w] + ':</b> ' + esc(l[1]) + '</p>';
+  }).join('');
+}
+/* Carte d'ecoute au-dessus de la question. Entrainement : Play / Replay,
+   Slower, « Show the text ». Examen : un passage, puis le temps de reponse. */
+function listenCard(q) {
+  var ex = !!S.exam, a = audioOK();
+  var answered = !S.sim && S.answers && S.answers[S.idx];
+  var open = !a || (!ex && (answered || (S.lrev && S.lrev[S.idx])));
+  var h = '<div class="lcard' + (ex ? ' lc-exam' : '') + '" id="lcard">' +
+    '<div class="lc-top"><span class="lc-ic">' + ico('headset') + '</span>' +
+    '<span class="lc-k">' + esc(LKIND_ONE[q.k] || 'Listening') + '</span>' +
+    '<span class="lc-st" id="lcSt">' + (a ? (ex ? 'The recording plays once.' : 'Listen, then answer.') : 'No audio here: read the text.') + '</span></div>';
+  if (ex) h += '<div class="lc-time" id="lcTime" aria-hidden="true"><i id="lcBar"></i></div>';
+  else {
+    h += '<div class="lc-btns">' +
+      (a ? '<button class="btn lc-b" id="listenBtn" onclick="lToggle()">' + ico('play', 'inl') + ' <span id="lcPlayT">Play</span></button>' +
+           '<button class="btn ghost lc-b" id="lcSlow" onclick="lPlay(true)">' + ico('slow', 'inl') + ' Slower</button>' : '') +
+      '<button class="btn ghost lc-b" id="lcRev" onclick="lReveal()"' + (open ? ' hidden' : '') + '>' +
+      ico('eye', 'inl') + ' Show the text</button></div>';
+  }
+  h += '<div class="lc-tx" id="lcTx"' + (open ? '' : ' hidden') + '>' + transcriptHtml(q.L) + '</div></div>';
+  return h;
+}
+var LP = { on: false };
+var RQ_TOKEN = 0;           // chaque affichage de question perime les lectures programmees
+function lPaint(on) {
+  LP.on = !!on;
+  var b = document.getElementById('listenBtn');
+  if (b) {
+    b.innerHTML = ico(on ? 'stop' : 'play', 'inl') + ' <span id="lcPlayT">' + (on ? 'Stop' : 'Replay') + '</span>';
+    b.classList.toggle('on', !!on);
+  }
+  if (!S.exam) {
+    var st = document.getElementById('lcSt');
+    if (st) st.textContent = on ? 'Playing…' : (S.locked ? 'Replay it as often as you like.' : 'Listen, then answer.');
+  }
+}
+/* bouton Play / Stop */
+function lToggle() {
+  if (LP.on) { stopSpeak(); lPaint(false); return; }
+  lPlay(false, null);
+}
+/* (re)lance l'enregistrement depuis le debut ; slow = plus lentement */
+function lPlay(slow, cb) {
+  var q = S.pool[S.idx];
+  if (!q || !q.L || S.exam || S.view !== 'quiz') return;
+  if (!audioOK()) { lReveal(); return; }
+  var idx = S.idx;
+  lPaint(true);
+  lSay(q.L, function () { if (S.idx === idx) lPaint(false); if (cb) cb(); }, !!slow);
+}
+function lReveal(auto) {
+  var tx = document.getElementById('lcTx'), b = document.getElementById('lcRev');
+  if (tx) tx.hidden = false;
+  if (b) b.hidden = true;
+  if (!auto && S.lrev) S.lrev[S.idx] = 1;
+}
+/* Affichage d'une question d'ecoute : en entrainement, l'enregistrement
+   part tout seul (sauf si la question a deja ete traitee) ; en examen,
+   le deroulement minute commence. */
+function lStart() {
+  var q = S.pool[S.idx];
+  if (!q || !q.L || S.view !== 'quiz') return;
+  if (S.exam) { examItemStart(); return; }
+  if (AD_OPEN || APP_PAUSED || document.hidden || !audioOK()) return;
+  if (S.answers && S.answers[S.idx]) { if (autoOn()) autoStartQuestion(); return; }
+  if (!LP.on) lPlay(false, null);          // deja lance par l'utilisateur : on ne relance pas
+}
+function revPlay(i) { var w = S.wrongs[i]; if (w && w.L && audioOK()) lSay(w.L, null); }
 
 var LETTERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 function renderQ() {
   var q = S.pool[S.idx];
+  if (!q) return;
+  if (S.exam && S.exam.part === 'break') { examBreak(); return; }
+  var ex = S.exam, isL = !!q.L, tok = ++RQ_TOKEN;
+  LP.on = false;
   var h = bar(S.title, S.sim ? '' : '<span class="pts">' + S.score + ' pt</span>', 'quitQuiz()');
   h += '<div class="pill"><div class="bar" style="width:' + pct(S.idx, S.pool.length) + '%"></div></div>';
-  h += '<div class="qmeta"><span>Question <b>' + (S.idx + 1) + '</b> / ' + S.pool.length + '</span>' +
-    '<span>' + (S.sim ? 'Feedback at the end' : 'Immediate feedback') + '</span></div>';
+  if (ex) {
+    var inL = q.part === 'L', base = inL ? 0 : ex.nL;
+    h += '<div class="qmeta"><span>' + (inL ? 'Part 1 &middot; Listening' : 'Part 2 &middot; Reading') + '</span>' +
+      '<span>Question <b>' + (S.idx - base + 1) + '</b> / ' + (inL ? ex.nL : ex.nR) + '</span></div>';
+  } else {
+    h += '<div class="qmeta"><span>Question <b>' + (S.idx + 1) + '</b> / ' + S.pool.length + '</span>' +
+      '<span>' + (S.sim ? 'Feedback at the end' : 'Immediate feedback') + '</span></div>';
+  }
 
-  h += '<div class="qbox"><div class="qtext">' + fmt(q.q) + '</div><div class="qtools">' +
-    (audioOK() ? '<button class="chip auto' + (autoOn() ? ' on' : ' off') + '" id="autoBtn" ' +
+  h += '<div class="qbox' + (isL ? ' lq' : '') + '">' + (isL ? listenCard(q) : '') +
+    '<div class="qtext">' + fmt(q.q) + '</div><div class="qtools">' +
+    (audioOK() && !ex ? '<button class="chip auto' + (autoOn() ? ' on' : ' off') + '" id="autoBtn" ' +
       'onclick="toggleAuto()" aria-pressed="' + (autoOn() ? 'true' : 'false') +
       '" aria-label="Automatic reading">' +
       ico(autoOn() ? 'sound' : 'soundoff', 'inl') + ' Auto</button>' : '') +
-    (audioOK() ? '<button class="chip" id="listenBtn" onclick="listenQuestion()">' +
+    (audioOK() && !isL && !ex ? '<button class="chip" id="listenBtn" onclick="listenQuestion()">' +
       ico('sound', 'inl') + ' Listen</button>' : '') +
-    '<button class="chip star' + (isFav(q.q) ? ' on' : '') + '" id="favBtn" onclick="favCurrent()">' +
+    '<button class="chip star' + (isFav(q.q, q.id) ? ' on' : '') + '" id="favBtn" onclick="favCurrent()">' +
     ico('star', 'inl') + ' Favourite</button></div></div>';
 
   h += '<div class="opts">';
@@ -1134,6 +1534,8 @@ function renderQ() {
   h += '</div><div id="fb"></div>';
   // Barre de navigation. En entrainement, un bouton « Previous » permet de
   // revenir revoir les questions deja traitees (jamais en simulation).
+  // En examen, partie ecoute : « Next » attend qu'une reponse soit choisie
+  // (sinon la question suivante arrive seule a la fin du temps).
   h += '<div class="navrow' + (!S.sim ? ' three' : '') + '">';
   if (!S.sim) {
     h += '<button class="btn ghost" id="prevBtn" onclick="prevQ()"' +
@@ -1141,7 +1543,7 @@ function renderQ() {
   }
   h += '<button class="btn ghost" onclick="quitQuiz()">' +
     (S.sim ? 'Give up' : 'Quit') + '</button>' +
-    '<button class="btn" id="nextBtn" onclick="nextQ()"' + (S.sim ? '' : ' disabled') + '>' +
+    '<button class="btn" id="nextBtn" onclick="nextQ()"' + ((S.sim && !(ex && isL)) ? '' : ' disabled') + '>' +
     (S.idx === S.pool.length - 1 ? 'Finish' : 'Next &rsaquo;') + '</button></div>';
   root.innerHTML = L(h);
   paintTimer();
@@ -1149,9 +1551,11 @@ function renderQ() {
   // Rejoue l'etat d'une question deja repondue quand on y revient.
   if (!S.sim && S.answers && S.answers[S.idx]) restoreAnswered();
 
-  /* Lecture automatique : on la declenche apres l'affichage, pour que la
-     voix suive ce que l'utilisateur a sous les yeux. */
-  if (autoOn() && audioOK()) setTimeout(autoStartQuestion, 120);
+  /* Lecture : l'enregistrement d'une question d'ecoute ; sinon, en lecture
+     automatique, l'enonce et les choix. On la declenche apres l'affichage,
+     pour que la voix suive ce que l'utilisateur a sous les yeux. */
+  if (isL) setTimeout(function () { if (tok === RQ_TOKEN) lStart(); }, ex ? 0 : 350);
+  else if (autoOn() && audioOK() && !ex) setTimeout(autoStartQuestion, 120);
 }
 /* Un utilisateur peut avoir demande la lecture : on la memorise pour que la
    validation declenche automatiquement la lecture de la reponse.            */
@@ -1162,15 +1566,27 @@ function listenQuestion() {
 function favCurrent() {
   var q = S.pool[S.idx];
   var src = [q.c].concat(q.o.filter(function (o) { return o !== q.c; }));
-  var on = toggleFav(q.q, src, 0, q.e);
+  var on = toggleFav(q.q, src, 0, q.e, q);
   var el = document.getElementById('favBtn');
   if (el) { el.className = 'chip star' + (on ? ' on' : ''); }
 }
+/* Fiche d'une faute (ecran de resultats, « Retry my mistakes »). */
+function wrongOf(q, your) {
+  var w = { q: q.q, your: your, c: q.c, e: q.e };
+  if (q.part) w.p = q.part;
+  if (q.L) { withListen(w, q); w.o = q.o.slice(); }
+  return w;
+}
 function pick(i) {
   var q = S.pool[S.idx];
+  if (!q || (S.exam && S.exam.part === 'break')) return;
   if (S.sim) {
     S.simSel = i;
-    q.o.forEach(function (o, j) { document.getElementById('opt' + j).className = 'opt' + (j === i ? ' sel' : ''); });
+    q.o.forEach(function (o, j) {
+      var el = document.getElementById('opt' + j);
+      if (el) el.className = 'opt' + (j === i ? ' sel' : '');
+    });
+    var nb = document.getElementById('nextBtn'); if (nb) nb.disabled = false;
     buzz(8);
     return;
   }
@@ -1182,14 +1598,15 @@ function pick(i) {
   if (good) S.runCorrect = (S.runCorrect || 0) + 1;
   paintAnswered(i, good);
   if (good) { S.score++; buzz(10); }
-  else { S.wrongs.push({ q: q.q, your: q.o[i], c: q.c, e: q.e }); buzz([18, 60, 18]); }
+  else { S.wrongs.push(wrongOf(q, q.o[i])); buzz([18, 60, 18]); }
   adCountAnswer(1);
-  boxPromote(q.q, good);
-  if (!good) boxAdd(q.q, [q.c].concat(q.o.filter(function (o) { return o !== q.c; })), 0, q.e);
+  boxPromote(q.q, good, q.id);
+  if (!good) boxAdd(q.q, [q.c].concat(q.o.filter(function (o) { return o !== q.c; })), 0, q.e, q);
   addAnswered(1);
   // Memorise l'etat pour pouvoir revenir sur cette question.
   S.answers[S.idx] = { picked: i, good: good };
   showVerdict(good, q);
+  if (q.L) { lReveal(true); if (!LP.on) lPaint(false); }   // le texte entendu, apres la reponse
   document.getElementById('nextBtn').disabled = false;
 
   /* Mode automatique : on lit la correction, puis on passe seul a la
@@ -1234,6 +1651,7 @@ function restoreAnswered() {
   S.locked = true;
   paintAnswered(a.picked, a.good);
   showVerdict(a.good, S.pool[S.idx]);
+  if (S.pool[S.idx].L) lReveal(true);
   var nb = document.getElementById('nextBtn'); if (nb) nb.disabled = false;
 }
 /* Revenir a la question precedente (entrainement seulement). */
@@ -1245,33 +1663,45 @@ function prevQ() {
   renderQ();
   window.scrollTo(0, 0);
 }
+/* Note d'une question de test chronometre ou d'examen (choix retenu). */
+function simGrade(q) {
+  var sel = (S.simSel >= 0) ? q.o[S.simSel] : null;
+  var ok = (sel === q.c);
+  S.lastGood = ok;
+  if (ok) { S.score++; if (q.part && S.partScore) S.partScore[q.part] = (S.partScore[q.part] || 0) + 1; }
+  else S.wrongs.push(wrongOf(q, sel || '(no answer)'));
+  boxPromote(q.q, ok, q.id);
+  if (!ok && sel) boxAdd(q.q, [q.c].concat(q.o.filter(function (o) { return o !== q.c; })), 0, q.e, q);
+  addAnswered(1);
+  S.simSel = -1;
+}
 function nextQ() {
   var q = S.pool[S.idx];
-  if (S.sim) {
-    var sel = (S.simSel >= 0) ? q.o[S.simSel] : null;
-    var ok = (sel === q.c);
-    S.lastGood = ok;
-    if (ok) S.score++; else S.wrongs.push({ q: q.q, your: sel || '(no answer)', c: q.c, e: q.e });
-    boxPromote(q.q, ok);
-    if (!ok && sel) boxAdd(q.q, [q.c].concat(q.o.filter(function (o) { return o !== q.c; })), 0, q.e);
-    addAnswered(1);
-    S.simSel = -1;
-  }
+  if (!q || (S.exam && S.exam.part === 'break')) return;
+  if (S.sim) { examStop(); simGrade(q); }
   stopSpeak();
   if (S.idx >= S.pool.length - 1) { finish(false); return; }
   if (!reviewDuringRun()) adDuringRun();   // fenetre d'avis OU annonce, jamais les deux
   S.idx++;
   S.listenUsed = false;                                   // remise a zero par question
   S.locked = !!(!S.sim && S.answers && S.answers[S.idx]); // deja repondue ?
+  if (S.exam && q.part === 'L' && S.pool[S.idx].part !== 'L') { examBreak(); return; }
   renderQ(); saveRun();
   window.scrollTo(0, 0);
 }
 function finish(timeout) {
   clearTimer(); stopSpeak();
   if (S.sim) adCountAnswer(S.pool.length);   // epreuve chronometree : comptee d'un bloc
-  if (timeout) for (var j = S.idx; j < S.pool.length; j++)
-    S.wrongs.push({ q: S.pool[j].q, your: '(time up)', c: S.pool[j].c, e: S.pool[j].e });
-  S.retry = S.wrongs.map(function (w) { return { q: w.q, o: [w.c].concat(distract(w)), a: 0, e: w.e }; });
+  if (timeout) {
+    /* temps ecoule : le choix deja fait sur la question affichee compte */
+    var j0 = S.idx;
+    if (S.sim && S.simSel >= 0 && S.pool[S.idx]) { simGrade(S.pool[S.idx]); j0 = S.idx + 1; }
+    for (var j = j0; j < S.pool.length; j++) S.wrongs.push(wrongOf(S.pool[j], '(time up)'));
+  }
+  S.retry = S.wrongs.map(function (w) {
+    if (w.L) return withListen({ q: w.q, o: [w.c].concat((w.o || []).filter(function (o) { return o !== w.c; })), a: 0, e: w.e }, w);
+    return { q: w.q, o: [w.c].concat(distract(w)), a: 0, e: w.e };
+  });
 
   var p = pct(S.score, S.pool.length);
   if (S.key) {
@@ -1279,13 +1709,19 @@ function finish(timeout) {
     var best = LSget('best', {});
     if (best[S.key] === undefined || best[S.key] < p) { best[S.key] = p; LSset('best', best); }
   }
+  if (S.exam) {
+    S.exam.end = nowMs();
+    var eb = LSget('exam_best', {});
+    if (eb[S.exam.t] === undefined || eb[S.exam.t] < p) { eb[S.exam.t] = p; LSset('exam_best', eb); }
+    track('exam_complete', { exam: S.exam.t, score: p, listening: pct(S.partScore.L, S.exam.nL), reading: pct(S.partScore.R, S.exam.nR), time_up: timeout ? 1 : 0 });
+  } else if (S.sim) track('test_complete', { questions: S.pool.length, score: p, time_up: timeout ? 1 : 0 });
   var hist = LSget('hist', []);
   hist.unshift({ d: nowMs(), n: S.title, p: p, q: S.pool.length, s: S.sim ? 1 : 0 });
   LSset('hist', hist.slice(0, 60));
 
   S.view = 'result';
   adScreen('normal');
-  S.shareData = S.sim ? { score: S.score, total: S.pool.length, pct: p, at: nowMs() } : null;
+  S.shareData = S.sim ? { score: S.score, total: S.pool.length, pct: p, at: nowMs(), kind: S.exam ? S.exam.name : 'ECL' } : null;
   renderResult(timeout);
   /* Demande d'avis Google Play : elle prend la place de l'annonce de fin de
      serie, jamais les deux ensemble (Google demande que rien ne recouvre sa
@@ -1301,6 +1737,24 @@ function distract(w) {
     return src[i].o.filter(function (o) { return o !== w.c; });
   return [];
 }
+/* Examen : le score de chaque partie. */
+function examReport() {
+  var ex = S.exam, sc = S.partScore || { L: 0, R: 0 };
+  function row(lbl, s, n) {
+    var q = pct(s, n);
+    return '<div class="prow"><span class="pn">' + lbl + '</span><span class="pbar"><i style="width:' + q + '%"></i></span>' +
+      '<span class="pv">' + s + ' / ' + n + '</span></div>';
+  }
+  var mins = Math.max(1, Math.round(((ex.end || nowMs()) - ex.start) / 60000));
+  var pl = pct(sc.L, ex.nL), pr = pct(sc.R, ex.nR), tip = '';
+  if (ex.nL && ex.nR && pl + 10 <= pr) tip = ' Listening is your weaker part: practice it in <b>Listening</b>, then take the exam again.';
+  else if (ex.nL && ex.nR && pr + 10 <= pl) tip = ' Reading is your weaker part: work on grammar and vocabulary, then take the exam again.';
+  return '<div class="gcard exam-rep"><h3>' + esc(ex.name) + ' exam: score by part</h3>' +
+    (ex.nL ? row('Part 1 &middot; Listening', sc.L, ex.nL) : '') +
+    (ex.nR ? row('Part 2 &middot; Reading', sc.R, ex.nR) : '') +
+    '<p class="fr">Time: about ' + mins + ' minute' + (mins > 1 ? 's' : '') + '. ' +
+    'A practice result in percent, not an official ' + esc(ex.name) + ' score.' + tip + '</p></div>';
+}
 function renderResult(timeout) {
   var n = S.pool.length, p = pct(S.score, n), v;
   v = p >= 85 ? 'Excellent. Solid level for the ECL.'
@@ -1312,6 +1766,7 @@ function renderResult(timeout) {
     '<div class="score-ring">' + ring(p) + '<span class="score-big">' + p + '<small>%</small></span></div>' +
     '<div class="score-sub">' + S.score + ' / ' + n + ' correct answers</div>' +
     '<div class="score-verdict">' + v + '</div></div>';
+  if (S.exam) h += examReport();
   /* Partage du score : epreuve chronometree uniquement, et seulement si le
      plugin de partage est installe. */
   if (S.sim && S.shareData && shareAvailable()) {
@@ -1329,8 +1784,13 @@ function renderResult(timeout) {
     '<button class="btn ghost" onclick="goTab(\'home\')">Home</button></div>';
   if (S.wrongs.length) {
     h += '<div class="secttl">To review</div>';
-    S.wrongs.forEach(function (w) {
-      h += '<div class="rev"><div class="rq">' + fmt(w.q) + '</div>' +
+    S.wrongs.forEach(function (w, i) {
+      h += '<div class="rev' + (w.L ? ' rev-l' : '') + '">' +
+        (S.exam && w.p ? '<div class="rev-part">' + (w.p === 'L' ? 'Listening' : 'Reading') + '</div>' : '') +
+        (w.L ? '<div class="rev-tx">' + transcriptHtml(w.L) +
+          (audioOK() ? '<button class="chip mini" onclick="revPlay(' + i + ')">' + ico('sound', 'inl') + ' Listen again</button>' : '') +
+          '</div>' : '') +
+        '<div class="rq">' + fmt(w.q) + '</div>' +
         '<div class="ra"><span class="no">Your answer: ' + fmt(w.your) + '</span><br>' +
         '<span class="yes">Correct answer: ' + fmt(w.c) + '</span></div>' +
         (w.e ? '<div class="re">' + fmt(w.e) + '</div>' : '') + '</div>';
@@ -1536,7 +1996,7 @@ function shareApi() {
 }
 function shareAvailable() { return !!shareApi(); }
 function shareText(d) {
-  return 'I scored ' + d.score + '/' + d.total + ' on an ECL practice test. ' +
+  return 'I scored ' + d.score + '/' + d.total + ' on an ' + (d.kind || 'ECL') + ' practice test. ' +
     '1,900+ explained questions, read aloud, works offline: ' + SHARE_URL;
 }
 var shareBusy = false;
@@ -1556,7 +2016,7 @@ function shareScore() {
   scoreCard(d, function (uri) {
     var opt = {
       message: shareText(d),
-      subject: 'My ECL practice test score',   // sert aussi de nom au fichier image
+      subject: 'My ' + (d.kind || 'ECL') + ' practice test score',   // sert aussi de nom au fichier image
       chooserTitle: 'Share your score'
     };
     if (uri) opt.files = [uri];
@@ -1636,7 +2096,7 @@ function drawCard(d, logo) {
   /* Libelle */
   g.textAlign = 'center';
   g.fillStyle = MUT; g.font = '600 30px ' + SANS;
-  cardSpacing(g, '8px'); g.fillText('ECL PRACTICE TEST', cx, 336); cardSpacing(g, '0px');
+  cardSpacing(g, '8px'); g.fillText((d.kind || 'ECL') + ' PRACTICE TEST', cx, 336); cardSpacing(g, '0px');
 
   /* Anneau de score */
   var cy = 575, R = 180;
@@ -1767,12 +2227,12 @@ VIEWS.progress = function () {
     'goal ' + goalTarget() + ' per day &middot; ' + streakDays() + ' day' + (streakDays() === 1 ? '' : 's') + ' in a row</p></div>';
 
   /* precision par domaine */
-  var sec = { grammar: [0, 0], vocab: [0, 0], idiom: [0, 0], test: [0, 0] };
+  var sec = { grammar: [0, 0], vocab: [0, 0], idiom: [0, 0], listen: [0, 0], test: [0, 0] };
   Object.keys(best).forEach(function (k) {
-    var b = BANKS[k]; if (!b) return;
+    var b = BANKS[k]; if (!b || !sec[b.section]) return;
     sec[b.section][0] += best[k]; sec[b.section][1]++;
   });
-  var names = { grammar: 'Grammar', vocab: 'Vocabulary', idiom: 'Idioms', test: 'Tests' };
+  var names = { grammar: 'Grammar', vocab: 'Vocabulary', idiom: 'Idioms', listen: 'Listening', test: 'Tests' };
   var rows = '';
   Object.keys(sec).forEach(function (s) {
     if (!sec[s][1]) return;
@@ -1789,8 +2249,10 @@ VIEWS.progress = function () {
       '<button class="btn" onclick="goTab(\'revise\')">Get started</button></div>';
   } else {
     h += '<div class="secttl">Best scores</div><div class="gcard">';
+    var ALL_LBL = { all_grammar: 'Grammar - full set', all_vocab: 'Vocabulary - full set',
+      all_idiom: 'Idioms & Phrasal - full set', all_listen: 'Listening - full set' };
     keys.forEach(function (k) {
-      var lbl = BANKS[k] ? BANKS[k].label : 'Full set';
+      var lbl = BANKS[k] ? (BANKS[k].section === 'listen' ? 'Listening: ' : '') + BANKS[k].label : (ALL_LBL[k] || 'Full set');
       h += '<div class="prow"><span class="pn">' + esc(lbl) + '</span>' +
         '<span class="pbar"><i style="width:' + best[k] + '%"></i></span>' +
         '<span class="pv">' + best[k] + '%</span></div>';
@@ -1799,7 +2261,7 @@ VIEWS.progress = function () {
   }
 
   var runs = [];
-  Object.keys(BANKS).concat(['all_grammar', 'all_vocab', 'all_idiom']).forEach(function (k) {
+  Object.keys(BANKS).concat(['all_grammar', 'all_vocab', 'all_idiom', 'all_listen']).forEach(function (k) {
     var r = getRun(k); if (r && r.i > 0) runs.push({ k: k, r: r });
   });
   if (runs.length) {
@@ -1901,6 +2363,7 @@ VIEWS.settings = function () {
   /* -------- Contenu et donnees -------- */
   h += '<div class="gcard"><h3>Content</h3><p class="fr">' +
     allQuestions().length + ' questions &middot; ' +
+    (LISTEN.length ? LISTEN.length + ' listening questions &middot; ' : '') +
     DRILLS.reduce(function (a, d) { return a + d.items.length; }, 0) + ' corrected drill items &middot; ' +
     IDIOMS_LIB.length + ' reference idioms</p></div>';
 
@@ -2035,11 +2498,70 @@ function renderVoiceBox() {
       'install it with the button below, or choose another one.</p>';
     if (nOther) h += '<label class="switch"><input type="checkbox"' + (showAll ? ' checked' : '') +
       ' onchange="LSset(\'voice_all\',this.checked?1:0);renderVoiceBox()"> Other languages too (they read English with their own accent)</label>';
+    h += roleVoiceHtml(list);
     box.innerHTML = h;
     box._list = flat;
     voiceNowInfo();
   });
 }
+/* ---------------- voix des questions d'ecoute (v5.9.26) ----------------
+   L'homme et la femme des questions d'ecoute et des examens. Application :
+   en-us-x-iol-network et en-us-x-tpc-network par defaut ; site : les voix
+   d'homme et de femme les plus naturelles du navigateur.                 */
+function roleVoiceHtml(list) {
+  if (!window.Speech || !Speech.getRoleVoice) return '';
+  var en = (list || []).filter(function (v) { return v && v.id && voiceLoc(v).l === 'en'; });
+  var box = document.getElementById('voiceBox');
+  if (box) box._en = en;
+  function sel(role) {
+    var cur = Speech.getRoleVoice(role), def = Speech.roleDefault(role), want = role === 'W' ? 'female' : 'male';
+    var items = en.map(function (v, i) { return { v: v, i: i }; });
+    items.sort(function (a, b) {
+      var ga = voiceGender(a.v) === want ? 0 : 1, gb = voiceGender(b.v) === want ? 0 : 1;
+      if (ga !== gb) return ga - gb;
+      var ua = voiceLoc(a.v).r === 'US' ? 0 : 1, ub = voiceLoc(b.v).r === 'US' ? 0 : 1;
+      if (ua !== ub) return ua - ub;
+      var la = voiceLabel(a.v).toLowerCase(), lb = voiceLabel(b.v).toLowerCase();
+      return la < lb ? -1 : (la > lb ? 1 : 0);
+    });
+    var o = '<option value=""' + (!cur ? ' selected' : '') + '>Automatic: ' + esc(def ? shortVoice(def, en) : 'no voice found') + '</option>';
+    items.forEach(function (x) {
+      var r = voiceLoc(x.v).r;
+      o += '<option value="' + x.i + '"' + (cur && cur === x.v.id ? ' selected' : '') + '>' + esc(voiceLabel(x.v)) +
+        (r && r !== 'US' ? ' (' + esc(VOICE_REGIONS[r] || r) + ')' : '') + '</option>';
+    });
+    return '<select class="sel" id="lv' + role + '" aria-label="' + (role === 'W' ? 'Voice of the woman' : 'Voice of the man') +
+      '" onchange="pickRoleVoice(\'' + role + '\',this.value)">' + o + '</select>';
+  }
+  return '<div class="lv-box"><p class="fr"><b>Listening voices</b>: the man and the woman of the listening questions and of the timed exams.</p>' +
+    '<label class="lv-row"><span>Man</span>' + sel('M') + '</label>' +
+    '<label class="lv-row"><span>Woman</span>' + sel('W') + '</label>' +
+    '<p class="fr" id="lvNote">' + roleNote() + '</p>' +
+    '<div class="navrow"><button class="btn ghost" onclick="testRoleVoices()">Test the two voices</button></div></div>';
+}
+function shortVoice(id, en) {
+  for (var i = 0; i < en.length; i++) if (en[i].id === id) return voiceLabel(en[i]);
+  return String(id).replace(/\s*-\s*English \(United States\)\s*$/i, '');
+}
+function roleNote() {
+  if (!window.Speech || !Speech.rolesShareVoice) return '';
+  return Speech.rolesShareVoice() ? 'Only one suitable voice was found: the woman is read with a higher pitch.' : '';
+}
+function pickRoleVoice(role, idx) {
+  var box = document.getElementById('voiceBox'), en = (box && box._en) || [];
+  var v = idx === '' ? null : en[parseInt(idx, 10)];
+  Speech.setRoleVoice(role, v ? v.id : '');
+  toast((role === 'W' ? 'Woman' : 'Man') + ': ' + (v ? voiceLabel(v) : 'automatic voice'));
+  var n = document.getElementById('lvNote'); if (n) n.textContent = roleNote();
+  lSay(role === 'W' ? [['W', 'Hello. I am the woman in the listening questions.']]
+                    : [['M', 'Hello. I am the man in the listening questions.']], null);
+}
+function testRoleVoices() {
+  if (!audioOK()) { toast('Audio unavailable'); return; }
+  lSay([['M', 'Excuse me, is this the gate for the flight to Denver?'],
+        ['W', 'Yes, it is. Boarding starts in twenty minutes.']], null);
+}
+
 /* "Voice in use": the exact name, to tell which one to keep as default. */
 function voiceNowInfo() {
   var el = document.getElementById('voiceNow'), box = document.getElementById('voiceBox');
@@ -2114,6 +2636,7 @@ function showDiag() {
     'Web Speech API: ' + (d.webSpeech ? 'present' : 'not exposed by this WebView') + '<br>' +
     'Native TTS plugin: ' + (d.nativePlugin ? 'ACTIVE' : 'not installed') + '<br>' +
     'Preferred voice: ' + esc(d.preferredVoice || '') + '<br>' +
+    (d.listeningVoices ? 'Listening voices (man / woman): ' + esc(d.listeningVoices) + '<br>' : '') +
     'Chunk size: ' + d.chunkSize + ' characters<br>' +
     'Voices loaded: ' + d.voicesLoaded + '<br>' +
     'US English voices: ' + ((d.usEnglishVoices || []).length ? esc(d.usEnglishVoices.join(', ')) : 'none listed') + '<br>' +
@@ -2140,7 +2663,7 @@ function applySkin() {
 }
 
 /* ------------------------------ donnees --------------------------------- */
-var KEYS = ['best', 'hist', 'fav', 'box', 'daily', 'streak', 'goal', 'theme', 'fontsize', 'haptic', 'les_done'];
+var KEYS = ['best', 'hist', 'fav', 'box', 'daily', 'streak', 'goal', 'theme', 'fontsize', 'haptic', 'les_done', 'exam_best'];
 function exportData() {
   var o = { v: APP_VERSION, d: nowMs(), data: {} };
   KEYS.forEach(function (k) { var v = LSget(k, null); if (v !== null) o.data[k] = v; });
@@ -2161,7 +2684,7 @@ function wipe() {
   if (!confirm('Erase all scores, favourites, review data and settings? This cannot be undone.')) return;
   KEYS.forEach(LSdel);
   Object.keys(BANKS).forEach(clearRun);
-  ['all_grammar', 'all_vocab', 'all_idiom'].forEach(clearRun);
+  ['all_grammar', 'all_vocab', 'all_idiom', 'all_listen'].forEach(clearRun);
   applySkin(); toast('Data erased'); goTab('home');
 }
 
@@ -2362,7 +2885,10 @@ document.addEventListener('backbutton', function (e) {
   else back();
 }, false);
 
-document.addEventListener('pause', function () { stopSpeak(); if (S.view === 'quiz') saveRun(); }, false);
+document.addEventListener('pause', function () { examAway(); stopSpeak(); if (S.view === 'quiz') saveRun(); }, false);
+/* examen, partie ecoute : un appel ou un autre onglet met l'examen en pause
+   (l'enregistrement repartira du debut a la reprise) */
+document.addEventListener('visibilitychange', function () { if (document.hidden) examAway(); }, false);
 window.addEventListener('beforeunload', function () { if (S.view === 'quiz') saveRun(); });
 
 /* clavier : utile en test sur PC */

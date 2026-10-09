@@ -44,6 +44,30 @@
     if (mq.addEventListener) mq.addEventListener('change', railAd);
   }
 
+  /* ------------- Auto ads: an anchor ad never hides the tab bar -------------
+     A bottom anchor ad (AdSense Auto ads, phones and tablets) is drawn over
+     the page. Its height goes into --adh, the variable the app's style.css
+     already uses for the banner of the Android app: the tab bar, the toast
+     and the end of the page move up above the ad, and back down when it is
+     closed. */
+  var lastAnchor = -1;
+  function anchorAd() {
+    var h = 0, vh = g.innerHeight || html.clientHeight;
+    doc.querySelectorAll('ins.adsbygoogle[data-anchor-status], ins.adsbygoogle[data-anchor-shown]').forEach(function (a) {
+      var st = a.getAttribute('data-anchor-status');
+      if (st && st !== 'displayed') return;
+      var r = a.getBoundingClientRect();
+      if (r.height > 0 && r.top > vh / 2 && r.bottom >= vh - 4) h = Math.max(h, Math.round(vh - r.top));
+    });
+    if (h !== lastAnchor) {
+      lastAnchor = h;
+      html.style.setProperty('--adh', h + 'px');
+      html.classList.toggle('w-anchor', h > 0);
+    }
+  }
+  setInterval(anchorAd, 1200);
+  g.addEventListener('resize', anchorAd);
+
   /* --------------------------- slim app banner --------------------------- */
   var banner = doc.getElementById('appBanner');
   if (banner && !isIOS && ls('banner_hidden') !== '1') banner.hidden = false;
@@ -83,10 +107,17 @@
         var n = doc.getElementById('wVoiceHelp');
         if (n) { n.remove(); return; }
         n = doc.createElement('div'); n.id = 'wVoiceHelp'; n.className = 'w-note';
-        n.innerHTML = 'Voices come from your browser and your computer. By default the trainer uses the best ' +
-          '<b>male American voice</b> it finds. <b>Microsoft Edge</b> has the most natural ones (Andrew, Guy, ' +
-          'Christopher); <b>Google Chrome</b> on Windows uses Microsoft David or Mark, and also offers ' +
-          '"Google US English" (female). Pick a voice in the list above, then use <b>Test the voice</b>.';
+        n.innerHTML = 'Voices come from your browser and your device, so the Android voices of the app ' +
+          '(<b>en-us-x-iol</b> for the man, <b>en-us-x-tpc</b> for the woman) cannot be chosen on a website. ' +
+          'The closest voices, picked automatically:' +
+          '<br>&bull; <b>Microsoft Edge</b> (computer): the natural voices, the best ones: Andrew or Guy for the man, Aria or Jenny for the woman.' +
+          '<br>&bull; <b>Google Chrome</b> (computer): "Google US English" (a woman); for the man only Microsoft David or Mark, less natural. ' +
+          'Open the trainer in Edge for the best listening practice.' +
+          '<br>&bull; <b>iPhone, iPad, Mac</b>: Aaron or Evan, Samantha or Ava. Better: download an "Enhanced" voice in ' +
+          'Settings &rsaquo; Accessibility &rsaquo; Spoken Content &rsaquo; Voices &rsaquo; English.' +
+          '<br>&bull; <b>Android phone</b>: the browser reads with the voice set in Android: Settings &rsaquo; Text-to-speech output ' +
+          '(Google engine, English United States, choose a voice). Or install the free Android app, which uses iol and tpc.' +
+          '<br>Choose other voices in the lists above, then use <b>Test the voice</b> and <b>Test the two voices</b>.';
         b.insertAdjacentElement('afterend', n);
       });
     });
@@ -123,7 +154,7 @@
   }
 
   /* The voice list says "Preferred Google US" (Android). On the web the
-     automatic choice is the best male American voice of the browser.      */
+     automatic choice is the most natural American voice of the browser.   */
   function webVoiceName() {
     var id = (g.Speech && g.Speech.defaultVoiceId) ? g.Speech.defaultVoiceId() : '';
     if (!id || /^en-us-x-/i.test(id)) return '';
@@ -136,8 +167,8 @@
       d.setAttribute('data-w', '1');
       var b = d.querySelector('b'), sp = d.querySelectorAll('span');
       if (b && nm) b.textContent = nm;
-      if (sp[1]) sp[1].textContent = nm ? 'The best male American voice found in this browser. Choose another voice below if you prefer.'
-        : 'This browser has no male American voice: an English (United States) voice is used.';
+      if (sp[1]) sp[1].textContent = nm ? 'The most natural American voice found in this browser. Choose another voice below if you prefer.'
+        : 'This browser lists no American voice: another English voice is used.';
     }
     var b0 = box.querySelector('p.fr > b');
     if (b0 && b0.textContent === 'All the voices of this device') b0.textContent = 'All the voices of this browser';
@@ -147,7 +178,7 @@
     var o = box.querySelector('option[value="__default__"]');
     if (o && !o.getAttribute('data-w')) {
       o.setAttribute('data-w', '1');
-      o.textContent = 'Automatic: best male US voice' + (nm ? ' (' + nm + ')' : '');
+      o.textContent = 'Automatic: most natural US voice' + (nm ? ' (' + nm + ')' : '');
     }
   }
   var appPickVoice = g.pickVoice;
@@ -155,7 +186,7 @@
     g.pickVoice = function (idx) {
       if (idx === '__default__') {
         if (g.Speech && g.Speech.useDefaultVoice) g.Speech.useDefaultVoice();
-        if (typeof g.toast === 'function') g.toast('Automatic voice: the best male American voice');
+        if (typeof g.toast === 'function') g.toast('Automatic voice: the most natural American voice');
         if (typeof g.voiceNowInfo === 'function') g.voiceNowInfo();
         if (typeof g.testVoice === 'function') g.testVoice();
         return;

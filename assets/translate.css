@@ -2,7 +2,7 @@
    translate.css - translation box, word bubble, "Translate" chip
    Shared by the content pages (site.css tokens) and the trainer (app tokens).
    ========================================================================== */
-.tr-card,.tr-bubble,.tr-chip{
+.tr-card,.tr-bubble,.tr-chip,.tr-sheet,.tr-tog,.tr-tip{
   --tr-bg:var(--sheet,var(--card,#fff));--tr-ink:var(--ink,#14243D);--tr-mut:var(--ink-2,var(--mut,#4F5F77));
   --tr-line:var(--rule,var(--line,#D3DCE8));--tr-soft:var(--sheet-2,var(--bg2,#F5F7FA));
   --tr-acc:var(--brass,#C08A2E);--tr-on-acc:var(--on-brass,var(--onBrass,#24180A));
@@ -68,14 +68,29 @@ html.tr-open .tr-pop{display:block}
   .tr-pop .tr-card{border-radius:18px 18px 0 0;max-height:86vh;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
 }
 
-/* header buttons */
+/* header: the word-translation switch (every page, and the trainer) */
 .tr-hbtn{display:none}
+.tr-tog{display:inline-flex;align-items:center;gap:8px;flex:none;min-height:40px;padding:0 10px 0 12px;margin-left:10px;border-radius:999px;
+  border:1px solid var(--tr-line);background:transparent;color:var(--tr-ink);font:600 15px/1 var(--tr-head);cursor:pointer;white-space:nowrap}
+.tr-tog[hidden]{display:none}
+.tr-tog svg{width:19px;height:19px;flex:none;color:var(--tr-acc)}
+.tr-tog-sw{position:relative;flex:none;width:30px;height:18px;border-radius:9px;background:var(--tr-line);transition:background-color .15s}
+.tr-tog-sw::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;
+  box-shadow:0 1px 2px rgba(0,0,0,.3);transition:left .15s}
+.tr-tog.on .tr-tog-sw{background:var(--tr-acc)}
+.tr-tog.on .tr-tog-sw::after{left:14px}
+.tr-tog:hover{background:var(--tr-soft)}
+.tr-tog:focus-visible{outline:3px solid var(--tr-acc);outline-offset:2px}
 @media (max-width:900px){
-  html.has-tr .tr-hbtn{display:inline-grid;place-items:center;flex:none;width:44px;height:44px;margin-left:auto;border:1px solid var(--rule,#D3DCE8);
-    border-radius:10px;background:none;color:var(--ink,#14243D);cursor:pointer}
-  html.has-tr .tr-hbtn+.menu-btn{margin-left:8px}
-  .tr-hbtn svg{width:22px;height:22px}
+  .site-header .tr-tog{order:2;margin-left:auto;padding:0 8px}
+  .site-header .menu-btn{order:3;margin-left:8px}
+  .tr-tog .tr-tog-t{display:none}
 }
+.w-nav .tr-tog{margin-left:6px}
+@media (max-width:860px){.w-nav .tr-tog .tr-tog-t{display:none}.w-nav .tr-tog{padding:0 8px}}
+.tr-tip{position:fixed;z-index:97;padding:10px 12px;border-radius:12px;background:#0B1A30;color:#EEF3FA;
+  font:500 14px/1.4 system-ui,-apple-system,'Segoe UI',Arial,sans-serif;box-shadow:0 12px 30px rgba(0,0,0,.3);pointer-events:none}
+.tr-tip[hidden]{display:none}
 .w-tr{display:inline-flex;align-items:center;gap:7px;min-height:42px;padding:0 12px;margin-left:6px;border-radius:10px;
   border:1px solid var(--line,#D3DCE8);background:transparent;color:var(--ink,#14243D);font:600 15px/1 var(--display,inherit);cursor:pointer}
 .w-tr svg{width:19px;height:19px}
@@ -93,7 +108,14 @@ html.tr-open .w-tr{background:var(--bg2,#EEF2F7)}
 .trb-say{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;border:1px solid rgba(255,255,255,.25);
   background:transparent;color:#fff;cursor:pointer;flex:none}
 .trb-say svg{width:15px;height:15px}
-.trb-lang{margin-left:auto;font-size:12px;color:#9FB0C6;white-space:nowrap}
+.trb-lang{margin-left:auto;padding:2px 0;border:0;background:none;font:500 12px/1.2 system-ui,-apple-system,'Segoe UI',Arial,sans-serif;
+  color:#9FB0C6;white-space:nowrap;cursor:pointer}
+.trb-lang:hover{color:#fff;text-decoration:underline}
+.trb-foot{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin-top:9px;padding-top:7px;border-top:1px solid rgba(255,255,255,.14);
+  font:500 12.5px/1.3 system-ui,-apple-system,'Segoe UI',Arial,sans-serif}
+.trb-gt{color:#9FD2FF}
+.trb-box,.trb-off{padding:0;border:0;background:none;color:#D9A441;font:600 12.5px/1.3 inherit;text-decoration:underline;cursor:pointer}
+.trb-off{margin-left:auto;color:#9FB0C6}
 .trb-out{font-size:18px;line-height:1.5;color:#FFD98A}
 .trb-out[dir="rtl"]{text-align:right;font-size:20px}
 .trb-more,.trb-start{margin-top:8px;background:transparent;border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;
@@ -108,7 +130,27 @@ html.tr-open .w-tr{background:var(--bg2,#EEF2F7)}
 .tr-chip[hidden]{display:none}
 .tr-chip svg{width:18px;height:18px;color:#D9A441}
 @media (prefers-reduced-motion:reduce){.tr-card.tr-flash{animation:none}}
-@media print{.tr-card,.tr-bubble,.tr-chip,.tr-hbtn{display:none!important}}
+/* language list */
+.tr-sheet{position:fixed;inset:0;z-index:98;display:flex;align-items:flex-end;justify-content:center;background:rgba(6,16,31,.55)}
+.tr-sheet[hidden]{display:none}
+@media (min-width:641px){.tr-sheet{align-items:center}}
+.trs-in{width:100%;max-width:520px;max-height:82vh;display:flex;flex-direction:column;padding:14px 14px 0;border-radius:18px 18px 0 0;
+  background:var(--tr-bg);color:var(--tr-ink);box-shadow:0 -10px 40px rgba(0,0,0,.3)}
+@media (min-width:641px){.trs-in{border-radius:18px;max-height:76vh}}
+.trs-h{display:flex;align-items:center;justify-content:space-between;margin:0 0 6px}
+.trs-h b{font:700 1.2rem/1.1 var(--tr-head)}
+.trs-x{width:38px;height:38px;border-radius:50%;border:1px solid var(--tr-line);background:var(--tr-soft);color:var(--tr-ink);font-size:22px;line-height:1;cursor:pointer}
+.trs-list{overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+.trs-g{margin:10px 0 4px;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--tr-mut)}
+.trs-o{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:0 12px;margin:0 0 4px;border-radius:11px;
+  border:1px solid var(--tr-line);background:var(--tr-bg);color:var(--tr-ink);font:inherit;text-align:left;cursor:pointer}
+.trs-o b{font-weight:600}
+.trs-o span{margin-left:auto;color:var(--tr-mut)}
+.trs-o i{font-style:normal;font-size:.68rem;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--tr-acc);color:var(--tr-on-acc)}
+.trs-o.on{border-color:var(--tr-acc);box-shadow:inset 0 0 0 1px var(--tr-acc)}
+.trs-o:hover{background:var(--tr-soft)}
+
+@media print{.tr-card,.tr-bubble,.tr-chip,.tr-hbtn,.tr-tog,.tr-tip,.tr-sheet{display:none!important}}
 
 /* Translation checks an answer, it never finds it: before the answer the
    question cannot be selected (no browser "Translate" menu either).       */

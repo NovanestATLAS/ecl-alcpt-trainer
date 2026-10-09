@@ -60,70 +60,81 @@
   });
 
   /* ---------------------------- read aloud ---------------------------------
-     The best MALE American voice of the browser, as in the Android app
-     (natural Microsoft voices in Edge, Google male voices on Android, Apple
-     male voices, Microsoft David or Mark on Windows). A voice chosen in the
-     trainer's settings is used instead when this browser has it. Listening
-     conversations add the best FEMALE American voice for the woman.        */
-  var synth = window.speechSynthesis || null, voice = null, voiceF = null, speakingBtn = null, seqGen = 0;
+     The most NATURAL American voice of the browser reads the lessons and the
+     questions (Microsoft Edge: Andrew; Chrome: Google US English; Apple:
+     Alex or Aaron...). Listening conversations use the best MAN's voice and
+     the best WOMAN's voice, the closest ones to the Android app's voices
+     (en-us-x-iol and en-us-x-tpc). Voices chosen in the trainer's settings
+     (same browser) are used first. One voice only: the woman gets a higher
+     pitch.                                                               */
+  var synth = window.speechSynthesis || null, voice = null, voiceM = null, voiceF = null, speakingBtn = null, seqGen = 0;
   var NOVELTY = /\b(Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Junior|Ralph|Kathy|Princess|Deranged|Hysterical|Grandpa|Grandma|Rocko|Shelley|Sandy|Flo|Eddy|Reed)\b/i;
-  function rank(v) {
-    var n = String(v.name || '') + ' ' + String(v.voiceURI || '');
-    if (NOVELTY.test(n)) return 1;
+  function vn(v) { return String(v.name || '') + ' ' + String(v.voiceURI || ''); }
+  function rank(v) {                                   // a man's voice, 0 = not one
+    var n = vn(v);
+    if (NOVELTY.test(n)) return 0;
     var nat = /natural|neural|online|premium|enhanced/i.test(n), r = 0;
     if (/\bAndrew\b/i.test(n)) r = 100;
     else if (/\bGuy\b/i.test(n)) r = 99;
     else if (/\bChristopher\b/i.test(n)) r = 98;
-    else if (/AndrewMultilingual/i.test(n)) r = 97;
-    else if (/\bBrian\b|BrianMultilingual/i.test(n)) r = 96;
-    else if (/\bEric\b/i.test(n)) r = 95;
-    else if (/\b(Roger|Steffan|Davis|Tony|Jason|Brandon|Kai)\b/i.test(n)) r = 94;
-    if (r) return nat ? r : r - 12;
-    if (/en-us-x-(iol|iom|tpd)/i.test(n)) return 92;
-    if (/\b(Evan|Nathan|Tom|Aaron)\b/i.test(n)) return nat ? 90 : 86;
-    if (/\bAlex\b/i.test(n)) return 88;
-    if (/Microsoft (Mark|David)/i.test(n)) return 80;
-    if (/\bFred\b/i.test(n)) return 40;
-    if (nat && /Microsoft/i.test(n)) return 60;
-    if (/Google US English/i.test(n)) return 58;
-    if (/google|-x-/i.test(n)) return 55;
-    if (/Samantha|Ava|Allison|Susan|Zoe|Nicky|Joelle|Noelle/i.test(n)) return 50;
-    return v.localService ? 20 : 15;
+    else if (/\bBrian(Multilingual)?\b/i.test(n) || /AndrewMultilingual/i.test(n)) r = 97;
+    else if (/\bEric\b/i.test(n)) r = 96;
+    else if (/\b(Roger|Steffan|Davis|Tony|Jason|Brandon|Kai|Ryan)\b/i.test(n)) r = 95;
+    if (r) return nat ? r : r - 30;
+    if (/en-us-x-(iol|iom|tpd)/i.test(n) || /#male/i.test(n)) return 92;
+    if (/\b(Evan|Nathan|Tom|Aaron|Alex)\b/i.test(n) && /premium|enhanced/i.test(n)) return 90;
+    if (/\bAlex\b/i.test(n)) return 85;
+    if (/\bAaron\b/i.test(n)) return 84;
+    if (/\b(Evan|Nathan)\b/i.test(n)) return 83;
+    if (/\bTom\b/i.test(n)) return 82;
+    if (/Microsoft (Mark|David)/i.test(n)) return 55;
+    if (/\bFred\b/i.test(n)) return 10;
+    return 0;
   }
-  function rankF(v) {
-    var n = String(v.name || '') + ' ' + String(v.voiceURI || '');
+  function rankF(v) {                                  // a woman's voice, 0 = not one
+    var n = vn(v);
     if (NOVELTY.test(n)) return 0;
     var nat = /natural|neural|online|premium|enhanced/i.test(n), r = 0;
     if (/\bAria\b/i.test(n)) r = 100;
     else if (/\bJenny\b/i.test(n)) r = 99;
-    else if (/\b(Ava|Emma)(Multilingual)?\b/i.test(n)) r = 98;
+    else if (/\b(Ava|Emma)(Multilingual)?\b/i.test(n) && /Microsoft/i.test(n)) r = 98;
     else if (/\b(Michelle|Nancy|Sara|Jane|Amber|Ashley|Cora|Elizabeth|Monica)\b/i.test(n)) r = 96;
-    if (r) return nat ? r : r - 12;
-    if (/en-us-x-(sfg|tpc|tpf|iob|iog)/i.test(n)) return 92;
-    if (/Google US English/i.test(n)) return 90;
-    if (/\b(Samantha|Allison|Susan|Zoe|Nicky|Joelle|Noelle|Victoria)\b/i.test(n)) return 86;
-    if (/Microsoft Zira/i.test(n)) return 80;
-    return 0;                                        // not known to be a woman's voice
+    if (r) return nat ? r : r - 30;
+    if (/en-us-x-(tpc|sfg|tpf|iob|iog)/i.test(n) || /#female/i.test(n)) return 92;
+    if (/\b(Ava|Allison|Samantha|Susan|Zoe|Joelle|Noelle)\b/i.test(n) && /premium|enhanced/i.test(n)) return 90;
+    if (/Google US English/i.test(n)) return 88;
+    if (/\bSamantha\b/i.test(n)) return 84;
+    if (/\b(Allison|Ava)\b/i.test(n)) return 83;
+    if (/\b(Susan|Zoe)\b/i.test(n)) return 82;
+    if (/\b(Nicky|Joelle|Noelle|Victoria)\b/i.test(n)) return 79;
+    if (/Microsoft Zira/i.test(n)) return 52;
+    return 0;
   }
+  function quality(v) { var q = Math.max(rank(v), rankF(v) - 1); return q > 0 ? q : (v.localService ? 20 : 15); }
   function usVoices() {
     return (synth.getVoices() || []).filter(function (x) {
       return /en[-_]US/i.test(x.lang || '') || /^en-us/i.test(x.voiceURI || '');
     });
   }
+  function enVoices() { return (synth.getVoices() || []).filter(function (x) { return /^en([-_]|$)/i.test(x.lang || ''); }); }
+  function best(list, f) { var b = null, bs = 0; list.forEach(function (v) { var s = f(v); if (s > bs) { bs = s; b = v; } }); return b; }
+  function saved(key) {
+    var want = '', every = synth.getVoices() || [];
+    try { want = localStorage.getItem(key) || ''; } catch (e) { }
+    for (var i = 0; want && i < every.length; i++) if (every[i].voiceURI === want || every[i].name === want) return every[i];
+    return null;
+  }
   function pickVoice() {
     if (!synth) return null;
-    var want = '', every = synth.getVoices() || [];
-    try { want = localStorage.getItem('et_voice') || ''; } catch (e) { }
-    for (var i = 0; want && i < every.length; i++) if (every[i].voiceURI === want || every[i].name === want) return every[i];
-    var all = usVoices();
-    all.sort(function (a, b) { return rank(b) - rank(a); });
-    return all[0] || null;
+    return saved('et_voice') || best(usVoices(), quality) || usVoices()[0] || enVoices()[0] || null;
+  }
+  function pickVoiceM() {
+    if (!synth) return null;
+    return saved('et_lvw_m') || best(usVoices(), rank) || best(enVoices(), rank) || pickVoice();
   }
   function pickVoiceF() {
     if (!synth) return null;
-    var all = usVoices().filter(function (v) { return rankF(v) > 0; });
-    all.sort(function (a, b) { return rankF(b) - rankF(a); });
-    return all[0] || null;
+    return saved('et_lvw_w') || best(usVoices(), rankF) || best(enVoices(), rankF) || pickVoice();
   }
   function rate() {
     var r = 0.92;
@@ -141,12 +152,11 @@
     var u = new SpeechSynthesisUtterance(String(text));
     u.lang = 'en-US'; u.rate = rate();
     if (!voice) voice = pickVoice();
-    if (who && !voiceF) voiceF = pickVoiceF();
-    if (who === 'W') {
-      if (voiceF && voiceF !== voice) u.voice = voiceF;
-      else { if (voice) u.voice = voice; u.pitch = 1.3; }      // one voice only: a higher pitch for the woman
-    } else if (voice) u.voice = voice;
-    if (who === 'M' && !(voiceF && voiceF !== voice)) u.pitch = 0.92;
+    if (who && (!voiceM || !voiceF)) { voiceM = pickVoiceM(); voiceF = pickVoiceF(); }
+    var one = !voiceM || !voiceF || voiceM === voiceF;
+    if (who === 'W') { if (voiceF) u.voice = voiceF; if (one) u.pitch = 1.25; }
+    else if (who === 'M') { if (voiceM) u.voice = voiceM; if (one) u.pitch = 0.9; }
+    else if (voice) u.voice = voice;
     if (u.voice && u.voice.lang) u.lang = u.voice.lang;
     return u;
   }
@@ -177,7 +187,7 @@
   if (!synth) html.classList.add('no-voice');
   else {
     voice = pickVoice();
-    if (synth.addEventListener) synth.addEventListener('voiceschanged', function () { voice = pickVoice(); voiceF = null; });
+    if (synth.addEventListener) synth.addEventListener('voiceschanged', function () { voice = pickVoice(); voiceM = null; voiceF = null; });
   }
   doc.addEventListener('click', function (e) {
     var b = e.target.closest ? e.target.closest('[data-say], [data-seq]') : null;
@@ -221,6 +231,7 @@
       exp.hidden = false;
       fb.firstChild.appendChild(exp);
       if (tx) { tx.hidden = false; fb.firstChild.appendChild(tx); }
+      var st = it.querySelector('.show-text'); if (st) st.hidden = true;
     } else {
       fb.innerHTML = '<div class="correction' + (ok ? '' : ' bad') + '"><p><b>' + head + '</b></p><p>' + (it.getAttribute('data-e') || '') + '</p></div>';
     }
@@ -233,16 +244,24 @@
     if (exp) { exp.hidden = true; it.insertBefore(exp, fb); }
     if (tx) { tx.hidden = true; it.insertBefore(tx, exp || fb); }
     fb.innerHTML = '';
+    var st = it.querySelector('.show-text'); if (st) st.hidden = false;
   }
-  /* no voice in this browser: listening items can be read instead */
-  if (!synth) doc.querySelectorAll('.qc-listen .qc-audio').forEach(function (au) {
+  /* "Show the text": in practice, every listening item can show what is
+     said, before or after the answer; in a test, only when this browser
+     has no voice (otherwise the text comes with the answers).           */
+  function addShowText(au) {
+    if (au.querySelector('.show-text')) return;
     var b = doc.createElement('button'); b.type = 'button'; b.className = 'btn btn-line btn-small show-text'; b.textContent = 'Show the text';
     b.addEventListener('click', function () {
       var it = au.closest('.qc-item'), tx = it.querySelector('.qc-tx');
       if (tx) { tx.hidden = false; it.classList.add('shown-text'); }
-      b.remove();
+      b.hidden = true;
     });
     au.appendChild(b);
+  }
+  doc.querySelectorAll('.qc-listen .qc-audio').forEach(function (au) {
+    var test = au.closest('.qc[data-mode="test"]');
+    if (!synth || !test) addShowText(au);
   });
 
   doc.querySelectorAll('.qc').forEach(function (qc) {
@@ -552,6 +571,7 @@
     }).join('');
     $fb.innerHTML = '';
     $next.hidden = true;
+    demo.classList.remove('answered');
   }
   $list.addEventListener('click', function (e) {
     var b = e.target.closest('.bub');
@@ -563,6 +583,7 @@
     var bs = $list.querySelectorAll('.bub');
     bs.forEach(function (x) { x.disabled = true; });
     bs[i].classList.add('pick');
+    demo.classList.add('answered');                 // translation allowed from now on
     setTimeout(function () {
       bs[q.a].classList.add('right');
       if (!ok) bs[i].classList.add('wrong');
