@@ -22,5 +22,5 @@ window.ECL_CONFIG = {
     results: '',
     article: ''
   },
-  ga4: ''
+  ga4: 'G-N7NPLR56K1'
 };
