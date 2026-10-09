@@ -42,6 +42,7 @@
   var VOICE_KEY = 'et_voice', RATE_KEY = 'et_rate', PITCH_KEY = 'et_pitch';
   var DEFAULT_US_VOICE = 'en-us-x-iol-network';
   var NVOICE_KEY = 'et_nvoice';   // voix du moteur Android natif
+  var IOL_RESET_KEY = 'et_voice_iol_5927';   // remise a iol faite (v5.9.27)
 
   /* voix des questions d'ecoute : M = homme, W = femme */
   var LV_NATIVE = { M: 'et_lv_m', W: 'et_lv_w' };     // identifiants Android
@@ -734,6 +735,7 @@
           setPref(NVOICE_KEY, DEFAULT_US_VOICE);
           setPref(VOICE_KEY, '');
           setPref('et_voice_forced_v3', '1');
+          setPref(IOL_RESET_KEY, '1');
           cb({ id: DEFAULT_US_VOICE, native: true });
           return;
         }
@@ -747,6 +749,17 @@
       if (WEB && !native && !pref('et_voice_web_q', '')) {
         setPref(VOICE_KEY, '');
         setPref('et_voice_web_q', '1');
+      }
+
+      /* v5.9.27 : la voix de l'entrainement (questions, choix,
+         explications) redevient en-us-x-iol-network, une fois, sur chaque
+         telephone. La voix de femme (tpc) se retrouvait choisie dans la
+         liste generale au lieu de la liste des voix d'ecoute. Un choix
+         fait ensuite dans Settings > Audio est garde.                    */
+      if (native && !pref(IOL_RESET_KEY, '')) {
+        setPref(NVOICE_KEY, DEFAULT_US_VOICE);
+        setPref(VOICE_KEY, '');
+        setPref(IOL_RESET_KEY, '1');
       }
 
       var currentNative = pref(NVOICE_KEY, '');

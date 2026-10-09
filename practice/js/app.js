@@ -10,7 +10,7 @@
      . Themes, confort de lecture, export / import des donnees
    =========================================================================== */
 
-var APP_VERSION = '5.9.26';
+var APP_VERSION = '5.9.27';
 
 /* v5.9.26
      . Ecoute : 155 questions (js/listening-data.js), une voix d'homme et une
@@ -159,8 +159,24 @@ function adCountAnswer(n) {
   try { Ads.questionAnswered(n || 1); } catch (e) { }
 }
 function adDuringRun() {
-  if (!window.Ads || S.sim) return;
-  try { Ads.maybeInterstitialMidRun(); } catch (e) { }
+  if (!window.Ads || S.sim || S.exam) return;
+  /* questions encore a venir : une serie courte garde son annonce pour la
+     fin (regle du temps d'utilisation, v5.9.27) */
+  try { Ads.maybeInterstitialMidRun(Math.max(0, S.pool.length - S.idx - 1)); } catch (e) { }
+}
+/* --- Pause naturelle (v5.9.27) --------------------------------------------
+   Quitter ce que l'on lisait (une lecon, les listes de mots, les cartes,
+   la bibliotheque d'idiomes, les exercices corriges) est une pause : une
+   annonce peut s'y placer, au moment du toucher, si elle est due (5 min
+   d'utilisation ou assez de reponses depuis la precedente, 4 min d'ecart
+   au moins). Jamais en quittant une serie, une epreuve ou un examen.   */
+var AD_READING = { lesson: 'a lesson', pverbs: 'the phrasal verbs', vwords: 'the ECL words', wcards: 'the flashcards',
+  library: 'the idioms library', drills: 'the corrected drills' };
+function adLeave(from, fromArg, to, toArg) {
+  if (!window.Ads || typeof Ads.pausePoint !== 'function') return;
+  if (!from || !AD_READING[from]) return;        // jamais depuis une serie, une epreuve, un examen
+  if (from === to && fromArg === toArg) return;
+  try { Ads.pausePoint(AD_READING[from]); } catch (e) { }
 }
 /* --- Annonce plein ecran : silence complet (v5.9.20) ---------------------
    Sur un parcours long, l'annonce etait demandee au passage a la question
@@ -180,6 +196,19 @@ function adClosed() {
   if (!AD_OPEN) return;
   AD_OPEN = false;
   autoResumeSoon();
+  listenResumeSoon();
+}
+/* Question d'ecoute a l'ecran a la fermeture de l'annonce (v5.9.27) :
+   son enregistrement n'a pas pu passer sous l'annonce ; il demarre alors
+   depuis le debut, comme a l'ouverture d'une question. (En lecture
+   automatique, autoResumeSoon s'en charge deja.) */
+function listenResumeSoon() {
+  setTimeout(function () {
+    if (AD_OPEN || APP_PAUSED || document.hidden || autoOn()) return;
+    var q = S.pool && S.pool[S.idx];
+    if (S.view !== 'quiz' || S.exam || !q || !q.L || (S.answers && S.answers[S.idx])) return;
+    if (!LP.on) lStart();
+  }, 700);
 }
 (function gateSpeech() {
   if (!window.Speech || typeof Speech.speak !== 'function' || Speech.adGate) return;
@@ -647,6 +676,7 @@ function anyRun() {
 /* ============================== NAVIGATION ============================== */
 var VIEWS = {};
 function go(v, arg, replace) {
+  var from = S.view, fromArg = S.viewArg;
   stopSpeak(); clearTimer();
   if (!replace && S.view && S.view !== v && VIEWS[S.view]) NAV.push({ v: S.view, a: S.viewArg });
   if (NAV.length > 30) NAV.shift();
@@ -654,15 +684,17 @@ function go(v, arg, replace) {
   safeRender(VIEWS[v] || VIEWS.home, arg, v);
   adScreen('normal');
   window.scrollTo(0, 0);
+  adLeave(from, fromArg, v, arg);
 }
 function back() {
-  var prev = NAV.pop();
+  var prev = NAV.pop(), from = S.view, fromArg = S.viewArg;
   stopSpeak(); clearTimer();
-  if (!prev) { S.view = 'home'; safeRender(VIEWS.home, null, 'home'); adScreen('normal'); window.scrollTo(0, 0); return; }
+  if (!prev) { S.view = 'home'; safeRender(VIEWS.home, null, 'home'); adScreen('normal'); window.scrollTo(0, 0); adLeave(from, fromArg, 'home', null); return; }
   S.view = prev.v; S.viewArg = prev.a;
   safeRender(VIEWS[prev.v] || VIEWS.home, prev.a, prev.v);
   adScreen('normal');
   window.scrollTo(0, 0);
+  adLeave(from, fromArg, prev.v, prev.a);
 }
 function bar(title, right, backFn) {
   return '<div class="topbar"><button class="backbtn" onclick="' + (backFn || 'back()') + '" aria-label="Back">&lsaquo;</button>' +
@@ -683,7 +715,11 @@ function tabbar(active) {
       'aria-label="' + t[2] + '">' + ico(t[1]) + '<span class="tl">' + t[2] + '</span></button>';
   }).join('') + '</nav>';
 }
-function goTab(v) { NAV = []; S.view = ''; go(v, null, true); buzz(8); }
+function goTab(v) {
+  var from = S.view, fromArg = S.viewArg;
+  NAV = []; S.view = ''; go(v, null, true); buzz(8);
+  adLeave(from, fromArg, v, null);
+}
 
 /* ================================ ICONES ================================
    Jeu vectoriel : contrairement aux emoji, ces icones s'affichent de facon
@@ -2479,17 +2515,21 @@ function renderVoiceBox() {
     });
     var accents = keys.filter(function (k) { return groups[k].en; }).length;
 
-    var h = '<p class="fr"><b>All the voices of this device</b>: ' + nEn + ' English voice' + (nEn > 1 ? 's' : '') +
+    /* v5.9.27 : cette liste regle la voix de l'ENTRAINEMENT (questions,
+       choix, explications). L'homme et la femme des questions d'ecoute se
+       reglent plus bas, dans « Listening voices ». */
+    var h = '<p class="fr"><b>Practice voice</b>: it reads the questions, the choices and the explanations. ' +
+      'This device has ' + nEn + ' English voice' + (nEn > 1 ? 's' : '') +
       (accents > 1 ? ' in ' + accents + ' accents' : '') +
-      (nOther ? ', ' + nOther + ' in other languages' : '') + '. Choose one: it is saved and reads a test sentence.</p>' +
+      (nOther ? ' and ' + nOther + ' in other languages' : '') + '. Choose one: it is saved and reads a test sentence.</p>' +
       '<div class="voice-default"><span class="vd-k">Default</span><b>' + esc(def) +
-      '</b><span>' + (exactInstalled ? 'Google US voice detected on this device.' :
+      '</b><span>' + (exactInstalled ? 'Male Google US voice, detected on this device.' :
       'Preferred Google US identifier. Android will use it when available, otherwise an installed US voice is used.') + '</span></div>';
     if (!flat.length) {
       h += '<p class="fr">No English voice is currently listed by Android. ' +
         'Install English (United States) voice data below.</p>';
     } else {
-      h += '<select class="sel" onchange="pickVoice(this.value)" aria-label="Voice">' +
+      h += '<select class="sel" onchange="pickVoice(this.value)" aria-label="Practice voice">' +
         '<option value="__default__"' + (cur === def ? ' selected' : '') + '>Default voice - ' + esc(def) + '</option>' +
         opts + '</select>';
     }
@@ -2619,6 +2659,8 @@ function adsDiagHtml() {
     (a.nextRetrySeconds ? '. Next try in about ' + dur(a.nextRetrySeconds) : ''));
   L.push('Launch number: ' + a.launch + ' (end of a set: one ad every ' + a.answersPerAd + ' answers)');
   L.push('Answers since the last ad: ' + a.answeredSinceAd);
+  if (a.activeSeconds !== undefined) L.push('Use since the last ad: ' + dur(a.activeSeconds) +
+    ' (an ad is due after ' + dur(a.activeDueSeconds) + ' of use or ' + a.answersPerAd + ' answers, at the next pause)');
   L.push('Full-screen ads shown since launch: ' + a.adsShown);
   L.push('Last ad: ' + (a.secondsSinceLastAd >= 0 ? dur(a.secondsSinceLastAd) + ' ago' : 'none since launch'));
   if (a.graceLeftSeconds > 0) L.push('Ad-free start: ' + dur(a.graceLeftSeconds) + ' left');

@@ -172,6 +172,11 @@
     }
     var b0 = box.querySelector('p.fr > b');
     if (b0 && b0.textContent === 'All the voices of this device') b0.textContent = 'All the voices of this browser';
+    var p0 = b0 && b0.parentNode;
+    if (p0 && !p0.getAttribute('data-w') && /This device has/.test(p0.innerHTML)) {
+      p0.setAttribute('data-w', '1');
+      p0.innerHTML = p0.innerHTML.replace('This device has', 'This browser has');
+    }
     box.querySelectorAll('p.fr').forEach(function (p) {
       if (/listed by Android/.test(p.textContent)) p.textContent = 'This browser lists no English voice. Open the trainer in Google Chrome or Microsoft Edge.';
     });
