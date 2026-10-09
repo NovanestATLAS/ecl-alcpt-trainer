@@ -63,11 +63,13 @@
      The best MALE American voice of the browser, as in the Android app
      (natural Microsoft voices in Edge, Google male voices on Android, Apple
      male voices, Microsoft David or Mark on Windows). A voice chosen in the
-     trainer's settings is used instead when this browser has it.          */
-  var synth = window.speechSynthesis || null, voice = null, speakingBtn = null;
+     trainer's settings is used instead when this browser has it. Listening
+     conversations add the best FEMALE American voice for the woman.        */
+  var synth = window.speechSynthesis || null, voice = null, voiceF = null, speakingBtn = null, seqGen = 0;
+  var NOVELTY = /\b(Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Junior|Ralph|Kathy|Princess|Deranged|Hysterical|Grandpa|Grandma|Rocko|Shelley|Sandy|Flo|Eddy|Reed)\b/i;
   function rank(v) {
     var n = String(v.name || '') + ' ' + String(v.voiceURI || '');
-    if (/\b(Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Junior|Ralph|Kathy|Princess|Deranged|Hysterical|Grandpa|Grandma|Rocko|Shelley|Sandy|Flo|Eddy|Reed)\b/i.test(n)) return 1;
+    if (NOVELTY.test(n)) return 1;
     var nat = /natural|neural|online|premium|enhanced/i.test(n), r = 0;
     if (/\bAndrew\b/i.test(n)) r = 100;
     else if (/\bGuy\b/i.test(n)) r = 99;
@@ -88,90 +90,261 @@
     if (/Samantha|Ava|Allison|Susan|Zoe|Nicky|Joelle|Noelle/i.test(n)) return 50;
     return v.localService ? 20 : 15;
   }
-  function pickVoice() {
-    if (!synth) return null;
-    var all = (synth.getVoices() || []).filter(function (x) {
+  function rankF(v) {
+    var n = String(v.name || '') + ' ' + String(v.voiceURI || '');
+    if (NOVELTY.test(n)) return 0;
+    var nat = /natural|neural|online|premium|enhanced/i.test(n), r = 0;
+    if (/\bAria\b/i.test(n)) r = 100;
+    else if (/\bJenny\b/i.test(n)) r = 99;
+    else if (/\b(Ava|Emma)(Multilingual)?\b/i.test(n)) r = 98;
+    else if (/\b(Michelle|Nancy|Sara|Jane|Amber|Ashley|Cora|Elizabeth|Monica)\b/i.test(n)) r = 96;
+    if (r) return nat ? r : r - 12;
+    if (/en-us-x-(sfg|tpc|tpf|iob|iog)/i.test(n)) return 92;
+    if (/Google US English/i.test(n)) return 90;
+    if (/\b(Samantha|Allison|Susan|Zoe|Nicky|Joelle|Noelle|Victoria)\b/i.test(n)) return 86;
+    if (/Microsoft Zira/i.test(n)) return 80;
+    return 0;                                        // not known to be a woman's voice
+  }
+  function usVoices() {
+    return (synth.getVoices() || []).filter(function (x) {
       return /en[-_]US/i.test(x.lang || '') || /^en-us/i.test(x.voiceURI || '');
     });
-    var want = '';
+  }
+  function pickVoice() {
+    if (!synth) return null;
+    var want = '', every = synth.getVoices() || [];
     try { want = localStorage.getItem('et_voice') || ''; } catch (e) { }
-    for (var i = 0; want && i < all.length; i++) if (all[i].voiceURI === want || all[i].name === want) return all[i];
+    for (var i = 0; want && i < every.length; i++) if (every[i].voiceURI === want || every[i].name === want) return every[i];
+    var all = usVoices();
     all.sort(function (a, b) { return rank(b) - rank(a); });
+    return all[0] || null;
+  }
+  function pickVoiceF() {
+    if (!synth) return null;
+    var all = usVoices().filter(function (v) { return rankF(v) > 0; });
+    all.sort(function (a, b) { return rankF(b) - rankF(a); });
     return all[0] || null;
   }
   function rate() {
     var r = 0.92;
     try { r = parseFloat(localStorage.getItem('et_rate')) || 0.92; } catch (e) { }
+    if (html.classList.contains('slow-voice')) r = Math.min(r, 0.78);
     return Math.min(1.4, Math.max(0.6, r));
   }
   function stopSpeak() {
+    seqGen++;
     if (synth) synth.cancel();
     if (speakingBtn) speakingBtn.setAttribute('aria-pressed', 'false');
     speakingBtn = null;
   }
-  function speak(text, btn) {
-    if (!synth || !text) return;
-    if (btn && btn === speakingBtn) { stopSpeak(); return; }
-    var was = synth.speaking || synth.pending;
-    stopSpeak();
+  function utter(text, who) {
     var u = new SpeechSynthesisUtterance(String(text));
     u.lang = 'en-US'; u.rate = rate();
     if (!voice) voice = pickVoice();
-    if (voice) u.voice = voice;
-    if (btn) { speakingBtn = btn; btn.setAttribute('aria-pressed', 'true'); }
-    u.onend = u.onerror = function () {
-      if (btn && speakingBtn === btn) { btn.setAttribute('aria-pressed', 'false'); speakingBtn = null; }
-    };
-    if (was) setTimeout(function () { synth.speak(u); }, 60); else synth.speak(u);
+    if (who && !voiceF) voiceF = pickVoiceF();
+    if (who === 'W') {
+      if (voiceF && voiceF !== voice) u.voice = voiceF;
+      else { if (voice) u.voice = voice; u.pitch = 1.3; }      // one voice only: a higher pitch for the woman
+    } else if (voice) u.voice = voice;
+    if (who === 'M' && !(voiceF && voiceF !== voice)) u.pitch = 0.92;
+    if (u.voice && u.voice.lang) u.lang = u.voice.lang;
+    return u;
   }
+  /* lines: [['M', 'text'], ['W', 'text'], ...] read one after the other */
+  function speakSeq(lines, btn) {
+    if (!synth || !lines || !lines.length) return;
+    if (btn && btn === speakingBtn) { stopSpeak(); return; }
+    var was = synth.speaking || synth.pending;
+    stopSpeak();
+    var gen = seqGen, i = 0;
+    if (btn) { speakingBtn = btn; btn.setAttribute('aria-pressed', 'true'); }
+    function done() { if (btn && speakingBtn === btn) { btn.setAttribute('aria-pressed', 'false'); speakingBtn = null; } }
+    function next() {
+      if (gen !== seqGen) return;
+      if (i >= lines.length) { done(); return; }
+      var L = lines[i++], u = utter(L[1], L[0]), fired = false;
+      u.onend = u.onerror = function () {
+        if (fired) return; fired = true;
+        if (gen !== seqGen) return;
+        setTimeout(next, i < lines.length ? 450 : 0);
+      };
+      synth.speak(u);
+    }
+    if (was) setTimeout(next, 60); else next();
+  }
+  function speak(text, btn) { if (text) speakSeq([['', text]], btn); }
   window.ECL_SAY = function (t) { speak(t, null); };
   if (!synth) html.classList.add('no-voice');
   else {
     voice = pickVoice();
-    if (synth.addEventListener) synth.addEventListener('voiceschanged', function () { voice = pickVoice(); });
+    if (synth.addEventListener) synth.addEventListener('voiceschanged', function () { voice = pickVoice(); voiceF = null; });
   }
   doc.addEventListener('click', function (e) {
-    var b = e.target.closest ? e.target.closest('[data-say]') : null;
+    var b = e.target.closest ? e.target.closest('[data-say], [data-seq]') : null;
     if (!b) return;
     e.preventDefault();
-    speak(b.getAttribute('data-say'), b);
+    if (b.hasAttribute('data-seq')) {
+      var lines = [];
+      try { lines = JSON.parse(b.getAttribute('data-seq')); } catch (x) { }
+      speakSeq(lines, b);
+      var it = b.closest('.qc-item');
+      if (it) it.classList.add('heard');
+    } else speak(b.getAttribute('data-say'), b);
+  });
+  doc.querySelectorAll('.qc-slow').forEach(function (c) {
+    try { c.checked = localStorage.getItem('ecl_slow') === '1'; } catch (e) { }
+    html.classList.toggle('slow-voice', c.checked);
+    c.addEventListener('change', function () {
+      html.classList.toggle('slow-voice', c.checked);
+      try { localStorage.setItem('ecl_slow', c.checked ? '1' : '0'); } catch (e) { }
+    });
   });
 
-  /* ---------------------- lesson quick check -------------------------- */
+  /* ------------------- quick check, practice pages, tests -------------------
+     . practice (lesson Quick check, practice pages): the explanation appears
+       as soon as you answer;
+     . test (data-mode="test"): choose freely, then "Check my answers" scores
+       every question at once, by part, with an optional timer.
+     A question gets the class "answered" once its answer is shown: only then
+     can its words be translated (translate.js).                            */
+  function reveal(it, picked) {
+    var a = +it.getAttribute('data-a'), bs = it.querySelectorAll('.bub'), ok = picked === a;
+    bs.forEach(function (x) { x.disabled = true; x.classList.remove('pick'); });
+    it.classList.add('answered');
+    if (picked >= 0) bs[picked].classList.add('pick');
+    bs[a].classList.add('right');
+    if (picked >= 0 && !ok) bs[picked].classList.add('wrong');
+    var exp = it.querySelector('.qc-exp'), tx = it.querySelector('.qc-tx'), fb = it.querySelector('.qc-fb');
+    var head = ok ? 'Correct.' : (picked < 0 ? 'No answer. The answer is ' : 'Not quite. The answer is ') + 'ABCD'.charAt(a) + '.';
+    if (exp) {
+      fb.innerHTML = '<div class="correction' + (ok ? '' : ' bad') + '"><p><b>' + head + '</b></p></div>';
+      exp.hidden = false;
+      fb.firstChild.appendChild(exp);
+      if (tx) { tx.hidden = false; fb.firstChild.appendChild(tx); }
+    } else {
+      fb.innerHTML = '<div class="correction' + (ok ? '' : ' bad') + '"><p><b>' + head + '</b></p><p>' + (it.getAttribute('data-e') || '') + '</p></div>';
+    }
+    return ok;
+  }
+  function unreveal(it) {
+    it.querySelectorAll('.bub').forEach(function (x) { x.disabled = false; x.classList.remove('pick', 'right', 'wrong'); });
+    it.classList.remove('answered', 'heard', 'shown-text');
+    var exp = it.querySelector('.qc-exp'), tx = it.querySelector('.qc-tx'), fb = it.querySelector('.qc-fb');
+    if (exp) { exp.hidden = true; it.insertBefore(exp, fb); }
+    if (tx) { tx.hidden = true; it.insertBefore(tx, exp || fb); }
+    fb.innerHTML = '';
+  }
+  /* no voice in this browser: listening items can be read instead */
+  if (!synth) doc.querySelectorAll('.qc-listen .qc-audio').forEach(function (au) {
+    var b = doc.createElement('button'); b.type = 'button'; b.className = 'btn btn-line btn-small show-text'; b.textContent = 'Show the text';
+    b.addEventListener('click', function () {
+      var it = au.closest('.qc-item'), tx = it.querySelector('.qc-tx');
+      if (tx) { tx.hidden = false; it.classList.add('shown-text'); }
+      b.remove();
+    });
+    au.appendChild(b);
+  });
+
   doc.querySelectorAll('.qc').forEach(function (qc) {
     var items = qc.querySelectorAll('.qc-item'), score = qc.querySelector('.qc-score'), again = qc.querySelector('.qc-again');
-    var done = 0, right = 0;
-    function update() {
-      if (done === items.length) {
-        score.textContent = right + ' / ' + items.length + ' correct. ' +
-          (right === items.length ? 'Excellent!' : 'Read the explanations, then try again.');
-        again.hidden = false;
-      } else score.textContent = done ? right + ' of ' + done + ' correct so far' : '';
+    var test = qc.getAttribute('data-mode') === 'test';
+    if (!test) {
+      var done = 0, right = 0;
+      var update = function () {
+        if (done === items.length) {
+          score.textContent = right + ' / ' + items.length + ' correct. ' +
+            (right === items.length ? 'Excellent!' : 'Read the explanations, then try again.');
+          again.hidden = false;
+        } else score.textContent = done ? right + ' of ' + done + ' correct so far' : '';
+      };
+      items.forEach(function (it) {
+        it.addEventListener('click', function (e) {
+          var b = e.target.closest('.bub');
+          if (!b || b.disabled) return;
+          done++; if (reveal(it, +b.getAttribute('data-i'))) right++;
+          update();
+        });
+      });
+      if (again) again.addEventListener('click', function () {
+        done = 0; right = 0; stopSpeak();
+        items.forEach(unreveal);
+        again.hidden = true; update();
+        qc.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      return;
     }
+
+    /* ---------- test mode ---------- */
+    var prog = qc.querySelector('.qc-prog b'), check = qc.querySelector('.qc-check'), warn = qc.querySelector('.qc-warn');
+    var result = qc.querySelector('.qc-result'), tbtn = qc.querySelector('.qc-timer'), clock = qc.querySelector('.qc-clock');
+    var minutes = +qc.getAttribute('data-minutes') || 0, left = 0, timer = 0, checked = false, warned = false;
+    function chosen(it) { var p = it.querySelector('.bub.pick'); return p ? +p.getAttribute('data-i') : -1; }
+    function count() { var c = 0; items.forEach(function (it) { if (chosen(it) >= 0) c++; }); return c; }
+    function fmtTime(s) { return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
+    function stopTimer() { clearInterval(timer); timer = 0; }
     items.forEach(function (it) {
       it.addEventListener('click', function (e) {
         var b = e.target.closest('.bub');
-        if (!b || b.disabled) return;
-        var i = +b.getAttribute('data-i'), a = +it.getAttribute('data-a'), bs = it.querySelectorAll('.bub'), ok = i === a;
-        bs.forEach(function (x) { x.disabled = true; });
-        it.classList.add('answered');          // translation is allowed from now on
-        bs[i].classList.add('pick');
-        bs[a].classList.add('right');
-        if (!ok) bs[i].classList.add('wrong');
-        done++; if (ok) right++;
-        it.querySelector('.qc-fb').innerHTML = '<div class="correction' + (ok ? '' : ' bad') + '"><p><b>' +
-          (ok ? 'Correct.' : 'Not quite. The answer is ' + 'ABCD'.charAt(a) + '.') + '</b></p><p>' + it.getAttribute('data-e') + '</p></div>';
-        update();
+        if (!b || b.disabled || checked) return;
+        it.querySelectorAll('.bub').forEach(function (x) { x.classList.toggle('pick', x === b); x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+        it.classList.add('chosen');
+        prog.textContent = count();
+        if (warned && count() === items.length) { warn.hidden = true; warned = false; }
       });
     });
-    if (again) again.addEventListener('click', function () {
-      done = 0; right = 0;
+    function grade() {
+      checked = true; stopTimer(); stopSpeak();
+      var parts = {}, order = [], right = 0;
       items.forEach(function (it) {
-        it.querySelectorAll('.bub').forEach(function (x) { x.disabled = false; x.classList.remove('pick', 'right', 'wrong'); });
-        it.classList.remove('answered');
-        it.querySelector('.qc-fb').innerHTML = '';
+        var sec = it.getAttribute('data-sec') || 'Questions';
+        if (!parts[sec]) { parts[sec] = { r: 0, n: 0 }; order.push(sec); }
+        var ok = reveal(it, chosen(it));
+        parts[sec].n++; if (ok) { parts[sec].r++; right++; }
       });
-      again.hidden = true; update();
+      var p = Math.round(100 * right / items.length);
+      result.innerHTML = '<p class="qc-big">' + right + ' / ' + items.length + ' <span>' + p + '%</span></p>' +
+        (order.length > 1 ? '<ul class="qc-parts">' + order.map(function (s) {
+          var x = parts[s], q = Math.round(100 * x.r / x.n);
+          return '<li><span>' + s + '</span><span class="qc-meter"><i style="width:' + q + '%"></i></span><b>' + x.r + ' / ' + x.n + '</b></li>';
+        }).join('') + '</ul>' : '') +
+        '<p class="qc-note">' + (p >= 80 ? 'Very good. Take longer timed tests to build speed and stamina.'
+          : p >= 60 ? 'Good base. Read the explanations of your mistakes, then practice your weakest part.'
+          : 'Start with the lessons, then take this test again in a week.') +
+        ' Scroll up: every question now shows its answer and explanation.</p>';
+      result.hidden = false; warn.hidden = true; check.hidden = true; again.hidden = false;
+      if (tbtn) tbtn.hidden = true;
+      qc.classList.add('graded');
+      result.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    check.addEventListener('click', function () {
+      var c = count();
+      if (c < items.length && !warned) {
+        warned = true; warn.hidden = false;
+        warn.textContent = (items.length - c) + ' question' + (items.length - c > 1 ? 's are' : ' is') +
+          ' not answered yet. Press the button again to check anyway.';
+        return;
+      }
+      grade();
+    });
+    if (tbtn) tbtn.addEventListener('click', function () {
+      if (timer) { stopTimer(); tbtn.textContent = 'Resume the timer'; return; }
+      if (!left) left = minutes * 60;
+      clock.hidden = false; clock.textContent = fmtTime(left);
+      tbtn.textContent = 'Pause the timer';
+      timer = setInterval(function () {
+        left--;
+        clock.textContent = fmtTime(Math.max(0, left));
+        clock.classList.toggle('low', left <= 60);
+        if (left <= 0) { stopTimer(); clock.textContent = 'Time is up'; grade(); }
+      }, 1000);
+    });
+    again.addEventListener('click', function () {
+      checked = false; warned = false; left = 0; stopTimer(); stopSpeak();
+      items.forEach(function (it) { unreveal(it); it.classList.remove('chosen'); });
+      prog.textContent = '0'; result.hidden = true; result.innerHTML = ''; check.hidden = false; again.hidden = true;
+      qc.classList.remove('graded');
+      if (tbtn) { tbtn.hidden = false; tbtn.textContent = 'Start the ' + minutes + '-minute timer'; }
+      if (clock) { clock.hidden = true; clock.classList.remove('low'); }
       qc.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   });

@@ -2188,7 +2188,89 @@ function loadBundle() {
     document.head.appendChild(s);
   });
 }
+/* ------------------- corrections de questions (octobre 2026) -------------------
+   Relecture independante des questions : cle fausse ou ambigue, explication
+   erronee, anglais britannique. Appliquees au chargement, en reperant chaque
+   question par son texte d'origine : aucun fichier data/ a remplacer, et
+   sans effet si la question est deja corrigee (site web).                  */
+var QFIX = [
+  ["PHRASALS", "In the middle of his speech, he *went off the deep end*.", {"o": ["He giggled a little.", "He started acting berserk.", "He gave extra, better examples.", "He answered questions correctly."]}],
+  ["PHRASALS", "Where did you *pick up* those bad words?", {"o": ["select", "raise", "learn", "spell"], "e": "*Pick up* = learn something informally, just by hearing or seeing it, without studying."}],
+  ["PHRASALS", "You don't have to stand up. *Be seated*.", {"o": ["lie down", "sit down", "wake up", "turn over"]}],
+  ["PHRASALS", "We are planning a big party. Would you like to *participate*?", {"o": ["be in on it", "be behind in it", "be out of it", "be up to it"]}],
+  ["PHRASALS", "Before you ask for a re-assignment, *consider the matter carefully*.", {"q": "Before you ask for a reassignment, *consider* the matter *carefully*.", "o": ["get through it", "come across it", "think it over", "check out of it"]}],
+  ["PHRASALS", "The student *fell asleep* during the graduation speeches.", {"e": "*Drop off* = fall asleep, often without meaning to."}],
+  ["IDIOMS_QUIZ", "The entire meal, including drinks and tip, *amounted to* $512.", {"e": "*Amount to* = *come to* (add up to a total): The bill came to $512."}],
+  ["IDIOMS_QUIZ", "Let's *stop working* on this exercise for a minute and do something different.", {"q": "Let's *stop working on* this exercise for a minute and do something different."}],
+  ["IDIOMS_QUIZ", "I can't go to the movies with you. I have to *burn the midnight oil*.", {"o": ["sleep all night", "work late at night", "watch TV all night", "make a 12:00 phone call"], "e": "*Burn the midnight oil* = work or study late into the night."}],
+  ["IDIOMS_QUIZ", "He's *plying a new trade* these days.", {"o": ["He has a different job.", "He has remarried.", "He is driving a new car.", "He is living in a different home."], "e": "A *trade* = a job. To *ply a trade* = to work at a job."}],
+  ["IDIOMS_QUIZ", "The *bean counters* probably won't agree to your budget requests.", {"o": ["cooks and chefs", "gardeners and farmers", "accountants or clerks in a business", "coaches or trainers for very weak athletes"], "e": "*Bean counter* (informal, slightly negative) = an accountant or finance official who cares mainly about costs."}],
+  ["IDIOMS_QUIZ", "I told you a little white lie.", {"o": ["I fibbed.", "I flinched.", "I forged.", "I framed."], "e": "A *little white lie* = a small lie that is not serious = a *fib*."}],
+  ["GRAMMAR_PLUS", "I would have called you if I _______ your number.", {"o": ["had had", "have had", "have", "would have"], "e": "Third conditional: if + past perfect (had + past participle). The past participle of *have* is *had*: if I had had your number."}],
+  ["GRAMMAR_PLUS", "He plays _______ guitar very well.", {"q": "_______ Pacific is the largest ocean in the world.", "o": ["The", "A", "An", "(no article)"], "a": 0, "e": "Use *the* with oceans, seas and rivers: the Pacific, the Atlantic, the Mediterranean, the Nile."}],
+  ["GRAMMAR_PLUS", "I'd rather you _______ mention this to anyone.", {"o": ["didn't", "don't", "won't", "hadn't"]}],
+  ["MODULE_TEST", "Surprisingly, the people of that country ______ any gum disease.", {"o": ["doesn't have", "don't have", "hasn't", "isn't having"]}],
+  ["MODULE_TEST", "Just as I was walking into the classroom, the bell ______.", {"o": ["ring", "ringing", "rang", "has rung"]}],
+  ["MODULE_TEST", "While you are taking the ECL tomorrow, I ______ your papers.", {"o": ["read", "was reading", "will be reading", "have read"]}],
+  ["MODULE_TEST", "We ______ the flight tickets yet.", {"o": ["don't book", "hasn't booked", "have booked", "haven't booked"]}],
+  ["VOCAB_AM", "Would you like a cookie with your coffee? A “cookie” is:", {"o": ["a small, flat, sweet baked treat", "a slice of bread", "a candy bar", "a cracker with cheese"], "e": "Cookie (US) = biscuit (UK). In American English, a *biscuit* is a small soft bread roll."}],
+  ["VOCAB_AM", "“To relieve” a unit means:", {"e": "To relieve a unit = to replace it with another unit in its position, so that it can rest or move elsewhere."}],
+  ["VOCAB_AM", "“Hardware” in a defence context means:", {"q": "“Hardware” in a defense context means:", "e": "Hardware (defense) = military equipment."}],
+  ["EXPRESS_QCM", "When I got to the pier, the ship ______ already ______.", {"o": ["has / sailed", "had / sailed", "is / sailing", "did / sail"], "e": "The past perfect (*had sailed*) shows an action completed before another past action (*I got to the pier*)."}],
+  ["EXPRESS_QCM", "He ______ to Washington three times this year.", {"o": ["have been", "has been", "goes", "was going"]}],
+  ["EXPRESS_QCM", "My purse was found ______ one of the cleaners.", {"o": ["to", "by", "from", "of"]}],
+  ["EXPRESS_QCM", "\"Come here,\" she said. -> She told me to ______ there.", {"o": ["comes", "go", "went", "coming"], "e": "*Here* becomes *there*, and *come* usually becomes *go*, because the speaker is no longer at that place."}],
+  ["EXPRESS_QCM", "Information about the enemy is called ______.", {"e": "*Intelligence* = information about an enemy's forces and plans."}],
+  ["EXPRESS_QCM", "To move troops away from a dangerous area is to ______ them.", {"e": "To *evacuate* = to move people out of a dangerous place."}],
+  ["EXPRESS_QCM", "A ______ officer deals with staff duties at headquarters.", {"q": "A ______ officer helps the commander with planning and administration at headquarters.", "e": "A *staff officer* works at headquarters and helps the commander plan and run operations."}],
+  ["EXPRESS_QCM", "The chain of ______ defines who reports to whom.", {"e": "*Chain of command* = the line of authority through which orders pass."}],
+  ["EXPRESS_QCM", "An aircraft that has no pilot on board is a ______.", {"e": "A *drone* (UAV) is an aircraft with no pilot on board."}],
+  ["EXPRESS_QCM", "A ______ is a formal investigation of an incident.", {"q": "The commander ordered a formal ______ into the accident.", "e": "An *inquiry* = an official investigation. *Inquire* is the verb."}],
+  ["EXPRESS_QCM", "The ship's ______ is the officer second in command.", {"e": "The *executive officer* (XO) is second in command after the commanding officer."}],
+  ["EXPRESS_QCM", "To ______ a ceasefire means to respect it.", {"e": "To *observe* a ceasefire = to respect it; to *breach* it = to break it."}],
+  ["EXPRESS_QCM", "Casualties are people who are ______ in an operation.", {"q": "Soldiers captured by the enemy are ______.", "o": ["prisoners of war", "veterans", "reservists", "deserters"], "a": 0, "e": "*Prisoners of war* (POWs) = members of the armed forces captured by the enemy."}],
+  ["EXPRESS_QCM", "I _____ right now.", {"e": "*Right now* calls for the present progressive (am/is/are + -ing). With *I*, use *am*: I am studying."}],
+  ["EXPRESS_QCM", "While I was driving to work this morning, I _____ to my new Celine Dion Cassette.", {"q": "When the alarm went off, the soldiers ______.", "o": ["sleep", "were sleeping", "are sleeping", "sleeping"], "a": 1, "e": "An action in progress (*were sleeping*) interrupted by a short action in the simple past (*went off*)."}],
+  ["EXPRESS_QCM", "Last week, he promised me that he _____ attend yesterday's meeting.", {"e": "Reported speech: the reporting verb *promised* is in the past, so *will* becomes *would*."}],
+  ["EXPRESS_QCM", "There was a fire _____ the library yesterday.", {"e": "Use *in* for something inside a building: in the library, in the dorms, in the hotel."}],
+  ["EXPRESS_QCM", "They will not qualify him because his ECL is still _____ 80.", {"e": "A number can be *under* (below) another number: his ECL score is under 80. The temperature is below zero."}],
+  ["EXPRESS_QCM", "If I were a person who _____ a million dollars, I would retire immediately.", {"e": "The unreal part is having a million dollars, so the verb after *who* is in the past too: if I were a person who *had* a million dollars, I would retire."}],
+  ["EXPRESS_QCM", "Blake is 17 years old. Neil is 18 years old. Craig is 16 years old.", {"o": ["Neil is younger than Blake.", "Blake is older than Neil.", "Craig is younger than Neil.", "Craig is older than Blake."], "a": 2, "e": "Craig (16) is younger than Neil (18). Neil is the oldest and Craig is the youngest."}],
+  ["EXPRESS_QCM", "That car is relatively inexpensive. _____, I think you should buy it.", {"e": "*Therefore* is a linking word that introduces a result. At the start of a sentence it is followed by a comma: You are studying a lot. Therefore, you should do well on the next test."}],
+  ["EXPRESS_QCM", "Before _____, he meditated for three minutes.", {"e": "*Before* is a preposition here, so it is followed by a noun or a gerund: *starting* is the -ing form of *start*."}],
+  ["EXPRESS_QCM", "Amine, it is high time you _____ for the examination.", {"q": "Amine, it is high time you _____ for the exam.", "o": ["are studying", "studied", "were studied", "are studied"], "a": 1, "e": "*It is (high) time* + subject + past simple: it is time you studied. The past form refers to the present."}],
+  ["EXPRESS_QCM", "I do not remember _____ that decision. When was it taken?", {"q": "I do not remember _____ that decision. When was it made?"}],
+  ["EXPRESS_QCM", "The patrol ______ back before dark yesterday.", {"o": ["comes", "came", "has come", "will come"], "e": "*Yesterday* is a finished time in the past: simple past, *came*."}],
+  ["EXPRESS_QCM", "The color red on the flag _____ blood.", {"e": "*The color* is singular (*it*), so the present simple takes -s: *symbolizes*."}],
+  ["EXPRESS_QCM", "The children are playing _____ the street again.", {"o": ["in", "at", "up", "through"], "e": "*In the street* = in the area of the road. *At* is used for a point, not for an area."}],
+  ["EXPRESS_QCM", "He makes a living _____ recycling old newspaper and magazines.", {"q": "He makes a living _____ recycling old newspapers and magazines.", "e": "*By* + -ing tells how someone does something: he makes a living by recycling. She improved her English by reading every day."}],
+  ["EXPRESS_QCM", "I heard some bad news _____ the radio this morning.", {"e": "*On the radio*, *on TV*, *on the Internet*: use *on* for the media."}],
+  ["EXPRESS_QCM", "The next ECL will _____ easy.", {"e": "After a modal (*will, might, should*...), use the base form of the verb: *will be*."}],
+  ["EXPRESS_QCM", "The escaped prisoner _____ last night near the airport.", {"e": "*Last night* calls for the past, and the prisoner did not catch anyone: he *was caught* (passive)."}],
+  ["EXPRESS_QCM", "Yesterday, the news about the earthquakes in Chile and Peru _____bad.", {"q": "Yesterday, the news about the earthquakes in Chile and Peru _____ bad.", "e": "*Yesterday* calls for the past, and *news* is singular: the news *was* bad."}],
+  ["EXPRESS_QCM", "If I finish my homework early, I _____ to the gym and work out.", {"e": "First conditional with *might*: a possible result in the future (*will* would make it certain)."}],
+  ["EXPRESS_QCM", "I am here _____ your teacher, not _____ your parent.", {"e": "*As* = in the role of: I am here as your teacher. He will act as company commander for three weeks."}],
+  ["EXPRESS_QCM", "It is not polite to stare _____ strangers.", {"e": "*Stare at*, *look at*, *point at*: these verbs take *at* before the person or thing."}],
+  ["EXPRESS_QCM", "Do you remember _____ him at the conference in Zurich?", {"o": ["to meet", "we meet", "meeting", "met"]}]
+];
+function fixQuestions() {
+  var banks = { BASE_GRAMMAR: BASE_GRAMMAR, GRAMMAR_PLUS: GRAMMAR_PLUS, EXPRESS_QCM: EXPRESS_QCM, BASE_VOCAB: BASE_VOCAB,
+    VOCAB_AM: VOCAB_AM, PHRASALS: PHRASALS, IDIOMS_QUIZ: IDIOMS_QUIZ, MODULE_TEST: MODULE_TEST };
+  QFIX.forEach(function (f) {
+    var b = banks[f[0]] || [];
+    for (var i = 0; i < b.length; i++) {
+      if (b[i] && b[i].q === f[1]) { for (var k in f[2]) if (f[2].hasOwnProperty(k)) b[i][k] = f[2][k]; break; }
+    }
+  });
+  [VOCAB_AM, PHRASALS, BASE_VOCAB].forEach(function (b) {
+    (b || []).forEach(function (x) {
+      if (x && typeof x.e === 'string') x.e = x.e.replace(/\((\*?)us(\*?)([,)])/g, '($1US$2$3');
+      if (x && typeof x.q === 'string') x.q = x.q.replace(/\((\*?)us(\*?)([,)])/g, '($1US$2$3');
+    });
+  });
+}
 function afterLoad() {
+  fixQuestions();
   buildBanks();
   // Acces direct a la page principale, a la premiere installation comme apres
   // une mise a jour : aucun ecran d'accueil, aucune page de nouveautes.
