@@ -154,6 +154,7 @@
         if (!b || b.disabled) return;
         var i = +b.getAttribute('data-i'), a = +it.getAttribute('data-a'), bs = it.querySelectorAll('.bub'), ok = i === a;
         bs.forEach(function (x) { x.disabled = true; });
+        it.classList.add('answered');          // translation is allowed from now on
         bs[i].classList.add('pick');
         bs[a].classList.add('right');
         if (!ok) bs[i].classList.add('wrong');
@@ -167,6 +168,7 @@
       done = 0; right = 0;
       items.forEach(function (it) {
         it.querySelectorAll('.bub').forEach(function (x) { x.disabled = false; x.classList.remove('pick', 'right', 'wrong'); });
+        it.classList.remove('answered');
         it.querySelector('.qc-fb').innerHTML = '';
       });
       again.hidden = true; update();
@@ -274,6 +276,7 @@
   function fqShow() {
     var q = qList[qI], c = q.c, m = /\*([^*]+)\*/.exec(c.x || ''), ctx = fq.querySelector('.fq-ctx');
     qAnswered = false;
+    fq.querySelector('.fq-body').classList.remove('answered');
     fq.querySelector('.dlg-n').textContent = 'Question ' + (qI + 1) + ' of ' + qList.length;
     if (m) {
       fq.querySelector('.fq-q').innerHTML = 'In this sentence, what does <span class="kw">' + esc(m[1]) + '</span> mean?';
@@ -293,6 +296,7 @@
   function fqAnswer(i) {
     if (qAnswered) return;
     qAnswered = true;
+    fq.querySelector('.fq-body').classList.add('answered');     // translation allowed from now on
     var q = qList[qI], ok = i === q.a, bs = fq.querySelectorAll('.bub');
     bs.forEach(function (x) { x.disabled = true; });
     bs[i].classList.add('pick'); bs[q.a].classList.add('right');

@@ -139,6 +139,11 @@
       if (sp[1]) sp[1].textContent = nm ? 'The best male American voice found in this browser. Choose another voice below if you prefer.'
         : 'This browser has no male American voice: an English (United States) voice is used.';
     }
+    var b0 = box.querySelector('p.fr > b');
+    if (b0 && b0.textContent === 'All the voices of this device') b0.textContent = 'All the voices of this browser';
+    box.querySelectorAll('p.fr').forEach(function (p) {
+      if (/listed by Android/.test(p.textContent)) p.textContent = 'This browser lists no English voice. Open the trainer in Google Chrome or Microsoft Edge.';
+    });
     var o = box.querySelector('option[value="__default__"]');
     if (o && !o.getAttribute('data-w')) {
       o.setAttribute('data-w', '1');
@@ -151,6 +156,7 @@
       if (idx === '__default__') {
         if (g.Speech && g.Speech.useDefaultVoice) g.Speech.useDefaultVoice();
         if (typeof g.toast === 'function') g.toast('Automatic voice: the best male American voice');
+        if (typeof g.voiceNowInfo === 'function') g.voiceNowInfo();
         if (typeof g.testVoice === 'function') g.testVoice();
         return;
       }

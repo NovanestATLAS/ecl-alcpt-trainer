@@ -1911,51 +1911,149 @@ VIEWS.settings = function () {
 };
 
 /* ------------------------- selecteur de voix ---------------------------- */
+/* Every voice of the phone (or of the browser), not only the US ones.
+   English voices first, grouped by accent (United States on top); the
+   voices of the other languages appear when "Other languages" is ticked.
+   Choosing a voice saves it and reads the test sentence.                  */
+var VOICE_REGIONS = { US: 'United States', GB: 'United Kingdom', CA: 'Canada', AU: 'Australia',
+  IE: 'Ireland', NZ: 'New Zealand', IN: 'India', ZA: 'South Africa', NG: 'Nigeria', GH: 'Ghana',
+  KE: 'Kenya', TZ: 'Tanzania', SG: 'Singapore', PH: 'Philippines', HK: 'Hong Kong', PK: 'Pakistan' };
+var VOICE_ORDER = ['US', 'GB', 'CA', 'AU', 'IE', 'NZ', 'IN', 'ZA', 'NG'];
+var VOICE_ISO3 = { eng: 'en', USA: 'US', GBR: 'GB', CAN: 'CA', AUS: 'AU', IRL: 'IE', NZL: 'NZ',
+  IND: 'IN', ZAF: 'ZA', NGA: 'NG' };
+var V_FEMALE = /\b(iob|iog|sfg|tpc|tpf|Ava|Aria|Emma|Jenny|Michelle|Ana|Jane|Nancy|Sara|Amber|Ashley|Cora|Elizabeth|Monica|Libby|Maisie|Sonia|Natasha|Clara|Neerja|Emily|Molly|Leah|Ezinne|Luna|Rosa|Imani|Asilia|Zira|Hazel|Susan|Catherine|Heera|Linda|Samantha|Allison|Victoria|Karen|Moira|Tessa|Fiona|Serena|Kate|Veena|Zoe|Nicky|Joelle|Noelle|Martha)(Multilingual)?\b|\bfemale\b|Google US English/i;
+var V_MALE = /\b(iol|iom|tpd|Andrew|Brian|Christopher|Eric|Guy|Roger|Steffan|Davis|Tony|Jason|Brandon|Kai|Ryan|Thomas|William|Liam|Prabhat|Connor|Mitchell|Luke|Abeo|Wayne|James|Elimu|Chilemba|David|Mark|George|Richard|Ravi|Sean|Alex|Fred|Daniel|Aaron|Arthur|Evan|Nathan|Tom|Rishi|Gordon|Oliver)(Multilingual)?\b|\bmale\b/i;
+
+function voiceLoc(v) {
+  var m = /^([a-z]{2,3})(?:[-_]([a-z]{2,3}|\d{3}))?/i.exec(String(v.lang || ''));
+  if (!m) m = /^([a-z]{2,3})-([a-z]{2,3})-/i.exec(String(v.id || ''));    // en-us-x-iol-network
+  if (!m) return { l: '', r: '' };
+  var l = m[1].toLowerCase(), r = String(m[2] || '').toUpperCase();
+  return { l: VOICE_ISO3[l] || l, r: VOICE_ISO3[r] || r };
+}
+function intlName(code, type) {
+  try { if (window.Intl && Intl.DisplayNames) return new Intl.DisplayNames(['en'], { type: type }).of(code) || code; }
+  catch (e) { }
+  return code;
+}
+function voiceGender(v) {
+  var t = String(v.name || '') + ' ' + String(v.id || ''), m = /#(female|male)_/i.exec(t);
+  if (m) return m[1].toLowerCase();                  // older Google names: en-us-x-sfg#male_1-local
+  return V_FEMALE.test(t) ? 'female' : (V_MALE.test(t) ? 'male' : '');
+}
+/* Short label: "iol · male · online" for an Android voice, the browser's
+   name without its language for a web voice. */
+function voiceLabel(v) {
+  var id = String(v.id || ''), g = voiceGender(v), extra = [];
+  var a = /^[a-z]{2,3}-[a-z]{2,3}-x-([a-z0-9]+)(?:#([a-z]+)_(\d+))?-(local|network)$/i.exec(id), nm;
+  if (a) {
+    nm = a[1] + (a[3] ? ' ' + a[3] : '');
+    extra.push(a[4].toLowerCase() === 'network' ? 'online' : 'offline');
+  } else if (/-language$/i.test(id)) nm = 'Standard voice';
+  else nm = String(v.name || id).replace(/\s*[-–(]\s*[A-Z][a-z]+(\s[A-Za-z]+)?\s*\([^)]*\)\)?\s*$/, '').trim() || id;
+  return nm + (g ? ' · ' + g : '') + (extra.length ? ' · ' + extra.join(' · ') : '');
+}
 function renderVoiceBox() {
   if (!window.Speech || !document.getElementById('voiceBox')) return;
-  Speech.listVoices(function (list) {
+  var lister = Speech.listAllVoices || Speech.listVoices;
+  lister.call(Speech, function (list) {
     var box = document.getElementById('voiceBox');
     if (!box) return;
-    list = (list || []).filter(function (v) {
-      return /en[-_]US/i.test(v.lang || '') || /^en-us/i.test(v.id || '');
-    });
     var cur = Speech.getVoiceId();
     var def = Speech.defaultVoiceId ? Speech.defaultVoiceId() : 'en-us-x-iol-network';
-    var exactInstalled = list.some(function (v) { return (v.id || '').toLowerCase() === def.toLowerCase(); });
+    var showAll = !!LSget('voice_all', 0);
+    var groups = {}, keys = [], nEn = 0, nOther = 0, exactInstalled = false;
+    (list || []).forEach(function (v) {
+      if (!v || !v.id) return;
+      var loc = voiceLoc(v), en = loc.l === 'en';
+      if ((v.id || '').toLowerCase() === String(def).toLowerCase()) exactInstalled = true;
+      if (en) nEn++; else nOther++;
+      if (!en && !showAll && v.id !== cur) return;
+      var k = en ? 'en|' + (loc.r || 'ZZ') : 'zz|' + (loc.l || 'zz') + '|' + loc.r;
+      if (!groups[k]) {
+        groups[k] = { en: en, r: loc.r, l: loc.l, items: [] };
+        keys.push(k);
+      }
+      groups[k].items.push(v);
+    });
+    function gName(gp) {
+      if (gp.en) return 'English — ' + (gp.r && gp.r !== 'ZZ' ? (VOICE_REGIONS[gp.r] || intlName(gp.r, 'region')) : 'other');
+      return intlName(gp.l, 'language') + (gp.r ? ' — ' + (VOICE_REGIONS[gp.r] || intlName(gp.r, 'region')) : '');
+    }
+    keys.sort(function (a, b) {
+      var A = groups[a], B = groups[b];
+      if (A.en !== B.en) return A.en ? -1 : 1;
+      if (A.en) {
+        var ia = VOICE_ORDER.indexOf(A.r), ib = VOICE_ORDER.indexOf(B.r);
+        ia = ia < 0 ? 99 : ia; ib = ib < 0 ? 99 : ib;
+        if (ia !== ib) return ia - ib;
+      }
+      return gName(A) < gName(B) ? -1 : (gName(A) > gName(B) ? 1 : 0);
+    });
+    var gOrder = { male: 0, female: 1, '': 2 }, flat = [], opts = '';
+    keys.forEach(function (k) {
+      var gp = groups[k];
+      gp.items.sort(function (a, b) {
+        var d = gOrder[voiceGender(a)] - gOrder[voiceGender(b)];
+        if (d) return d;
+        var la = voiceLabel(a).toLowerCase(), lb = voiceLabel(b).toLowerCase();
+        return la < lb ? -1 : (la > lb ? 1 : 0);
+      });
+      opts += '<optgroup label="' + esc(gName(gp)) + ' (' + gp.items.length + ')">' + gp.items.map(function (v) {
+        flat.push(v);
+        return '<option value="' + (flat.length - 1) + '"' + (v.id === cur && cur !== def ? ' selected' : '') + '>' +
+          esc(voiceLabel(v)) + '</option>';
+      }).join('') + '</optgroup>';
+    });
+    var accents = keys.filter(function (k) { return groups[k].en; }).length;
 
-    var h = '<p class="fr"><b>US English voices only</b></p>' +
+    var h = '<p class="fr"><b>All the voices of this device</b>: ' + nEn + ' English voice' + (nEn > 1 ? 's' : '') +
+      (accents > 1 ? ' in ' + accents + ' accents' : '') +
+      (nOther ? ', ' + nOther + ' in other languages' : '') + '. Choose one: it is saved and reads a test sentence.</p>' +
       '<div class="voice-default"><span class="vd-k">Default</span><b>' + esc(def) +
       '</b><span>' + (exactInstalled ? 'Google US voice detected on this device.' :
       'Preferred Google US identifier. Android will use it when available, otherwise an installed US voice is used.') + '</span></div>';
-
-    if (!list.length) {
-      h += '<p class="fr">No US English voice is currently listed by Android. ' +
+    if (!flat.length) {
+      h += '<p class="fr">No English voice is currently listed by Android. ' +
         'Install English (United States) voice data below.</p>';
     } else {
-      h += '<select class="sel" onchange="pickVoice(this.value)">' +
-        '<option value="__default__"' + (cur === def ? ' selected' : '') + '>Preferred Google US - ' + esc(def) + '</option>' +
-        list.filter(function (v) { return (v.id || '').toLowerCase() !== def.toLowerCase(); }).map(function (v, i) {
-          return '<option value="' + i + '"' + (v.id === cur ? ' selected' : '') + '>' +
-            esc(v.name) + (v.lang ? ' - ' + esc(v.lang) : '') + (v.google ? ' - Google' : '') + '</option>';
-        }).join('') + '</select>';
+      h += '<select class="sel" onchange="pickVoice(this.value)" aria-label="Voice">' +
+        '<option value="__default__"' + (cur === def ? ' selected' : '') + '>Default voice - ' + esc(def) + '</option>' +
+        opts + '</select>';
     }
+    h += '<p class="fr vsel-now" id="voiceNow"></p>';
+    if (nOther) h += '<label class="switch"><input type="checkbox"' + (showAll ? ' checked' : '') +
+      ' onchange="LSset(\'voice_all\',this.checked?1:0);renderVoiceBox()"> Other languages too (they read English with their own accent)</label>';
     box.innerHTML = h;
-    box._list = list.filter(function (v) { return (v.id || '').toLowerCase() !== def.toLowerCase(); });
+    box._list = flat;
+    voiceNowInfo();
   });
+}
+/* "Voice in use": the exact name, to tell which one to keep as default. */
+function voiceNowInfo() {
+  var el = document.getElementById('voiceNow'), box = document.getElementById('voiceBox');
+  if (!el || !window.Speech) return;
+  var cur = Speech.getVoiceId(), v = null;
+  ((box && box._list) || []).forEach(function (x) { if (x.id === cur) v = x; });
+  var loc = v ? voiceLoc(v) : null;
+  el.innerHTML = 'Voice in use: <b>' + esc(cur) + '</b>' + (v ? ' &middot; ' + esc(voiceLabel(v)) +
+    (loc && loc.r ? ' &middot; ' + esc(VOICE_REGIONS[loc.r] || intlName(loc.r, 'region')) : '') : '');
 }
 function pickVoice(idx) {
   var box = document.getElementById('voiceBox');
   if (!box) return;
   if (idx === '__default__') {
     if (Speech.useDefaultVoice) Speech.useDefaultVoice();
-    toast('Preferred Google US voice selected');
+    toast('Default voice selected');
+    voiceNowInfo();
     testVoice();
     return;
   }
   var v = (box._list || [])[parseInt(idx, 10)];
   if (!v) return;
   Speech.setVoiceId(v.id, v.native);
-  toast('US voice saved');
+  toast('Voice saved');
+  voiceNowInfo();
   testVoice();
 }
 function openVoiceSettings() {

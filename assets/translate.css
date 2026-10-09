@@ -109,3 +109,9 @@ html.tr-open .w-tr{background:var(--bg2,#EEF2F7)}
 .tr-chip svg{width:18px;height:18px;color:#D9A441}
 @media (prefers-reduced-motion:reduce){.tr-card.tr-flash{animation:none}}
 @media print{.tr-card,.tr-bubble,.tr-chip,.tr-hbtn{display:none!important}}
+
+/* Translation checks an answer, it never finds it: before the answer the
+   question cannot be selected (no browser "Translate" menu either).       */
+#root .qbox,#root .opts,.qc-item:not(.answered) .qc-q,.qc-item:not(.answered) .bubbles,
+.fq-body:not(.answered) .fq-q,.fq-body:not(.answered) .fq-ctx,.fq-body:not(.answered) .bubbles{-webkit-user-select:none;user-select:none}
+#root.tr-ok .qbox,#root.tr-ok .opts,#root.tr-ok #fb{-webkit-user-select:text;user-select:text}

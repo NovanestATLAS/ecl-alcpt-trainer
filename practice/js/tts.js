@@ -88,9 +88,10 @@
   }
   function pickVoice() {
     var wanted = pref(VOICE_KEY, ''), all = englishVoices(), i;
+    /* the voice chosen in Settings, whatever its accent or language */
     if (wanted) {
-      for (i = 0; i < all.length; i++) {
-        if (all[i].voiceURI === wanted || all[i].name === wanted) return all[i];
+      for (i = 0; i < voices.length; i++) {
+        if (voices[i].voiceURI === wanted || voices[i].name === wanted) return voices[i];
       }
     }
     for (i = 0; i < all.length; i++) {
@@ -302,7 +303,7 @@
     return /en[-_]US/i.test(String(lang || '')) || /^en-us/i.test(String(id || ''));
   }
 
-  function normaliseNative(list) {
+  function normaliseNative(list, every) {
     var out = [], i, v, id, name, lang;
     if (!list || !list.length) return out;
     for (i = 0; i < list.length; i++) {
@@ -314,7 +315,7 @@
         lang = v.language || v.locale || v.lang || '';
       }
       if (!id) continue;
-      if (!isEnglish(lang, id)) continue;
+      if (!every && !isEnglish(lang, id)) continue;
       out.push({ id: String(id), name: String(name), lang: String(lang),
                  google: isGoogle(name, id), native: true });
     }
@@ -333,6 +334,29 @@
       nativeVoiceCache = normaliseNative(res);
       cb(nativeVoiceCache);
     }
+  }
+
+  /* Every voice of the engine, all languages (Settings > Audio). */
+  var nativeAllCache = null;
+  function fetchNativeAll(cb) {
+    if (nativeAllCache) { cb(nativeAllCache); return; }
+    if (!detectNative() || typeof nativeTTS.getVoices !== 'function') { cb([]); return; }
+    var res;
+    try { res = nativeTTS.getVoices(); } catch (e) { cb([]); return; }
+    if (res && typeof res.then === 'function') {
+      res.then(function (l) { nativeAllCache = normaliseNative(l, true); cb(nativeAllCache); },
+               function () { cb([]); });
+    } else {
+      nativeAllCache = normaliseNative(res, true);
+      cb(nativeAllCache);
+    }
+  }
+  function webAllList() {
+    collectVoices();
+    return voices.map(function (v) {
+      return { id: v.voiceURI || v.name, name: v.name, lang: v.lang || '',
+               google: isGoogle(v.name, v.voiceURI), native: false };
+    });
   }
 
   function webVoiceList() {
@@ -477,9 +501,17 @@
       });
     },
 
+    /* Tout le catalogue, toutes langues : Settings > Audio. */
+    listAllVoices: function (cb) {
+      fetchNativeAll(function (nat) {
+        if (nat && nat.length) { cb(nat); return; }
+        waitForVoices(function () { cb(webAllList()); }, 12);
+      });
+    },
+
     /* Identifiant de la voix actuellement retenue, natif ou web. */
     getVoiceId: function () {
-      return pref(NVOICE_KEY, '') || pref(VOICE_KEY, '') || DEFAULT_US_VOICE;
+      return pref(NVOICE_KEY, '') || pref(VOICE_KEY, '') || Speech.defaultVoiceId();
     },
 
     /* Enregistre la voix choisie. `native` indique la source.

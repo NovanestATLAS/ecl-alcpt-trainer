@@ -7,9 +7,13 @@
      Google Chrome and Microsoft Edge on computers translate on the device
      with the browser's built-in Translator API. In other browsers, or for a
      language the browser cannot translate, the box opens Google Translate.
-   . Hover: in those same browsers, hold the mouse over a word in a lesson
-     to see it in the chosen language (a switch turns it off).
-   . Select some text in a lesson: a small Translate button appears.
+   . Hover: in those same browsers, once a question has been ANSWERED (a
+     lesson's Quick check, or the trainer in practice mode), hold the mouse
+     over a word of that question to see it in the chosen language (a switch
+     turns it off). Never before the answer, never in the timed test, the
+     module test or the smart review.
+   . Select some text: a small Translate button appears (same rules inside
+     the questions).
    Nothing is sent to this website.
    ========================================================================== */
 (function (g) {
@@ -64,13 +68,53 @@
   function put(k, v) { try { localStorage.setItem(k, v); } catch (e) { } }
   function find(code) { for (var i = 0; i < LANGS.length; i++) if (LANGS[i][0] === code) return LANGS[i]; return null; }
 
-  var lang = find(get(K_LANG, 'ar')) ? get(K_LANG, 'ar') : 'ar';
+  /* First visit: suggest the language of the browser or phone (French phone
+     -> French), Arabic when the device is set to English.                  */
+  function suggest() {
+    var list = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ''];
+    for (var i = 0; i < list.length; i++) {
+      var t = String(list[i] || '').toLowerCase(), p = t.split('-')[0];
+      if (!p || p === 'en') continue;
+      if (p === 'zh') return /hant|tw|hk|mo/.test(t) ? 'zh-Hant' : 'zh';
+      if (p === 'iw') p = 'he';
+      if (p === 'nb' || p === 'nn') p = 'no';
+      if (p === 'fil') p = 'tl';
+      if (find(p)) return p;
+    }
+    return 'ar';
+  }
+  var saved = get(K_LANG, ''), lang = find(saved) ? saved : suggest();
   var hasAPI = 'Translator' in g && !!g.Translator && typeof g.Translator.create === 'function';
   var finePointer = !!(g.matchMedia && g.matchMedia('(hover: hover) and (pointer: fine)').matches);
   var hoverOn = get(K_HOVER, '1') !== '0';
-  var SCOPE = '[data-tr-scope], article.prose, #root';
+  var SCOPE = '[data-tr-scope], article.prose, #root, .fq-body';
   var SKIP = 'input, textarea, select, kbd, code, svg, .say, .btn, .tool, .study-bar, .chips, .letters, .pager, .vchip, ' +
-             '.tabbar, .navrow, .tr-card, .tr-bubble, .tr-chip, [data-tr-skip]';
+             '.tabbar, .navrow, .qtools, .tr-card, .tr-bubble, .tr-chip, [data-tr-skip]';
+
+  /* Translation helps to CHECK an answer, never to find it:
+     . trainer: only once the question is answered, in practice with immediate
+       feedback; never in the timed test, the module test or the smart review;
+     . lessons: only in a Quick check question, or a "Quiz me" question, that
+       has been answered.                                                      */
+  function trainerOK() {
+    var S = g.S;
+    return !!(S && S.view === 'quiz' && !S.sim && S.locked && S.key !== 't_mod' && S.title !== 'Smart review');
+  }
+  function zoneOK(el) {            // word under the mouse
+    if (!el || !el.closest) return false;
+    if (el.closest('#root')) return trainerOK() && !!el.closest('.qbox, .opts, #fb');
+    var q = el.closest('.qc-item, .fq-body');
+    return !!(q && q.classList.contains('answered'));
+  }
+  function selectOK(el) {          // selected text (the Translate chip)
+    if (el.closest('#root')) return trainerOK();
+    var q = el.closest('.qc-item, .fq-body');
+    return q ? q.classList.contains('answered') : true;
+  }
+  /* a quiz opens in a modal dialog, drawn above the page: the bubble and
+     the chip must then be placed inside that dialog to be seen           */
+  function hostFor(el) { var d = el && el.closest && el.closest('dialog[open]'); return d || doc.body; }
+  function mount(node, host) { if (node && host && node.parentNode !== host) host.appendChild(node); }
 
   /* broken: the browser shows the API but it does not answer (some Chromium
      browsers); bad[code]: this language could not be prepared            */
@@ -214,7 +258,7 @@
       '<div class="tr-out" aria-live="polite" hidden></div>' +
       '<p class="tr-status"></p>' +
       '<label class="tr-switch" hidden><input type="checkbox" class="tr-hover"><span class="tr-sw" aria-hidden="true"></span>' +
-      '<span>Translate a word when the mouse is over it</span></label>' +
+      '<span>After I answer, translate the word under the mouse</span></label>' +
       '<p class="tr-hint"></p>';
     var sel = card.querySelector('.tr-lang'), ta = card.querySelector('.tr-in'), go = card.querySelector('.tr-go'),
         gt = card.querySelector('.tr-gt'), out = card.querySelector('.tr-out'), st = card.querySelector('.tr-status'),
@@ -296,11 +340,18 @@
     else if (E.state === 'unavailable') msg = 'Your browser cannot translate into ' + nm + ' here: use Google Translate.';
     else if (E.state === 'error') msg = 'Your browser could not prepare the translator. Use Google Translate.';
     c.st.textContent = msg;
-    var canHover = dev && finePointer;
+    /* the switch only where there are questions to answer */
+    var trainer = !!doc.getElementById('root'), quiz = !!doc.querySelector('.qc-item, [data-fq]');
+    var canHover = dev && finePointer && (trainer || quiz);
     c.sw.hidden = !canHover;
-    c.hint.textContent = canHover ? 'You can also select a few words on the page and press Translate.'
-      : (finePointer ? 'Tip: select words on the page, then press the Translate button that appears.'
-                     : 'Tip: select a word or a sentence on the page, then tap Translate.');
+    var how = finePointer ? 'select words, then press the Translate button that appears' : 'select a word, then tap Translate';
+    c.hint.textContent = trainer
+        ? (canHover ? 'Answer the question first: then hold the mouse over a word of the question or of the explanation.'
+                    : 'Answer the question first: then ' + how + '. Not available in the timed test.')
+      : quiz
+        ? (canHover ? 'In a quiz, answer first: then hold the mouse over a word of that question. Elsewhere, ' + how + '.'
+                    : 'In a quiz, answer first, then ' + how + '. Elsewhere on the page, it works at any time.')
+      : 'Tip: ' + how + '.';
   }
   function refresh() { cards.forEach(refreshCard); }
   watchers.push(refresh);
@@ -314,6 +365,7 @@
     var docked = !c.card.closest('[data-tr-pop]') && !(g.matchMedia && g.matchMedia('(max-width: 900px)').matches);
     var s = selectedText();
     if (s) c.ta.value = s;
+    else if (c.card.closest('[data-tr-pop]') && trainerOK()) { c.ta.value = trainerSentence(); c.gt.href = gtUrl(c.ta.value, lang); }
     if (docked) {
       c.card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       c.card.classList.remove('tr-flash'); void c.card.offsetWidth; c.card.classList.add('tr-flash');
@@ -331,6 +383,14 @@
     var side = !!c.card.closest('[data-tr-pop]') && !!(g.matchMedia && g.matchMedia('(min-width: 641px)').matches);
     backdrop.hidden = !open || side;
     if (open) setTimeout(function () { try { c.ta.focus({ preventScroll: true }); } catch (e) { } }, 60);
+  }
+  /* the question of the trainer with the correct answer in the blank */
+  function trainerSentence() {
+    var S = g.S, q = S && S.pool && S.pool[S.idx];
+    if (!q) return '';
+    var t = String(q.q || '').replace(/\*/g, ''), ans = String(q.c || '').replace(/\*/g, '');
+    var gap = /_{2,}|\u2026+|\.{3,}/;
+    return (ans && gap.test(t) ? t.replace(gap, ans) : t).replace(/\s+/g, ' ').trim();
   }
   function closeSheet() {
     html.classList.remove('tr-open');
@@ -418,6 +478,7 @@
       so.hidden = false; so.textContent = '…'; setDir(so, code); more.hidden = true;
       translate(sentence, code, true).then(function (r) { so.textContent = r == null ? 'Not available.' : r; place(bubble, hit.rect); });
     });
+    mount(bubble, hit.host || doc.body);
     place(bubble, hit.rect);
     var key = hov.key;
     function show(r) {
@@ -443,13 +504,14 @@
     if (!hoverReady() || hov.pinned) return;
     if (bubble && !bubble.hidden && bubble.contains(target)) { clearTimeout(hov.hide); clearTimeout(hov.timer); return; }
     var el = target && (target.nodeType === 1 ? target : target.parentElement);
-    if (!el || !el.closest || !el.closest(SCOPE) || el.closest(SKIP)) { if (hov.key) scheduleHide(); return; }
+    if (!el || !el.closest || !zoneOK(el) || el.closest(SKIP)) { if (hov.key) scheduleHide(); return; }
     var hit = null, unit = el.closest('[data-tr-unit]');
     if (unit) {
       var label = unit.textContent.replace(/\s+/g, ' ').trim();
       hit = { unit: true, label: label, text: unit.getAttribute('data-tr-text') || label, rect: unit.getBoundingClientRect() };
     } else hit = wordAt(x, y);
     if (!hit) { if (hov.key) scheduleHide(); return; }
+    hit.host = hostFor(el);
     var key = hit.label + '|' + Math.round(hit.rect.left) + '|' + Math.round(hit.rect.top);
     clearTimeout(hov.hide);
     if (key === hov.key) return;
@@ -476,14 +538,14 @@
   g.addEventListener('blur', hideBubble);
 
   /* ---------------------- select text -> Translate button ---------------------- */
-  var chip = null, chipText = '', selTimer = 0;
+  var chip = null, chipText = '', chipHost = null, selTimer = 0;
   function selectedText() {
     var s = g.getSelection && g.getSelection();
     if (!s || s.isCollapsed || !s.rangeCount) return '';
     var t = s.toString().replace(/\s+/g, ' ').trim();
     if (!t || t.length > 600 || !/[A-Za-z]/.test(t)) return '';
     var n = s.getRangeAt(0).commonAncestorContainer, el = n.nodeType === 1 ? n : n.parentElement;
-    if (!el || !el.closest || !el.closest(SCOPE) || el.closest('input, textarea, .tr-card, .tr-bubble')) return '';
+    if (!el || !el.closest || !el.closest(SCOPE) || el.closest('input, textarea, .tr-card, .tr-bubble') || !selectOK(el)) return '';
     return t;
   }
   function hideChip() { if (chip) chip.hidden = true; }
@@ -500,12 +562,15 @@
         hideChip();
         if (!onDevice(code)) { g.open(gtUrl(text, code), '_blank', 'noopener'); return; }
         hov.key = 'sel|' + text;
-        fill({ unit: true, label: text.length > 60 ? text.slice(0, 57) + '…' : text, text: text, rect: rect }, code, true);
+        fill({ unit: true, label: text.length > 60 ? text.slice(0, 57) + '…' : text, text: text, rect: rect, host: chipHost }, code, true);
         hov.pinned = true;
       });
       doc.body.appendChild(chip);
     }
     chipText = t;
+    var an = s.getRangeAt(0).commonAncestorContainer;
+    chipHost = hostFor(an.nodeType === 1 ? an : an.parentElement);
+    mount(chip, chipHost);
     chip.style.left = '0px'; chip.style.top = '0px'; chip.hidden = false;
     var w = chip.offsetWidth, vw = html.clientWidth, vh = g.innerHeight;
     var x = Math.min(Math.max(8, rc.right - w / 2), vw - w - 8);
@@ -525,6 +590,21 @@
     found.forEach(build);
     html.classList.add('has-tr');
     doc.querySelectorAll('[data-tr-open][hidden]').forEach(function (b) { b.hidden = false; });
+    var root = doc.getElementById('root');
+    if (root) {
+      var sync = function () {
+        var ok = trainerOK();
+        if (root.classList.contains('tr-ok') !== ok) root.classList.toggle('tr-ok', ok);
+        doc.querySelectorAll('.w-tr').forEach(function (b) { b.hidden = !ok; });
+        if (!ok) {
+          var c = mainCard();
+          if (c && c.card.closest('[data-tr-pop]') && html.classList.contains('tr-open')) closeSheet();
+          hideBubble(); hideChip();
+        }
+      };
+      sync();
+      if (g.MutationObserver) new MutationObserver(sync).observe(root, { childList: true, subtree: true });
+    }
     if (onDevice(lang)) prepare(lang, false);
   }
   if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', start); else start();
