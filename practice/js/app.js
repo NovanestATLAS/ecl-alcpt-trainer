@@ -10,7 +10,7 @@
      . Themes, confort de lecture, export / import des donnees
    =========================================================================== */
 
-var APP_VERSION = '5.9.27';
+var APP_VERSION = '5.9.28';
 
 /* v5.9.26
      . Ecoute : 155 questions (js/listening-data.js), une voix d'homme et une
@@ -2411,7 +2411,10 @@ VIEWS.settings = function () {
     '<button class="btn ghost block danger" onclick="wipe()">Erase everything</button></div>';
 
   h += '<div class="gcard"><h3>About</h3><p class="fr">ECL English Trainer, <span onclick="devTap()">version ' + APP_VERSION + '</span>.<br>' +
-    'Focused ECL and ALCPT preparation with US audio, adaptive review, reference material and timed tests.</p></div>';
+    'Focused ECL and ALCPT preparation with US audio, adaptive review, reference material and timed tests.</p>' +
+    /* v5.9.28 : mise a jour depuis Google Play (js/update.js, application seulement) */
+    (window.AppUpdate && AppUpdate.available() ? '<button class="btn ghost block" onclick="AppUpdate.check(true)">Check for updates</button>' : '') +
+    '</div>';
   if (LSget('dev', 0)) h += devCard();
 
   root.innerHTML = L(h + tabbar('settings'));
@@ -2920,6 +2923,8 @@ document.addEventListener('deviceready', function () {
 
 document.addEventListener('backbutton', function (e) {
   e.preventDefault();
+  /* v5.9.28 : Retour ferme d'abord la fenetre de mise a jour (update.js) */
+  if (window.AppUpdate && AppUpdate.dismiss && AppUpdate.dismiss()) return;
   /* v5.9.25 : Retour ferme d'abord la fenetre de traduction (tr.js) */
   if (window.AppTr && AppTr.dismiss && AppTr.dismiss()) return;
   if (S.view === 'home' || S.view === 'welcome') { if (navigator.app) navigator.app.exitApp(); }
