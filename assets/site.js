@@ -165,19 +165,19 @@
     return u;
   }
   /* lines: [['M', 'text'], ['W', 'text'], ...] read one after the other.
-     Listening items play their Google Cloud recordings (listen-audio.js)
-     when they exist; the browser voices read anything else. */
+     Listening lines and texts with a Kokoro recording play the MP3 file
+     (listen-audio.js); the browser voices read anything else. */
   var rec = null;
   function speakSeq(lines, btn) {
     if (!lines || !lines.length) return;
     if (btn && btn === speakingBtn) { stopSpeak(); return; }
-    var LA = window.ECL_LISTEN;
-    if (LA && LA.has(lines)) {
+    var LA = window.ECL_LISTEN, items = LA && LA.plan(lines, 450);
+    if (items) {
       stopSpeak();
       var g0 = seqGen;
       if (btn) { speakingBtn = btn; btn.setAttribute('aria-pressed', 'true'); }
-      var r = rec = LA.play(lines, {
-        rate: rate() / LA.defRate, gap: 450,
+      var r = rec = LA.play(items, {
+        rate: rate() / LA.defRate,
         onend: function () { if (rec === r) rec = null; if (btn && speakingBtn === btn) { btn.setAttribute('aria-pressed', 'false'); speakingBtn = null; } },
         onfail: function (k) { if (rec === r) rec = null; if (g0 === seqGen && synth) voiceSeq(lines.slice(k), btn, false); }
       });
@@ -207,7 +207,7 @@
   }
   function speak(text, btn) { if (text) speakSeq([['', text]], btn); }
   window.ECL_SAY = function (t) { speak(t, null); };
-  if (!synth) html.classList.add('no-voice');
+  if (!synth && !(window.ECL_LISTEN && window.ECL_LISTEN.reads)) html.classList.add('no-voice');
   else {
     voice = pickVoice();
     if (synth.addEventListener) synth.addEventListener('voiceschanged', function () { voice = pickVoice(); voiceM = null; voiceF = null; });
@@ -639,7 +639,7 @@
   });
 
   /* Listen: the question and its four choices, in the American voice */
-  if (!synth || !$listen) { if ($listen) $listen.hidden = true; }
+  if ((!synth && !(window.ECL_LISTEN && window.ECL_LISTEN.reads)) || !$listen) { if ($listen) $listen.hidden = true; }
   else {
     $listen.addEventListener('click', function () {
       var q = Q[qi];
