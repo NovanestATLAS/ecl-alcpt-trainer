@@ -25,6 +25,10 @@ SPEED = 1.0
 SR = 24000
 BITRATE = '48k'
 BLANK_S = 0.4                   # a blank (_____) is a short silence, as with the browser voices
+# Kokoro leaves ~0.4 s of silence before and ~0.5 s after the voice: the clips are
+# played one after the other ("A." then the choice), so only 0.06 s / 0.12 s are kept
+TRIM = ('silenceremove=start_periods=1:start_threshold=-50dB:start_silence=0.06,areverse,'
+        'silenceremove=start_periods=1:start_threshold=-50dB:start_silence=0.12,areverse')
 # choice letters, said as letter names (Kokoro / misaki phonemes)
 LETTERS = {'A.': '[A](/ˈA/).', 'B.': '[B](/bˈi/).', 'C.': '[C](/sˈi/).',
            'D.': '[D](/dˈi/).', 'E.': '[E](/ˈi/).', 'F.': '[F](/ˈɛf/).'}
@@ -75,7 +79,7 @@ class Kokoro:
             self.sf.write(w.name, np.concatenate(pieces), SR)
         try:
             subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-i', w.name,
-                            '-af', 'loudnorm=I=-16:TP=-1.5:LRA=11', '-ac', '1', '-ar', str(SR),
+                            '-af', TRIM + ',loudnorm=I=-16:TP=-1.5:LRA=11', '-ac', '1', '-ar', str(SR),
                             '-codec:a', 'libmp3lame', '-b:a', BITRATE, '-map_metadata', '-1', '-id3v2_version', '0',
                             dest], check=True)
         finally:
