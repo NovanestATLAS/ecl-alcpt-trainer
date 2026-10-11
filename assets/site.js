@@ -144,6 +144,7 @@
   }
   function stopSpeak() {
     seqGen++;
+    if (rec) { rec.stop(); rec = null; }
     if (synth) synth.cancel();
     if (speakingBtn) speakingBtn.setAttribute('aria-pressed', 'false');
     speakingBtn = null;
@@ -160,12 +161,31 @@
     if (u.voice && u.voice.lang) u.lang = u.voice.lang;
     return u;
   }
-  /* lines: [['M', 'text'], ['W', 'text'], ...] read one after the other */
+  /* lines: [['M', 'text'], ['W', 'text'], ...] read one after the other.
+     Listening items play their Google Cloud recordings (listen-audio.js)
+     when they exist; the browser voices read anything else. */
+  var rec = null;
   function speakSeq(lines, btn) {
-    if (!synth || !lines || !lines.length) return;
+    if (!lines || !lines.length) return;
     if (btn && btn === speakingBtn) { stopSpeak(); return; }
+    var LA = window.ECL_LISTEN;
+    if (LA && LA.has(lines)) {
+      stopSpeak();
+      var g0 = seqGen;
+      if (btn) { speakingBtn = btn; btn.setAttribute('aria-pressed', 'true'); }
+      var r = rec = LA.play(lines, {
+        rate: rate() / LA.defRate, gap: 450,
+        onend: function () { if (rec === r) rec = null; if (btn && speakingBtn === btn) { btn.setAttribute('aria-pressed', 'false'); speakingBtn = null; } },
+        onfail: function (k) { if (rec === r) rec = null; if (g0 === seqGen && synth) voiceSeq(lines.slice(k), btn, false); }
+      });
+      return;
+    }
+    if (!synth) return;
     var was = synth.speaking || synth.pending;
     stopSpeak();
+    voiceSeq(lines, btn, was);
+  }
+  function voiceSeq(lines, btn, was) {
     var gen = seqGen, i = 0;
     if (btn) { speakingBtn = btn; btn.setAttribute('aria-pressed', 'true'); }
     function done() { if (btn && speakingBtn === btn) { btn.setAttribute('aria-pressed', 'false'); speakingBtn = null; } }
