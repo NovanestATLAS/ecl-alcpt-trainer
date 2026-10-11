@@ -44,7 +44,7 @@ jobs:
       - id: count
         run: |
           python3 tools/read-audio/generate.py | tee -a "$GITHUB_STEP_SUMMARY"
-          echo "missing=$(python3 -c "import json,os;print(sum(1 for x in json.load(open('tools/read-audio/texts.json'))['items'] if not os.path.exists('assets/audio/read/'+x['h']+'.mp3')))")" >> "$GITHUB_OUTPUT"
+          echo "missing=$(python3 tools/read-audio/generate.py --missing)" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
         with:
           name: texts

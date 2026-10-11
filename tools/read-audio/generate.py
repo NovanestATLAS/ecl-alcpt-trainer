@@ -35,7 +35,8 @@ LETTERS = {'A.': '[A](/ˈA/).', 'B.': '[B](/bˈi/).', 'C.': '[C](/sˈi/).',
 
 
 def load():
-    return json.load(open(TEXTS, encoding='utf-8'))['items']
+    # a text with no letter or digit ("-") has nothing to say: the browser voice keeps it
+    return [x for x in json.load(open(TEXTS, encoding='utf-8'))['items'] if re.search(r'[A-Za-z0-9]', x['t'])]
 
 
 def segments(text):
@@ -107,9 +108,13 @@ def main():
     ap.add_argument('--shards', type=int, default=1)
     ap.add_argument('--out', default=OUT, help='folder for the new files (default assets/audio/read)')
     ap.add_argument('--index', action='store_true', help='write index.js and remove unused recordings')
+    ap.add_argument('--missing', action='store_true', help='print the number of missing recordings')
     a = ap.parse_args()
 
     items = load()
+    if a.missing:
+        print(sum(1 for x in items if not os.path.exists(os.path.join(OUT, x['h'] + '.mp3'))))
+        return
     if a.index:
         write_index(items)
         return
