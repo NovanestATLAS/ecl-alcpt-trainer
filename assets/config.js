@@ -14,6 +14,10 @@
                    data stream between the quotes, for example 'G-AB12CD34EF'
                    (Analytics > Admin > Data streams > ecl-alcpt-trainer.com).
                    Leave '' to switch Google Analytics off.
+   contactKey    : access key of the contact form (contact.html), from
+                   https://web3forms.com (free). Messages go to the email
+                   address the key was created with; that address never
+                   appears in the site. Leave '' to switch the form off.
    ========================================================================== */
 window.ECL_CONFIG = {
   adsenseClient: 'ca-pub-3709043100488694',
@@ -22,5 +26,6 @@ window.ECL_CONFIG = {
     results: '',
     article: ''
   },
-  ga4: 'G-N7NPLR56K1'
+  ga4: 'G-N7NPLR56K1',
+  contactKey: ''
 };
