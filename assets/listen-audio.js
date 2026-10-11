@@ -1,10 +1,12 @@
 /* ==========================================================================
    listen-audio.js - recorded voices for the LISTENING questions (website).
-   The recordings are made once with Google Cloud Text-to-Speech (Chirp 3
-   HD: en-US-Chirp3-HD-Charon for the man, en-US-Chirp3-HD-Aoede for the
-   woman) by tools/listening-audio/generate.py, saved as MP3 files in
-   assets/audio/listening/ and listed in assets/audio/listening/manifest.js
-   (window.ECL_LISTEN_AUDIO), which loads before this file.
+   The recordings are made once with Kokoro TTS, a free open-source voice
+   model run locally (am_michael for the man, af_heart for the woman, speed
+   1.0), by tools/listening-audio/generate.py. They are saved as MP3 files
+   named after the question (assets/audio/listening/L04-2.mp3 = 2nd line of
+   question L04) and listed in the question-to-audio manifest
+   assets/audio/listening/manifest.js (window.ECL_LISTEN_AUDIO), which
+   loads before this file.
 
    Only the listening questions use them:
      . the trainer (practice/): Listening practice and the listening part of
@@ -15,12 +17,17 @@
        (data-seq), through window.ECL_LISTEN in site.js.
    A line with no recording, a file that does not load, or a browser that
    refuses to play falls back to the voices of the browser, as before.
-   No Google Cloud key is ever used here: the files are plain static MP3.
+   No API and no key are used here: the files are plain static MP3.
    ========================================================================== */
 (function (g) {
   'use strict';
-  var M = g.ECL_LISTEN_AUDIO || { files: {} };
-  var files = M.files || {};
+  /* 'M|text' -> 'L04-2.mp3?v=hash' (the hash changes with the text, so a
+     corrected line is never played from an old cached file) */
+  var M = g.ECL_LISTEN_AUDIO || { items: {} };
+  var files = {};
+  Object.keys(M.items || {}).forEach(function (id) {
+    (M.items[id] || []).forEach(function (l) { files[(l.role === 'W' ? 'W' : 'M') + '|' + l.text] = l.file + '?v=' + l.hash; });
+  });
   var DEF_RATE = 0.92;                     // reading speed the browser voices use by default
 
   /* folder of the MP3 files, next to the manifest */
@@ -41,7 +48,7 @@
     }
     return true;
   }
-  function url(line) { return base + fileOf(line[0], line[1]) + '.mp3'; }
+  function url(line) { return base + fileOf(line[0], line[1]); }
   function prefetch(u) { try { if (g.fetch) g.fetch(u).catch(function () { }); } catch (e) { } }
 
   var SILENT = 'data:audio/mpeg;base64,//NExAAAAANIAAAAAExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMu//NExFMAAANIAAAAADEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMu//NExKYAAANIAAAAADEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//NExKwAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//NExKwAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';

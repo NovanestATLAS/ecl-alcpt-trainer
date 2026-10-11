@@ -1,46 +1,47 @@
 #!/usr/bin/env python3
-"""Recordings of the listening questions - Google Cloud Text-to-Speech (Chirp 3 HD).
+"""Recordings of the listening questions - Kokoro TTS (free, open-source, runs locally).
+
+Kokoro-82M (Apache 2.0, https://github.com/hexgrad/kokoro) runs on the machine
+itself: no paid API, no API key, no billing. Voices: am_michael (the man) and
+af_heart (the woman), speed 1.0.
 
 Collects every listening line of the website:
   . practice/js/listening-data.js  (Listening practice, ECL and ALCPT timed exams)
-  . tests/*.html, data-seq buttons  (listening tests and the listening part of the tests)
-and keeps one MP3 per (voice, text) in assets/audio/listening/, listed in
-assets/audio/listening/manifest.js, which the website loads (assets/listen-audio.js).
+  . tests/*.html, data-seq buttons  (listening tests; the same questions, matched by text)
+and keeps one MP3 per line, named after the question: assets/audio/listening/L04-2.mp3
+is the 2nd line of question L04. The question-to-audio manifest is written twice:
+  . assets/audio/listening/manifest.json  (for people and tools)
+  . assets/audio/listening/manifest.js    (loaded by the website, assets/listen-audio.js)
 
-Only MISSING recordings are made: a line whose text or voice changes gets a new
-file name (hash of voice + text), so it is made again; nothing else is sent to
-Google. Grammar, vocabulary, idioms... are not concerned.
+Only MISSING or CHANGED lines are recorded (each entry keeps a hash of voice,
+speed and text). Grammar, vocabulary, idioms... are not concerned.
 
-  python3 tools/listening-audio/generate.py                    # estimate only, no Google call
-  python3 tools/listening-audio/generate.py --sample L01,L02,L04
-  python3 tools/listening-audio/generate.py --all --prune
+  python3 tools/listening-audio/generate.py              # count only, no synthesis
+  python3 tools/listening-audio/generate.py --only L01,L02,L04
+  python3 tools/listening-audio/generate.py --all [--batch 20]
 
-Authentication: an OAuth access token in GCP_ACCESS_TOKEN, or `gcloud auth
-print-access-token` (the GitHub workflow signs in with the GCP_SA_KEY secret).
-No key ever goes into the website.
+Needs: pip install "kokoro>=0.9.4" soundfile; espeak-ng and ffmpeg.
 """
-import argparse, base64, glob, hashlib, html, json, os, re, subprocess, sys, tempfile, urllib.request, urllib.error
+import argparse, glob, hashlib, html, json, os, re, subprocess, sys, tempfile, time
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 OUT = os.path.join(ROOT, 'assets', 'audio', 'listening')
-MANIFEST = os.path.join(OUT, 'manifest.js')
-VOICES = {'M': 'en-US-Chirp3-HD-Charon', 'W': 'en-US-Chirp3-HD-Aoede'}
-API = 'https://texttospeech.googleapis.com/v1/text:synthesize'
-FREE_CHARS = 1_000_000          # Chirp 3 HD free characters per month
-USD_PER_M = 30.0                # Chirp 3 HD price per million characters after that
-BITRATE = '48k'
-RATE_HZ = 24000
-BYTES_PER_CHAR = 48000 / 8 / 14.5   # 48 kbps, about 14.5 characters per second of speech
+MANIFEST_JSON = os.path.join(OUT, 'manifest.json')
+MANIFEST_JS = os.path.join(OUT, 'manifest.js')
+MODEL = 'hexgrad/Kokoro-82M'
+VOICES = {'M': 'am_michael', 'W': 'af_heart'}
+SPEED = 1.0
+SR = 24000                      # Kokoro's own sample rate
+BITRATE = '48k'                 # mono MP3: clear speech, about 6 KB a second
 
 
-def collect():
-    """[(item id or page, role, text)] in order, every listening line of the site."""
-    out = []
+def load_items():
     src = open(os.path.join(ROOT, 'practice', 'js', 'listening-data.js'), encoding='utf-8').read()
-    data = json.loads(src[src.index('{'):src.rindex('}') + 1])
-    for it in data['items']:
-        for role, text in it['L']:
-            out.append((it['id'], 'W' if role == 'W' else 'M', text))
+    return json.loads(src[src.index('{'):src.rindex('}') + 1])['items']
+
+
+def test_lines():
+    out = []
     for f in sorted(glob.glob(os.path.join(ROOT, 'tests', '*.html'))):
         for m in re.finditer(r'data-seq="([^"]*)"', open(f, encoding='utf-8').read()):
             for role, text in json.loads(html.unescape(m.group(1))):
@@ -49,122 +50,149 @@ def collect():
     return out
 
 
-def file_id(role, text):
-    return hashlib.sha1((VOICES[role] + '\n' + text).encode('utf-8')).hexdigest()[:12]
-
-
 def spoken(text):
-    """Text sent to Google: plain punctuation, the same reading as the browser voices."""
+    """Text given to Kokoro: plain punctuation."""
     t = re.sub(r'[‘’]', "'", text)
     t = re.sub(r'[“”]', '"', t)
     t = re.sub(r'[–—]', ', ', t)
     return re.sub(r'\s+', ' ', t).strip()
 
 
-def token():
-    t = os.environ.get('GCP_ACCESS_TOKEN', '').strip()
-    if t:
-        return t
-    return subprocess.check_output(['gcloud', 'auth', 'print-access-token'], text=True).strip()
+def line_hash(role, text):
+    return hashlib.sha1(('kokoro|%s|%s|%s' % (VOICES[role], SPEED, text)).encode('utf-8')).hexdigest()[:10]
 
 
-def synthesize(tok, role, text, dest):
-    body = json.dumps({
-        'input': {'text': spoken(text)},
-        'voice': {'languageCode': 'en-US', 'name': VOICES[role]},
-        'audioConfig': {'audioEncoding': 'LINEAR16', 'sampleRateHertz': RATE_HZ},
-    }).encode('utf-8')
-    headers = {'Authorization': 'Bearer ' + tok, 'Content-Type': 'application/json; charset=utf-8'}
-    if os.environ.get('GCP_PROJECT'):
-        headers['x-goog-user-project'] = os.environ['GCP_PROJECT']
-    req = urllib.request.Request(API, data=body, headers=headers)
+def plan(items):
+    """Every line of every question: {id: [{file, role, voice, text, hash}]}"""
+    out = {}
+    for it in items:
+        out[it['id']] = [{
+            'file': '%s-%d.mp3' % (it['id'], n),
+            'role': 'W' if role == 'W' else 'M',
+            'voice': VOICES['W' if role == 'W' else 'M'],
+            'text': text,
+            'hash': line_hash('W' if role == 'W' else 'M', text),
+        } for n, (role, text) in enumerate(it['L'], 1)]
+    return out
+
+
+def read_manifest():
     try:
-        with urllib.request.urlopen(req, timeout=120) as r:
-            wav = base64.b64decode(json.load(r)['audioContent'])
-    except urllib.error.HTTPError as e:
-        sys.exit('Google Cloud error %s: %s' % (e.code, e.read().decode('utf-8', 'replace')[:800]))
-    with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as w:
-        w.write(wav)
-    try:
-        # optimized MP3: mono, 24 kHz, 48 kbps constant, no tags
-        subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-i', w.name, '-ac', '1', '-ar', str(RATE_HZ),
-                        '-codec:a', 'libmp3lame', '-b:a', BITRATE, '-map_metadata', '-1', '-id3v2_version', '0',
-                        dest], check=True)
-    finally:
-        os.unlink(w.name)
+        return json.load(open(MANIFEST_JSON, encoding='utf-8')).get('items', {})
+    except (OSError, ValueError):
+        return {}
 
 
-def write_manifest(lines):
-    files = {}
-    for _, role, text in lines:
-        fid = file_id(role, text)
-        if os.path.exists(os.path.join(OUT, fid + '.mp3')):
-            files[role + '|' + text] = fid
-    js = ('/* Recordings of the listening questions (Google Cloud TTS, Chirp 3 HD).\n'
-          '   Generated by tools/listening-audio/generate.py: do not edit by hand. */\n'
-          'window.ECL_LISTEN_AUDIO = ' + json.dumps({'v': 1, 'voices': VOICES, 'files': dict(sorted(files.items()))},
-                                                    ensure_ascii=False, separators=(',', ':')) + ';\n')
+def write_manifest(want, done):
+    """Only lines whose MP3 exists and matches the current text go in."""
+    items = {}
+    for qid, lines in want.items():
+        ok = [l for l in lines if done.get(l['file']) == l['hash'] and os.path.exists(os.path.join(OUT, l['file']))]
+        if len(ok) == len(lines):
+            items[qid] = lines
+    m = {'v': 2, 'engine': 'Kokoro TTS', 'model': MODEL, 'voices': VOICES, 'speed': SPEED,
+         'format': 'MP3 %s mono %d Hz' % (BITRATE, SR), 'count': sum(len(v) for v in items.values()), 'items': items}
     os.makedirs(OUT, exist_ok=True)
-    open(MANIFEST, 'w', encoding='utf-8').write(js)
-    return files
+    with open(MANIFEST_JSON, 'w', encoding='utf-8') as f:
+        json.dump(m, f, ensure_ascii=False, indent=1)
+        f.write('\n')
+    with open(MANIFEST_JS, 'w', encoding='utf-8') as f:
+        f.write('/* Question-to-audio manifest of the listening questions (Kokoro TTS: am_michael = man,\n'
+                '   af_heart = woman, speed 1.0). Generated by tools/listening-audio/generate.py. */\n'
+                'window.ECL_LISTEN_AUDIO = ' + json.dumps(m, ensure_ascii=False, separators=(',', ':')) + ';\n')
+    return m
+
+
+class Kokoro:
+    def __init__(self):
+        import numpy as np, soundfile as sf
+        from kokoro import KPipeline
+        self.np, self.sf = np, sf
+        self.pipe = KPipeline(lang_code='a', repo_id=MODEL)          # 'a' = American English
+
+    def mp3(self, voice, text, dest):
+        parts = [r.audio for r in self.pipe(spoken(text), voice=voice, speed=SPEED, split_pattern=r'\n+') if r.audio is not None]
+        if not parts:
+            sys.exit('Kokoro produced no audio for: ' + text)
+        pause = self.np.zeros(int(SR * 0.12), dtype='float32')     # a breath between long sentences
+        audio = self.np.concatenate([x for p in parts for x in (p.cpu().numpy().astype('float32'), pause)][:-1])
+        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as w:
+            self.sf.write(w.name, audio, SR)
+        try:
+            # same loudness for both voices; mono 24 kHz 48 kbps; no tags
+            subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-i', w.name,
+                            '-af', 'loudnorm=I=-16:TP=-1.5:LRA=11', '-ac', '1', '-ar', str(SR),
+                            '-codec:a', 'libmp3lame', '-b:a', BITRATE, '-map_metadata', '-1', '-id3v2_version', '0',
+                            dest], check=True)
+        finally:
+            os.unlink(w.name)
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('--sample', help='item ids to record, e.g. L01,L02,L04')
-    ap.add_argument('--all', action='store_true', help='record every missing line')
-    ap.add_argument('--prune', action='store_true', help='delete recordings no longer used (with --all)')
-    ap.add_argument('--max-chars', type=int, default=100_000,
-                    help='stop if this run would send more characters (default 100000, far below the free allowance)')
+    ap.add_argument('--only', help='question ids to record, e.g. L01,L02,L04')
+    ap.add_argument('--all', action='store_true', help='record every missing or changed line')
+    ap.add_argument('--batch', type=int, default=20, help='questions per batch; the manifest is saved after each batch')
     a = ap.parse_args()
 
-    lines = collect()
-    uniq = {}
-    for src, role, text in lines:
-        uniq.setdefault((role, text), src)
-    have = {os.path.basename(p)[:-4] for p in glob.glob(os.path.join(OUT, '*.mp3'))}
-    missing = [(r, t) for (r, t) in uniq if file_id(r, t) not in have]
-    total_chars = sum(len(spoken(t)) for r, t in uniq)
+    items = load_items()
+    want = plan(items)
+    known = {(l['role'], l['text']) for v in want.values() for l in v}
+    stray = [x for x in test_lines() if (x[1], x[2]) not in known]
+    old = read_manifest()
+    done = {l['file']: l['hash'] for v in old.values() for l in v}
+    todo_ids = [qid for qid, lines in want.items()
+                if any(done.get(l['file']) != l['hash'] or not os.path.exists(os.path.join(OUT, l['file'])) for l in lines)]
 
-    print('Listening lines on the site : %d (%d unique recordings: %d man, %d woman)' % (
-        len(lines), len(uniq), sum(1 for r, _ in uniq if r == 'M'), sum(1 for r, _ in uniq if r == 'W')))
-    print('Characters, all recordings  : %d' % total_chars)
-    print('Recordings already saved    : %d' % (len(uniq) - len(missing)))
-    print('Missing recordings          : %d (%d characters)' % (len(missing), sum(len(spoken(t)) for _, t in missing)))
-    print('Estimated storage, all      : %.1f MB (MP3 %s mono %d Hz)' % (total_chars * BYTES_PER_CHAR / 1e6, BITRATE, RATE_HZ))
-    print('Estimated cost              : $0.00 within the %d free characters a month, then $%.2f per million' % (FREE_CHARS, USD_PER_M))
+    n_lines = sum(len(v) for v in want.values())
+    chars = sum(len(spoken(l['text'])) for v in want.values() for l in v)
+    print('Questions with audio : %d (%d lines: %d man / %d woman, %d characters)' % (
+        len(want), n_lines, sum(1 for v in want.values() for l in v if l['role'] == 'M'),
+        sum(1 for v in want.values() for l in v if l['role'] == 'W'), chars))
+    print('Voices               : man %s, woman %s, speed %.1f' % (VOICES['M'], VOICES['W'], SPEED))
+    print('Up to date           : %d questions; to record: %d' % (len(want) - len(todo_ids), len(todo_ids)))
+    if stray:
+        print('Test-page lines not found in listening-data.js (they keep the browser voice): %d' % len(stray))
+        for s in stray[:10]:
+            print('   ', s)
 
-    if a.sample:
-        ids = {x.strip() for x in a.sample.split(',') if x.strip()}
-        todo = [(r, t) for (r, t) in missing if uniq[(r, t)] in ids]
-    elif a.all:
-        todo = missing
-    else:
-        print('\nEstimate only: nothing was sent to Google. Use --sample IDS or --all.')
-        write_manifest(lines)
+    if a.only:
+        ids = [x.strip() for x in a.only.split(',') if x.strip()]
+        bad = [x for x in ids if x not in want]
+        if bad:
+            sys.exit('Unknown question ids: ' + ', '.join(bad))
+        todo_ids = [x for x in todo_ids if x in ids]
+    elif not a.all:
+        write_manifest(want, done)
+        print('\nCount only. Use --only IDS or --all to record.')
         return
-    chars = sum(len(spoken(t)) for _, t in todo)
-    if chars > a.max_chars:
-        sys.exit('This run would send %d characters, more than --max-chars %d: stopped.' % (chars, a.max_chars))
-    print('\nThis run: %d recordings, %d characters' % (len(todo), chars))
 
     os.makedirs(OUT, exist_ok=True)
-    tok = token() if todo else ''
-    for n, (role, text) in enumerate(todo, 1):
-        fid = file_id(role, text)
-        synthesize(tok, role, text, os.path.join(OUT, fid + '.mp3'))
-        print('  [%d/%d] %s %s  %s' % (n, len(todo), role, fid, text[:70]))
+    tts = Kokoro() if todo_ids else None
+    t0 = time.time()
+    for b in range(0, len(todo_ids), max(1, a.batch)):
+        batch = todo_ids[b:b + a.batch]
+        for qid in batch:
+            for l in want[qid]:
+                if done.get(l['file']) == l['hash'] and os.path.exists(os.path.join(OUT, l['file'])):
+                    continue
+                tts.mp3(l['voice'], l['text'], os.path.join(OUT, l['file']))
+                done[l['file']] = l['hash']
+                print('  %-9s %-10s %s' % (l['file'], l['voice'], l['text'][:70]), flush=True)
+        write_manifest(want, done)
+        print('Batch %d: %d questions done (%.0f s)' % (b // a.batch + 1, min(b + a.batch, len(todo_ids)), time.time() - t0), flush=True)
 
-    if a.all and a.prune:
-        keep = {file_id(r, t) for r, t in uniq}
-        for p in glob.glob(os.path.join(OUT, '*.mp3')):
-            if os.path.basename(p)[:-4] not in keep:
+    # files of questions that no longer exist
+    if a.all:
+        keep = {l['file'] for v in want.values() for l in v} | {'manifest.json', 'manifest.js'}
+        for p in glob.glob(os.path.join(OUT, '*')):
+            if os.path.basename(p) not in keep:
                 os.unlink(p)
                 print('  removed', os.path.basename(p))
 
-    files = write_manifest(lines)
-    size = sum(os.path.getsize(p) for p in glob.glob(os.path.join(OUT, '*.mp3')))
-    print('\nSaved recordings: %d files, %.2f MB. Characters sent this run: %d.' % (len(files), size / 1e6, chars))
+    m = write_manifest(want, done)
+    mp3 = glob.glob(os.path.join(OUT, '*.mp3'))
+    print('\nSaved: %d MP3 files for %d questions, %.2f MB.' % (len(mp3), len(m['items']), sum(map(os.path.getsize, mp3)) / 1e6))
 
 
 if __name__ == '__main__':

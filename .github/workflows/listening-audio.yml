@@ -1,71 +1,69 @@
-# Recordings of the listening questions (Google Cloud Text-to-Speech, Chirp 3 HD).
-# Started by hand only (Actions > Listening audio > Run workflow): nothing is
-# ever sent to Google Cloud on a push. The Google key stays in the encrypted
-# repository secret GCP_SA_KEY; the website only receives plain MP3 files.
+# Recordings of the listening questions with Kokoro TTS (free, open-source,
+# run on the GitHub runner itself: no paid API, no key, no billing).
+# Runs when the listening questions or the generator change, or by hand
+# (Actions > Listening audio > Run workflow). Only missing or changed lines
+# are recorded; the new MP3 files and the manifest are committed back.
 name: Listening audio
 
 on:
+  push:
+    paths:
+      - 'practice/js/listening-data.js'
+      - 'tests/*listening*.html'
+      - 'tests/*practice-test.html'
+      - 'tests/ecl-practice-questions.html'
+      - 'tools/listening-audio/**'
+      - '.github/workflows/listening-audio.yml'
   workflow_dispatch:
     inputs:
-      mode:
-        description: 'estimate = count only (no Google call); sample = the items below; all = every missing recording'
-        type: choice
-        options: [estimate, sample, all]
-        default: estimate
-      sample_ids:
-        description: 'Items for the sample (mode = sample)'
-        default: 'L01,L02,L04'
-      max_chars:
-        description: 'Safety limit: characters this run may send'
-        default: '100000'
+      only:
+        description: 'Question ids to record (empty = every missing or changed line)'
+        default: ''
 
 permissions:
   contents: write
 
 concurrency:
-  group: listening-audio
+  group: listening-audio-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   generate:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
 
-      - name: Sign in to Google Cloud
-        if: inputs.mode != 'estimate'
-        uses: google-github-actions/auth@v2
+      - uses: actions/setup-python@v5
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          python-version: '3.12'
 
-      - uses: google-github-actions/setup-gcloud@v2
-        if: inputs.mode != 'estimate'
-
-      - name: Install ffmpeg
-        if: inputs.mode != 'estimate'
-        run: command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
-
-      - name: Make the missing recordings
+      - name: Install Kokoro (CPU)
         run: |
-          case "${{ inputs.mode }}" in
-            sample) python3 tools/listening-audio/generate.py --sample "${{ inputs.sample_ids }}" --max-chars "${{ inputs.max_chars }}" ;;
-            all)    python3 tools/listening-audio/generate.py --all --prune --max-chars "${{ inputs.max_chars }}" ;;
-            *)      python3 tools/listening-audio/generate.py ;;
-          esac | tee -a "$GITHUB_STEP_SUMMARY"
+          sudo apt-get update -qq && sudo apt-get install -y -qq espeak-ng ffmpeg
+          pip install -q torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -q "kokoro==0.9.4" soundfile
 
-      - name: Keep the new recordings for listening
-        if: inputs.mode == 'sample'
-        uses: actions/upload-artifact@v4
+      - name: Cache the Kokoro model
+        uses: actions/cache@v4
         with:
-          name: listening-sample
-          path: assets/audio/listening/*.mp3
+          path: ~/.cache/huggingface
+          key: kokoro-82m-v1
+
+      - name: Record the missing lines
+        run: |
+          if [ -n "${{ inputs.only }}" ]; then
+            python3 tools/listening-audio/generate.py --only "${{ inputs.only }}"
+          else
+            python3 tools/listening-audio/generate.py --all --batch 20
+          fi | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Save to the repository
-        if: inputs.mode != 'estimate'
         run: |
-          git add assets/audio/listening
+          git add -A assets/audio/listening
           if git diff --cached --quiet; then echo "Nothing new."; exit 0; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898699+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Listening audio: Chirp 3 HD recordings (${{ inputs.mode }})"
+          git commit -m "Listening audio: Kokoro recordings (am_michael / af_heart)"
+          git pull --rebase -q
           git push

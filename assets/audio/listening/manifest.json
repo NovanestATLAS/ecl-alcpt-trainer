@@ -1,0 +1,13 @@
+{
+ "v": 2,
+ "engine": "Kokoro TTS",
+ "model": "hexgrad/Kokoro-82M",
+ "voices": {
+  "M": "am_michael",
+  "W": "af_heart"
+ },
+ "speed": 1.0,
+ "format": "MP3 48k mono 24000 Hz",
+ "count": 0,
+ "items": {}
+}
