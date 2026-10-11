@@ -1,0 +1,71 @@
+# Recordings of the listening questions (Google Cloud Text-to-Speech, Chirp 3 HD).
+# Started by hand only (Actions > Listening audio > Run workflow): nothing is
+# ever sent to Google Cloud on a push. The Google key stays in the encrypted
+# repository secret GCP_SA_KEY; the website only receives plain MP3 files.
+name: Listening audio
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'estimate = count only (no Google call); sample = the items below; all = every missing recording'
+        type: choice
+        options: [estimate, sample, all]
+        default: estimate
+      sample_ids:
+        description: 'Items for the sample (mode = sample)'
+        default: 'L01,L02,L04'
+      max_chars:
+        description: 'Safety limit: characters this run may send'
+        default: '100000'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: listening-audio
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sign in to Google Cloud
+        if: inputs.mode != 'estimate'
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+        if: inputs.mode != 'estimate'
+
+      - name: Install ffmpeg
+        if: inputs.mode != 'estimate'
+        run: command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
+
+      - name: Make the missing recordings
+        run: |
+          case "${{ inputs.mode }}" in
+            sample) python3 tools/listening-audio/generate.py --sample "${{ inputs.sample_ids }}" --max-chars "${{ inputs.max_chars }}" ;;
+            all)    python3 tools/listening-audio/generate.py --all --prune --max-chars "${{ inputs.max_chars }}" ;;
+            *)      python3 tools/listening-audio/generate.py ;;
+          esac | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the new recordings for listening
+        if: inputs.mode == 'sample'
+        uses: actions/upload-artifact@v4
+        with:
+          name: listening-sample
+          path: assets/audio/listening/*.mp3
+
+      - name: Save to the repository
+        if: inputs.mode != 'estimate'
+        run: |
+          git add assets/audio/listening
+          if git diff --cached --quiet; then echo "Nothing new."; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898699+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Listening audio: Chirp 3 HD recordings (${{ inputs.mode }})"
+          git push
