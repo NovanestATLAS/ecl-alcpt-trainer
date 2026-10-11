@@ -57,14 +57,33 @@
     if (!el) { el = new Audio(); el.preload = 'auto'; }
     return el;
   }
-  /* first tap or key: the audio element may play later without a new gesture
-     (Safari, phones) */
-  ['touchend', 'click', 'keydown'].forEach(function (ev) {
-    document.addEventListener(ev, function once() {
-      document.removeEventListener(ev, once, true);
-      try { var a = audio(); if (!a.src) { a.src = SILENT; var p = a.play(); if (p && p.catch) p.catch(function () { }); } } catch (e) { }
-    }, true);
-  });
+  /* Phones (Safari above all) let an audio element play without a new tap
+     only once it has played during a tap. The element is unlocked MUTED, and
+     only on a tap made while a listening question or a timed exam is on
+     screen: an audio element started elsewhere could take the phone's audio
+     away from the voice that reads grammar, vocabulary and idioms. */
+  var unlocked = false;
+  function listeningNow(t) {
+    var st = g.S;                                        // trainer state (practice/app.js)
+    if (st && st.view !== undefined) {
+      var q = st.pool && st.pool[st.idx];
+      return !!(st.exam || st.view === 'listen' || st.view === 'sim' || (st.view === 'quiz' && q && q.L));
+    }
+    return !!(t && t.closest && t.closest('.qc-listen'));  // test pages
+  }
+  function unlock(ev) {
+    if (unlocked || !listeningNow(ev && ev.target)) return;
+    var a = audio();
+    if (a.src && a.src !== SILENT) return;
+    try {
+      a.muted = true; a.src = SILENT;
+      var p = a.play();
+      var done = function (ok) { if (a.src === SILENT) { try { a.pause(); } catch (e) { } a.muted = false; } if (ok) unlocked = true; };
+      if (p && p.then) p.then(function () { done(true); }, function () { done(false); });
+      else done(true);
+    } catch (e) { a.muted = false; }
+  }
+  ['touchend', 'click', 'keydown'].forEach(function (ev) { document.addEventListener(ev, unlock, true); });
 
   var gen = 0;
   /* play(lines, { rate, gap, onend, onfail(i) }) -> { stop, pause, resume, paused }
@@ -72,13 +91,13 @@
      onfail(i): line i could not be played (the caller reads lines i... itself) */
   function play(lines, o) {
     o = o || {};
-    var my = ++gen, i = 0, a = audio(), guard = null, gapT = null, isPaused = false, over = false;
+    var my = ++gen, i = 0, a = audio(), guard = null, gapT = null, startT = null, isPaused = false, over = false;
     var rate = Math.max(0.5, Math.min(2, o.rate || 1));
-    function clear() { if (guard) { clearTimeout(guard); guard = null; } if (gapT) { clearTimeout(gapT); gapT = null; } }
+    function clear() { if (guard) { clearTimeout(guard); guard = null; } if (gapT) { clearTimeout(gapT); gapT = null; } if (startT) { clearTimeout(startT); startT = null; } }
     function live() { return my === gen && !over; }
     function end() { if (!live()) return; over = true; clear(); detach(); if (o.onend) o.onend(); }
     function fail() { if (!live()) return; over = true; clear(); detach(); try { a.pause(); } catch (e) { } if (o.onfail) o.onfail(i); }
-    function detach() { a.onended = a.onerror = a.onloadedmetadata = null; }
+    function detach() { a.onended = a.onerror = a.onloadedmetadata = a.onplaying = a.onpause = null; }
     function next() {
       if (!live() || isPaused) return;
       if (i >= lines.length) { end(); return; }
@@ -90,12 +109,19 @@
         gapT = setTimeout(function () { gapT = null; next(); }, o.gap || 0);
       };
       a.onerror = fail;
+      /* a recording that does not start within a few seconds (blocked by the
+         phone, slow network) gives way to the browser voice */
+      a.onplaying = function () { if (startT) { clearTimeout(startT); startT = null; } };
+      a.onpause = function () { if (live() && !isPaused && !a.ended && !gapT) fail(); };
+      if (startT) clearTimeout(startT);
+      startT = setTimeout(function () { startT = null; if (live() && !isPaused && a.paused) fail(); }, 4000);
       /* a recording that never says it has ended still moves on */
       a.onloadedmetadata = function () {
         if (!live() || !isFinite(a.duration)) return;
         if (guard) clearTimeout(guard);
         guard = setTimeout(function () { if (live() && !isPaused && a.onended) a.onended(); }, a.duration * 1000 / rate + 4000);
       };
+      a.muted = false;
       a.src = url(lines[i]);
       a.defaultPlaybackRate = rate; a.playbackRate = rate;
       try { a.preservesPitch = true; a.webkitPreservesPitch = true; } catch (e) { }
@@ -106,7 +132,7 @@
     next();
     return {
       stop: function () { if (my === gen) gen++; over = true; clear(); detach(); try { a.pause(); } catch (e) { } },
-      pause: function () { if (!live() || isPaused) return; isPaused = true; if (guard) { clearTimeout(guard); guard = null; } try { a.pause(); } catch (e) { } },
+      pause: function () { if (!live() || isPaused) return; isPaused = true; if (guard) { clearTimeout(guard); guard = null; } if (startT) { clearTimeout(startT); startT = null; } try { a.pause(); } catch (e) { } },
       resume: function () {
         if (!live() || !isPaused) return;
         isPaused = false;
