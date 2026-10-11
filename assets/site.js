@@ -60,13 +60,13 @@
   });
 
   /* ---------------------------- read aloud ---------------------------------
-     The most NATURAL American voice of the browser reads the lessons and the
-     questions (Microsoft Edge: Andrew; Chrome: Google US English; Apple:
-     Alex or Aaron...). Listening conversations use the best MAN's voice and
-     the best WOMAN's voice, the closest ones to the Android app's voices
-     (en-us-x-iol and en-us-x-tpc). Voices chosen in the trainer's settings
-     (same browser) are used first. One voice only: the woman gets a higher
-     pitch.                                                               */
+     The American voice BUILT INTO the computer or phone reads the lessons and
+     the questions (Windows: Microsoft David; Apple: Alex or Aaron...); an
+     online voice only when there is none. Listening conversations use their
+     recordings (listen-audio.js), or else the built-in MAN's voice and
+     WOMAN's voice (Windows: David and Zira). Voices chosen in the trainer's
+     settings (same browser) are used first. One voice only: the woman gets
+     a higher pitch.                                                      */
   var synth = window.speechSynthesis || null, voice = null, voiceM = null, voiceF = null, speakingBtn = null, seqGen = 0;
   var NOVELTY = /\b(Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Junior|Ralph|Kathy|Princess|Deranged|Hysterical|Grandpa|Grandma|Rocko|Shelley|Sandy|Flo|Eddy|Reed)\b/i;
   function vn(v) { return String(v.name || '') + ' ' + String(v.voiceURI || ''); }
@@ -117,6 +117,9 @@
     });
   }
   function enVoices() { return (synth.getVoices() || []).filter(function (x) { return /^en([-_]|$)/i.test(x.lang || ''); }); }
+  /* the voices built into the computer or phone come first (Windows: Microsoft
+     David and Zira): Chrome's online voices can fall silent without any error */
+  function localUS() { return usVoices().filter(function (x) { return x.localService !== false; }); }
   function best(list, f) { var b = null, bs = 0; list.forEach(function (v) { var s = f(v); if (s > bs) { bs = s; b = v; } }); return b; }
   function saved(key) {
     var want = '', every = synth.getVoices() || [];
@@ -126,15 +129,15 @@
   }
   function pickVoice() {
     if (!synth) return null;
-    return saved('et_voice') || best(usVoices(), quality) || usVoices()[0] || enVoices()[0] || null;
+    return saved('et_voice') || best(localUS(), quality) || best(usVoices(), quality) || usVoices()[0] || enVoices()[0] || null;
   }
   function pickVoiceM() {
     if (!synth) return null;
-    return saved('et_lvw_m') || best(usVoices(), rank) || best(enVoices(), rank) || pickVoice();
+    return saved('et_lvw_m') || best(localUS(), rank) || best(usVoices(), rank) || best(enVoices(), rank) || pickVoice();
   }
   function pickVoiceF() {
     if (!synth) return null;
-    return saved('et_lvw_w') || best(usVoices(), rankF) || best(enVoices(), rankF) || pickVoice();
+    return saved('et_lvw_w') || best(localUS(), rankF) || best(usVoices(), rankF) || best(enVoices(), rankF) || pickVoice();
   }
   function rate() {
     var r = 0.92;
