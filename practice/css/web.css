@@ -58,6 +58,17 @@ html,body{font-family:'Barlow',system-ui,-apple-system,'Segoe UI',Roboto,Arial,s
 .w-foot a,.w-foot button{color:var(--mut);background:none;border:0;padding:0;font:inherit;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 .w-foot p{margin:0}
 
+/* ------------- about the trainer (static text, home screen only) ------------- */
+.w-about{max-width:780px;margin:0 auto;padding:8px 22px 24px;border-top:1px solid var(--line);color:var(--mut);font-size:15px;line-height:1.6}
+.w-about h1{margin:18px 0 8px;font:600 21px/1.25 var(--display);color:var(--ink)}
+.w-about h2{margin:18px 0 6px;font:600 16.5px/1.3 var(--display);color:var(--ink)}
+.w-about p,.w-about ul{margin:0 0 10px}
+.w-about ul{padding-left:20px}
+.w-about li{margin:3px 0}
+.w-about b{color:var(--ink)}
+.w-about a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+html[data-view]:not([data-view="home"]) .w-about{display:none}
+
 /* --------------------------- right rail -------------------------------- */
 .w-rail{display:none}
 .w-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:var(--sheetShadow);
@@ -119,6 +130,7 @@ html.no-listen .w-k-listen{display:none}
         --w-x:calc(50% - var(--w-col)/2 + (var(--w-nav) + var(--w-gap))/2)}
   .app{max-width:var(--w-col);padding:22px 0 64px;margin:0 0 0 var(--w-x)}
   .w-foot{max-width:var(--w-col);margin:0 0 0 var(--w-x);padding:8px 0 40px}
+  .w-about{max-width:var(--w-col);margin:0 0 0 var(--w-x);padding:8px 0 24px}
   .w-banner{max-width:var(--w-col);margin:16px 0 0 var(--w-x)}
 
   /* tab bar -> left column */
