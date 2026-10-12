@@ -117,7 +117,7 @@
           'Settings &rsaquo; Accessibility &rsaquo; Spoken Content &rsaquo; Voices &rsaquo; English.' +
           '<br>&bull; <b>Android phone</b>: the browser reads with the voice set in Android: Settings &rsaquo; Text-to-speech output ' +
           '(Google engine, English United States, choose a voice). Or install the free Android app, which uses iol and tpc.' +
-          '<br>Choose other voices in the lists above, then use <b>Test the voice</b> and <b>Test the two voices</b>.';
+          '<br>Choose other voices in the lists above, then use <b>Test the two voices</b>.';
         b.insertAdjacentElement('afterend', n);
       });
     });

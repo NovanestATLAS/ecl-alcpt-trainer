@@ -270,6 +270,10 @@ if (window.Ads && typeof Ads.onFullscreen === 'function') {
 
 /* ================================ AUDIO ================================= */
 function audioOK() { return !!(window.Speech && Speech.usable()); }
+/* Site web : seule l'ecoute a une voix (ses enregistrements) ; grammaire,
+   vocabulaire, idiomes... ne sont plus lus, sans lecture automatique ni
+   bouton Listen. L'application Android garde la lecture de tout.          */
+function readOn() { return !window.ECL_WEB; }
 function spk(text) {
   if (!text) return;
   if (!audioOK()) { toast('Audio unavailable: see Settings'); return; }
@@ -348,6 +352,7 @@ function readQuestion(q) { return q; }
    On force une courte pause apres la lettre pour qu'elle ne se fonde pas
    dans le mot suivant.                                                       */
 function speakQuestionAndChoices(q, playIntro) {
+  if (!readOn()) return;
   if (!audioOK()) { toast('Audio unavailable: see Settings'); return; }
   autoCancel();                         // lecture demandee : la lecture automatique s'efface
   var parts = [];
@@ -363,7 +368,7 @@ function speakQuestionAndChoices(q, playIntro) {
 /* Apres validation en mode entrainement : lit la bonne reponse et,
    si elle est en anglais, l'explication.                                     */
 function speakAnswer(q) {
-  if (!audioOK()) return;
+  if (!readOn() || !audioOK()) return;
   autoCancel();
   var parts = ['The correct answer is: ' + plainTxt(q.c) + '.'];
   var ex = enExplanation(q.e);
@@ -398,7 +403,7 @@ var autoTimer = null;     // temporisation entre la correction et la suite
 var autoWatch = null;     // filet si 'end' n'arrive jamais (moteur muet)
 var APP_PAUSED = false;   // application en arriere-plan
 
-function autoOn() { return !!LSget('autoaudio', 0); }
+function autoOn() { return readOn() && !!LSget('autoaudio', 0); }
 
 /* Annule la lecture automatique en cours ainsi que sa suite. */
 function autoCancel() {
@@ -1348,7 +1353,7 @@ function examReading(n) {
   }
   return shuffle(pick).slice(0, n).map(function (x) { var p = poolItem(x); p.part = 'R'; return p; });
 }
-/* ============ 50 TESTS NUMEROTES PAR EXAMEN (application) ===================
+/* ============ 50 TESTS NUMEROTES PAR EXAMEN ================================
    Dans l'application, l'ECL et l'ALCPT ont chacun 50 tests differents
    (Practice Test 1 a 50). Chaque test a les memes sections : ecoute
    (15 enonces, 12 questions-reponses, 14 dialogues courts, 5 conversations,
@@ -1357,11 +1362,11 @@ function examReading(n) {
    tant que la banque suffit (permutations fixes, derivees du numero) ; l'ECL
    et l'ALCPT utilisent des permutations differentes. « Next test » ouvre le
    premier test jamais commence : un test abandonne compte comme commence,
-   on n'y retombe donc pas. Le site garde un tirage unique par examen.   */
+   on n'y retombe donc pas. Application et site web ont les memes tests. */
 var FORMS_N = 50;
 var FORM_L = { s: 15, r: 12, d: 14, c: 5, k: 4 };
 var FORM_R = { grammar: 25, vocab: 17, idiom: 8 };
-function formsOn() { return !window.ECL_WEB && LISTEN.length > 0; }
+function formsOn() { return LISTEN.length > 0; }
 function seeded(seed) {
   var a = seed >>> 0;
   return function () {
@@ -1436,7 +1441,7 @@ function startExam(t, f) {
   if (ex.part === 'R') { S.timeLeft = c.readMin * 60; ex.endAt = nowMs() + S.timeLeft * 1000; S.timerId = setInterval(tick, 1000); paintTimer(); }
   track('exam_start', { exam: c.t });
 }
-/* grille des 50 tests (application) */
+/* grille des 50 tests */
 function formsGrid(t) {
   var log = formLog()[t] || {}, nx = formNext(t), h = '<div class="secttl">All ' + FORMS_N + ' practice tests</div>' +
     '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px">';
@@ -1699,11 +1704,11 @@ function renderQ() {
 
   h += '<div class="qbox' + (isL ? ' lq' : '') + '">' + (isL ? listenCard(q) : '') +
     '<div class="qtext">' + fmt(q.q) + '</div><div class="qtools">' +
-    (audioOK() && !ex ? '<button class="chip auto' + (autoOn() ? ' on' : ' off') + '" id="autoBtn" ' +
+    (audioOK() && !ex && readOn() ? '<button class="chip auto' + (autoOn() ? ' on' : ' off') + '" id="autoBtn" ' +
       'onclick="toggleAuto()" aria-pressed="' + (autoOn() ? 'true' : 'false') +
       '" aria-label="Automatic reading">' +
       ico(autoOn() ? 'sound' : 'soundoff', 'inl') + ' Auto</button>' : '') +
-    (audioOK() && !isL && !ex ? '<button class="chip" id="listenBtn" onclick="listenQuestion()">' +
+    (audioOK() && !isL && !ex && readOn() ? '<button class="chip" id="listenBtn" onclick="listenQuestion()">' +
       ico('sound', 'inl') + ' Listen</button>' : '') +
     '<button class="chip star' + (isFav(q.q, q.id) ? ' on' : '') + '" id="favBtn" onclick="favCurrent()">' +
     ico('star', 'inl') + ' Favourite</button></div></div>';
@@ -1823,7 +1828,7 @@ function showVerdict(good, q) {
   fb.innerHTML = L('<div class="verdict ' + (good ? 'ok' : 'bad') + '">' +
     (good ? '&#10004; Correct.' : '&#10008; Incorrect &mdash; correct answer: <b>' + fmt(q.c) + '</b>') +
     (q.e ? '<span class="rule2">' + fmt(q.e) + '</span>' : '') +
-    (audioOK() ? '<button class="chip mini" onclick="speakAnswer(S.pool[S.idx])">' +
+    (audioOK() && readOn() ? '<button class="chip mini" onclick="speakAnswer(S.pool[S.idx])">' +
       ico('sound', 'inl') + ' Listen to the answer</button>' : '') +
     '</div>');
 }
@@ -2368,7 +2373,7 @@ VIEWS.library = function (f, _a, resultsOnly) {
     if (q && it.i.toLowerCase().indexOf(q) < 0 && it.m.toLowerCase().indexOf(q) < 0) return;
     n++;
     h += '<div class="icard"><div class="ih"><div class="idm">' + esc(it.i) + '</div>' +
-      (audioOK() ? '<button class="spk" onclick="spkNow(IDIOMS_LIB[' + i + '].i+\'. \'+IDIOMS_LIB[' + i + '].x)">' + ico('sound') + '</button>' : '') +
+      (audioOK() && readOn() ? '<button class="spk" onclick="spkNow(IDIOMS_LIB[' + i + '].i+\'. \'+IDIOMS_LIB[' + i + '].x)">' + ico('sound') + '</button>' : '') +
       '</div><div class="im">' + esc(it.m) + '</div><div class="ix">&ldquo;' + esc(it.x) + '&rdquo;</div></div>';
   });
   if (!n) h += '<div class="empty">' + ico('none', 'ei') + '<p>No result.</p></div>';
@@ -2480,17 +2485,17 @@ VIEWS.settings = function () {
       '<input class="rng" type="range" min="0.5" max="1.3" step="0.02" value="' + Speech.getRate() +
       '" oninput="document.getElementById(\'rv\').textContent=this.value;Speech.setRate(this.value)">';
     var bms = (Speech.getBlankMs ? Speech.getBlankMs() : 400) / 1000;
-    h += '<p class="fr" style="margin-top:8px">Silence for a blank (_____): ' +
+    if (readOn()) h += '<p class="fr" style="margin-top:8px">Silence for a blank (_____): ' +
       '<b id="bv">' + bms.toFixed(1) + ' s</b></p>' +
       '<input class="rng" type="range" min="0" max="2" step="0.1" value="' + bms +
       '" oninput="document.getElementById(\'bv\').textContent=(+this.value).toFixed(1)+\' s\';Speech.setBlankMs(this.value*1000);LSset(\'blankms\',this.value*1000);LSset(\'blankms_user\',1)">';
-    h += '<label class="switch" style="margin-top:14px"><input type="checkbox"' +
+    if (readOn()) h += '<label class="switch" style="margin-top:14px"><input type="checkbox"' +
       (autoOn() ? ' checked' : '') + ' onchange="setAuto(this.checked)"> ' +
       'Automatic reading during tests</label>' +
       '<p class="fr">The question and its choices are read on their own, then the ' +
       'correction, and the next question comes up by itself. You can also switch ' +
       'this on or off with the <b>Auto</b> button on any question.</p>';
-    h += '<div class="navrow"><button class="btn ghost" onclick="testVoice()">Test the voice</button>' +
+    if (readOn()) h += '<div class="navrow"><button class="btn ghost" onclick="testVoice()">Test the voice</button>' +
       '<button class="btn ghost" onclick="testChoices()">Test a blank + choices</button></div>';
   } else {
     h += '<div class="banner bad">&#10008; US English audio is not available yet.</div>' +
@@ -2689,6 +2694,7 @@ function renderVoiceBox() {
     if (nOther) h += '<label class="switch"><input type="checkbox"' + (showAll ? ' checked' : '') +
       ' onchange="LSset(\'voice_all\',this.checked?1:0);renderVoiceBox()"> Other languages too (they read English with their own accent)</label>';
     h += roleVoiceHtml(list);
+    if (!readOn()) h = roleVoiceHtml(list);     // site : seules les voix de l'ecoute
     box.innerHTML = h;
     box._list = flat;
     voiceNowInfo();
