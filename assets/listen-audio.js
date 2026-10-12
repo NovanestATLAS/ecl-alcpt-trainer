@@ -1,93 +1,69 @@
 /* ==========================================================================
-   listen-audio.js - recorded voices of the website (Kokoro TTS).
-   Every recording is made once with Kokoro TTS, a free open-source voice
-   model run on GitHub's own machines (no API, no key, no billing), and
-   served as a plain MP3 file:
+   listen-audio.js - recorded voices of the listening questions (Kokoro TTS).
+   Every listening line is recorded once with Kokoro TTS, a free open-source
+   voice model run on GitHub's own machines (no API, no key, no billing),
+   and served as a plain MP3 file (assets/audio/listening/,
+   tools/listening-audio/): the man (am_michael for L01-L155, am_liam from
+   L156) and the woman (af_heart), one file per line, named after the
+   question (L04-2.mp3 = 2nd line of question L04). manifest.js
+   (window.ECL_LISTEN_AUDIO) gives the hash of every recorded line; the
+   texts come from listening-data.js, and the lines of the test pages,
+   which do not load it, are listed apart.
 
-     . LISTENING (assets/audio/listening/, tools/listening-audio/): the man
-       (am_michael) and the woman (af_heart) of the listening questions,
-       one file per line, named after the question (L04-2.mp3 = 2nd line of
-       question L04), listed in manifest.js (window.ECL_LISTEN_AUDIO);
-     . READ ALOUD (assets/audio/read/, tools/read-audio/): the questions,
-       choices, answers and explanations of grammar, vocabulary, idioms...,
-       read by am_michael, and the Listen buttons of the lessons. A file is
-       named after its text (hash()): the choice letters ("A.") and "The
-       correct answer is:" are separate clips, because the choices are
-       shuffled. assets/audio/read/index.js (window.ECL_READ_AUDIO) says the
-       recordings exist.
+   Only listening has a voice on the website: grammar, vocabulary, idioms
+   and the lessons are not read aloud.
 
    Users: the trainer (practice/: Speech.speak() is wrapped below, the
-   shared engine tts.js is unchanged) and the site pages (site.js, through
-   window.ECL_LISTEN). A text with no recording, a file that does not load,
+   shared engine tts.js is unchanged) and the test pages (site.js, through
+   window.ECL_LISTEN). A line with no recording, a file that does not load,
    or a browser that refuses to play falls back to the browser's voice.
    ========================================================================== */
 (function (g) {
   'use strict';
   var DEF_RATE = 0.92;                     // reading speed the browser voices use by default
-  var READ_GAP = 300;                      // silence between two parts (question, choice A...)
 
   var root = '/assets/';
   try {
     var me = document.currentScript && document.currentScript.src;
     if (me) root = me.replace(/listen-audio\.js(\?.*)?$/, '');
   } catch (e) { }
-  var LBASE = root + 'audio/listening/', RBASE = root + 'audio/read/';
+  var LBASE = root + 'audio/listening/';
 
-  /* listening: 'M|text' -> 'L04-2.mp3?v=hash' (the hash changes with the
-     text, so a corrected line is never played from an old cached file) */
-  var M = g.ECL_LISTEN_AUDIO || { items: {} };
-  var files = {};
-  Object.keys(M.items || {}).forEach(function (id) {
-    (M.items[id] || []).forEach(function (l) { files[(l.role === 'W' ? 'W' : 'M') + '|' + l.text] = l.file + '?v=' + l.hash; });
-  });
-  function fileOf(role, text) { return files[(role === 'W' ? 'W' : 'M') + '|' + String(text == null ? '' : text)] || ''; }
-
-  /* read aloud: file name = cyrb53 hash of the text, in base 36
-     (tools/read-audio/generate.py computes the same) */
-  var R = g.ECL_READ_AUDIO && g.ECL_READ_AUDIO.count ? g.ECL_READ_AUDIO : null;
-  function hash(str) {
-    var h1 = 0xdeadbeef, h2 = 0x41c6ce57, i, ch;
-    for (i = 0; i < str.length; i++) {
-      ch = str.charCodeAt(i);
-      h1 = Math.imul(h1 ^ ch, 2654435761);
-      h2 = Math.imul(h2 ^ ch, 1597334677);
-    }
-    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
-    h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
-    h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-    return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+  /* 'M|text' -> 'L04-2.mp3?v=hash' (the hash changes with the text, so a
+     corrected line is never played from an old cached file). Built the
+     first time a line is looked up: listening-data.js loads after this file. */
+  var M = g.ECL_LISTEN_AUDIO || {};
+  var files = null;
+  function build() {
+    files = {};
+    var t = M.t || {}, k;
+    for (k in t) if (t.hasOwnProperty(k)) files[k] = t[k];
+    var D = g.LISTEN_DATA, items = (D && D.items) || [], H = M.h || {};
+    items.forEach(function (it) {
+      var h = H[it.id];
+      if (!h || !it.L || h.length !== it.L.length) return;
+      it.L.forEach(function (l, n) { files[(l[0] === 'W' ? 'W' : 'M') + '|' + l[1]] = it.id + '-' + (n + 1) + '.mp3?v=' + h[n]; });
+    });
+    return files;
   }
-  var LETTER = /^([A-F])\. ([\s\S]+)$/, ANSWER = /^The correct answer is: ([\s\S]+)\.$/;
-  /* a text as it is recorded: [{t: text of the clip, g: silence before it}] */
-  function clips(text) {
-    text = String(text == null ? '' : text).replace(/\s+/g, ' ').trim();
-    if (!text) return [];
-    var m = LETTER.exec(text);
-    if (m) return [{ t: m[1] + '.', g: 0 }, { t: m[2], g: 80 }];
-    m = ANSWER.exec(text);
-    if (m) return [{ t: 'The correct answer is:', g: 0 }, { t: m[1], g: 80 }];
-    return [{ t: text, g: 0 }];
+  function fileOf(role, text) {
+    if (!files || (!files._d && g.LISTEN_DATA)) { build(); if (g.LISTEN_DATA) files._d = 1; }
+    return files[(role === 'W' ? 'W' : 'M') + '|' + String(text == null ? '' : text)] || '';
   }
+  var recorded = !!(M.count > 0);
 
-  /* lines: [['M' or 'W', listening line] or ['', text to read], ...]
+  /* lines: [['M' or 'W', listening line], ...]
      -> [{u: url, g: silence before (ms), k: index of the line}], or null
-     when a listening line has no recording */
+     when a line has no recording (or is not a listening line) */
   function plan(lines, gap) {
     if (!lines || !lines.length) return null;
     var items = [];
     for (var i = 0; i < lines.length; i++) {
-      var r = lines[i][0], t = lines[i][1], gi = i ? (gap || 0) : 0;
-      if (r === 'M' || r === 'W') {
-        var f = fileOf(r, t);
-        if (!f) return null;
-        items.push({ u: LBASE + f, g: gi, k: i });
-      } else {
-        if (!R) return null;
-        var c = clips(t);
-        if (!c.length) return null;
-        for (var j = 0; j < c.length; j++) items.push({ u: RBASE + hash(c[j].t) + '.mp3', g: j ? c[j].g : gi, k: i });
-      }
+      var r = lines[i][0], t = lines[i][1];
+      if (r !== 'M' && r !== 'W') return null;
+      var f = fileOf(r, t);
+      if (!f) return null;
+      items.push({ u: LBASE + f, g: i ? (gap || 0) : 0, k: i });
     }
     return items;
   }
@@ -176,13 +152,13 @@
     };
   }
 
-  g.ECL_LISTEN = { has: has, plan: plan, play: play, clips: clips, hash: hash, reads: !!R, defRate: DEF_RATE };
+  g.ECL_LISTEN = { has: has, plan: plan, play: play, reads: recorded, defRate: DEF_RATE };
 
   /* ------------------------ trainer (practice/) ---------------------------
      Wraps the shared audio engine (tts.js) without changing it. Listening
-     lines (opts.roles) and every text with a recording play the MP3 files and
-     send the same 'start' and 'end' events, so the Listen buttons, Auto mode,
-     the exam timer and the answer window behave exactly as before.         */
+     lines (opts.roles) with a recording play the MP3 files and send the same
+     'start' and 'end' events, so the Play button, the exam timer and the
+     answer window behave exactly as before; anything else goes to tts.js.   */
   var S = g.Speech;
   if (!S || typeof S.speak !== 'function' || S.listenAudio) return;
   var raw = { speak: S.speak, stop: S.stop, pause: S.pause, resume: S.resume, isSpeaking: S.isSpeaking,
@@ -200,7 +176,7 @@
     var roles = opts.roles && isArr(text);
     var parts = isArr(text) ? text : [text];
     var lines = parts.map(function (t, k) { return [roles ? (opts.roles[k] === 'W' ? 'W' : 'M') : '', t]; });
-    var items = plan(lines, roles ? (opts.gap || 0) : READ_GAP);
+    var items = roles ? plan(lines, opts.gap || 0) : null;
     if (items) {
       S.stop();                              // same 'end' as before a new reading
       var rate = (S.getRate ? S.getRate() : DEF_RATE) / DEF_RATE * (opts.rateMul > 0 ? opts.rateMul : 1);
@@ -228,7 +204,7 @@
   S.isPaused = function () { return cur ? cur.paused() : raw.isPaused.apply(S, arguments); };
   S.pause = function () { if (cur) { cur.pause(); emit('pause', {}); return; } return raw.pause.apply(S, arguments); };
   S.resume = function () { if (cur) { cur.resume(); emit('resume', {}); return; } return raw.resume.apply(S, arguments); };
-  /* the recordings make audio available even where the browser has no voice */
-  if (R && raw.usable) S.usable = function () { return true; };
+  /* the recordings make listening available even where the browser has no voice */
+  if (recorded && raw.usable) S.usable = function () { return true; };
   S.listenAudio = true;
 })(window);

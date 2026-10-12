@@ -456,7 +456,6 @@
         '<span class="fc-face fc-front"><b class="fc-term"></b><span class="fc-hint">Click, or press Space, to see the meaning</span></span>' +
         '<span class="fc-face fc-back"><small class="fc-t2"></small><b class="fc-mean"></b><span class="fc-ex"></span></span></button></div>' +
         '<div class="dlg-row"><button type="button" class="btn btn-line btn-small fc-prev">&larr; Previous</button>' +
-        '<button type="button" class="btn btn-line btn-small fc-say">Listen</button>' +
         '<button type="button" class="btn btn-line btn-small fc-shuf">Shuffle</button>' +
         '<button type="button" class="btn btn-th btn-small fc-next">Next &rarr;</button></div>');
       var card = fc.querySelector('.fc-card');
@@ -464,10 +463,6 @@
       fc.querySelector('.fc-prev').addEventListener('click', function () { fcGo(-1); });
       fc.querySelector('.fc-next').addEventListener('click', function () { fcGo(1); });
       fc.querySelector('.fc-shuf').addEventListener('click', function () { shuffle(fcList); fcI = 0; fcShow(); });
-      fc.querySelector('.fc-say').addEventListener('click', function (e) {
-        var c = fcList[fcI];
-        speak(card.classList.contains('flip') ? bare(c.x || c.b) : c.f, e.currentTarget);
-      });
       fc.addEventListener('keydown', function (e) {
         if (e.key === 'ArrowRight') { e.preventDefault(); fcGo(1); }
         else if (e.key === 'ArrowLeft') { e.preventDefault(); fcGo(-1); }
@@ -621,7 +616,7 @@
   var $q = demo.querySelector('.sheet-q'), $list = demo.querySelector('.bubbles'),
       $fb = demo.querySelector('.sheet-fb'), $n = demo.querySelector('[data-n]'),
       $next = demo.querySelector('[data-next]'), $more = demo.querySelector('[data-more]'),
-      $dots = demo.querySelectorAll('.progress i'), $listen = demo.querySelector('.listen');
+      $dots = demo.querySelectorAll('.progress i');
   var L = 'ABCD';
 
   function render() {
@@ -680,19 +675,5 @@
     if (i >= 0) { var b = $list.querySelectorAll('.bub')[i]; if (b && !b.disabled) { e.preventDefault(); answer(i); } }
   });
 
-  /* Listen: the question and its four choices, in the American voice */
-  if ((!synth && !(window.ECL_LISTEN && window.ECL_LISTEN.reads)) || !$listen) { if ($listen) $listen.hidden = true; }
-  else {
-    $listen.addEventListener('click', function () {
-      var q = Q[qi];
-      if (q.b) {   // a question of the trainer's bank: its recordings are the trainer's
-        speakSeq([['', bare(q.q)]].concat(q.o.map(function (o, i) { return ['', L[i] + '. ' + bare(o)]; })), $listen);
-        return;
-      }
-      var text = bare(q.q).replace(/_{2,}/g, ', blank, ') + '. ' +
-        q.o.map(function (o, i) { return L[i] + ', ' + bare(o) + '.'; }).join(' ');
-      speak(text, $listen);
-    });
-  }
   render();
 })();
