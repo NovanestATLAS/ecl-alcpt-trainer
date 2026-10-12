@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Contact | ECL &amp; ALCPT English Trainer</title>
-<meta name="description" content="How to contact the team behind ECL &amp; ALCPT English Trainer.">
+<meta name="description" content="Contact the team behind ECL &amp; ALCPT English Trainer: report a mistake, send a suggestion or ask for help.">
 <link rel="canonical" href="https://ecl-alcpt-trainer.com/contact.html">
 <meta name="theme-color" content="#142B4D">
 <meta property="og:type" content="website">
@@ -29,7 +29,7 @@
   <a class="brand" href="./"><img src="assets/img/logo-192.png" alt="" width="38" height="38"><span>ECL &amp; ALCPT <span class="nw">English Trainer</span><small>Free practice for the ECL and ALCPT</small></span></a>
   <button class="menu-btn" type="button" aria-expanded="false" aria-controls="nav" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   <nav class="nav" id="nav" aria-label="Main">
-    <a href="practice/">Practice</a><a href="tests/">Tests</a><a href="lessons/">Lessons</a><a href="guides/">Resources</a><a href="about.html">About</a>
+    <a href="practice/">Practice</a><a href="tests/">Tests</a><a href="lessons/">Lessons</a><a href="guides/">Resources</a><a href="about.html">About</a><a href="contact.html" aria-current="page">Contact</a>
     <a data-google-vignette="false" class="btn btn-navy btn-small android-cta" href="https://play.google.com/store/apps/details?id=com.ecltrainer.english&amp;referrer=utm_source%3Decl-alcpt-trainer.com%26utm_medium%3Dwebsite%26utm_campaign%3Dheader"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.4"/><path d="M10.5 18.2h3"/></svg>Get the Android app</a>
   </nav>
   <button class="tr-tog" type="button" data-tr-toggle aria-pressed="true" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 5.5h10M8.5 3.5v2M6 5.5c.9 3.2 3 5.8 6 7.3M11 5.5c-.9 3.4-3.3 6.4-6.6 7.9"/><path d="M12.5 20.5l4-9 4 9M13.9 17.5h5.2"/></svg><span class="tr-tog-t">Translate</span><span class="tr-tog-sw" aria-hidden="true"></span></button>
@@ -42,7 +42,22 @@
   </div>
   <div class="wrap layout single">
     <article class="prose">
-<p>Write to <a href="mailto:quizzy.quest.planet@gmail.com">quizzy.quest.planet@gmail.com</a>.</p>
+<p>Send us a message with this form: a mistake in a question, a suggestion, a problem with the site or the app. We usually answer within a few days.</p>
+<form class="cform" id="contact-form" novalidate>
+  <div class="cf-row">
+    <label class="cf-f"><span>Your name <i>(optional)</i></span><input name="name" type="text" autocomplete="name" maxlength="80"></label>
+    <label class="cf-f"><span>Your email <i>(optional, so we can reply)</i></span><input name="email" type="email" autocomplete="email" maxlength="120" inputmode="email"></label>
+  </div>
+  <label class="cf-f"><span>Subject</span><select name="topic">
+    <option value="mistake">A mistake in a question</option>
+    <option value="suggestion">A suggestion</option>
+    <option value="problem">A problem with the site or the app</option>
+    <option value="other">Something else</option>
+  </select></label>
+  <label class="cf-f"><span>Message</span><textarea name="message" rows="7" maxlength="5000" required></textarea></label>
+  <input class="cf-hp" type="checkbox" name="botcheck" tabindex="-1" autocomplete="off" aria-hidden="true">
+  <div class="cf-send"><button class="btn btn-navy" type="submit">Send the message</button><p class="cf-status" role="status" aria-live="polite"></p></div>
+</form>
 <h2>Reporting a mistake in a question</h2>
 <p>Please include:</p>
 <ul><li>the full text of the question;</li><li>the answer shown as correct;</li><li>the answer you think is correct, and why.</li></ul>
@@ -100,6 +115,7 @@
 <script src="assets/audio/read/index.js" defer></script>
 <script src="assets/listen-audio.js" defer></script>
 <script src="assets/site.js" defer></script>
+<script src="assets/contact.js" defer></script>
 <script src="assets/translate.js" defer></script>
 </body>
 </html>

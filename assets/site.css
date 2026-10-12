@@ -656,3 +656,21 @@ html.no-voice .qc-hint::before{content:"Audio is not available in this browser. 
 .show-text{min-height:36px}
 
 .qc-audio .show-text[hidden]{display:none}
+
+/* contact form (contact.html) */
+.cform{position:relative;margin:1.4em 0 2em;padding:22px;border:1px solid var(--rule);border-radius:14px;background:var(--sheet,var(--paper))}
+.cf-row{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+@media (max-width:640px){.cf-row{grid-template-columns:1fr}.cform{padding:16px}}
+.cf-f{display:block;margin:0 0 14px}
+.cf-f>span{display:block;font-weight:600;margin-bottom:5px}
+.cf-f i{font-style:normal;font-weight:400;color:var(--ink-2);font-size:.92em}
+.cform input,.cform select,.cform textarea{width:100%;box-sizing:border-box;font:inherit;color:var(--ink);background:var(--paper);
+  border:1px solid var(--rule);border-radius:10px;padding:11px 12px;min-height:48px}
+.cform textarea{resize:vertical;min-height:150px}
+.cform input:focus,.cform select:focus,.cform textarea:focus{outline:2px solid var(--navy);outline-offset:1px;border-color:var(--navy)}
+.cform .cf-hp{position:absolute;left:0;top:0;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);border:0;opacity:0}
+.cf-send{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px}
+.cf-send .btn:disabled{opacity:.6;cursor:default}
+.cf-status{margin:0;font-weight:600}
+.cf-status.ok{color:var(--ok)}
+.cf-status.bad{color:var(--bad)}
