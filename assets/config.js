@@ -27,5 +27,5 @@ window.ECL_CONFIG = {
     article: ''
   },
   ga4: 'G-N7NPLR56K1',
-  contactKey: ''
+  contactKey: 'd5dd4775-3f49-4699-8e24-f912ad749d75'
 };
