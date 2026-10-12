@@ -153,7 +153,7 @@
     speakingBtn = null;
   }
   function utter(text, who) {
-    var u = new SpeechSynthesisUtterance(String(text));
+    var u = new SpeechSynthesisUtterance(String(text).replace(/_{2,}/g, ', blank, '));
     u.lang = 'en-US'; u.rate = rate();
     if (!voice) voice = pickVoice();
     if (who && (!voiceM || !voiceF)) { voiceM = pickVoiceM(); voiceF = pickVoiceF(); }
@@ -577,6 +577,47 @@
   var dataEl = doc.getElementById('demo-data');
   if (!demo || !dataEl) return;
   var Q = JSON.parse(dataEl.textContent), qi = 0;
+  /* The demo does not show the same questions again: each visit takes five
+     questions from the trainer's own question bank (practice/data), the ones
+     never shown in this browser first, then the ones shown longest ago. The
+     five questions written into the page are used until the bank arrives,
+     or if it cannot be loaded. No question is added to the site. */
+  var SEEN_KEY = 'ecl_demo_seen';
+  function dkey(q) {
+    var t = String(q.q) + '|' + String(q.o[q.a]), h = 2166136261;
+    for (var i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return (h >>> 0).toString(36);
+  }
+  function seenGet() { try { return JSON.parse(localStorage.getItem(SEEN_KEY)) || {}; } catch (e) { return {}; } }
+  function seenMark(q) {
+    var s = seenGet(); s._n = (s._n || 0) + 1; s[dkey(q)] = s._n;
+    try { localStorage.setItem(SEEN_KEY, JSON.stringify(s)); } catch (e) { }
+  }
+  function freshest(list, n) {
+    var s = seenGet();
+    return list.map(function (q) { return { q: q, s: s[dkey(q)] || 0, r: Math.random() }; })
+      .sort(function (a, b) { return a.s - b.s || a.r - b.r; }).slice(0, n).map(function (x) { return x.q; });
+  }
+  Q = freshest(Q, Q.length);
+  (function loadBank() {
+    var me = doc.querySelector('script[src*="assets/site.js"]');
+    var root = me ? me.src.replace(/assets\/site\.js.*$/, '') : '/';
+    if (!window.fetch) return;
+    Promise.all(['express_qcm', 'grammar_plus', 'vocab_american'].map(function (f) {
+      return fetch(root + 'practice/data/' + f + '.json').then(function (r) { if (!r.ok) throw r.status; return r.json(); });
+    })).then(function (sets) {
+      var bank = [];
+      sets.forEach(function (set) {
+        (set || []).forEach(function (x) {
+          if (x && x.q && x.o && x.o.length === 4 && x.e) bank.push({ q: x.q, o: x.o, a: x.a | 0, e: x.e, b: 1 });
+        });
+      });
+      if (bank.length < Q.length) return;
+      if (qi !== 0 || demo.classList.contains('answered')) return;   // already in use: keep it
+      Q = freshest(bank, Q.length);
+      render();
+    }, function () { });
+  })();
   var $q = demo.querySelector('.sheet-q'), $list = demo.querySelector('.bubbles'),
       $fb = demo.querySelector('.sheet-fb'), $n = demo.querySelector('[data-n]'),
       $next = demo.querySelector('[data-next]'), $more = demo.querySelector('[data-more]'),
@@ -586,6 +627,7 @@
   function render() {
     var q = Q[qi];
     stopSpeak();
+    seenMark(q);
     $n.textContent = qi + 1;
     $q.innerHTML = kw(q.q);
     $list.innerHTML = q.o.map(function (o, i) {
@@ -643,6 +685,10 @@
   else {
     $listen.addEventListener('click', function () {
       var q = Q[qi];
+      if (q.b) {   // a question of the trainer's bank: its recordings are the trainer's
+        speakSeq([['', bare(q.q)]].concat(q.o.map(function (o, i) { return ['', L[i] + '. ' + bare(o)]; })), $listen);
+        return;
+      }
       var text = bare(q.q).replace(/_{2,}/g, ', blank, ') + '. ' +
         q.o.map(function (o, i) { return L[i] + ', ' + bare(o) + '.'; }).join(' ');
       speak(text, $listen);
