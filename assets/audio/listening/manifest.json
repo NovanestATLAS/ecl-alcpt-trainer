@@ -4,7 +4,9 @@
  "model": "hexgrad/Kokoro-82M",
  "voices": {
   "M": "am_michael",
-  "W": "af_heart"
+  "M_new": "am_liam",
+  "W": "af_heart",
+  "new_from": "L156"
  },
  "speed": 1.0,
  "format": "MP3 48k mono 24000 Hz",
