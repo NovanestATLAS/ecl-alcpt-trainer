@@ -86,6 +86,51 @@ function pct(n, d) { return d ? Math.round(100 * n / d) : 0; }
 function LSget(k, d) { try { var v = localStorage.getItem('ecl_' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
 function LSset(k, v) { try { localStorage.setItem('ecl_' + k, JSON.stringify(v)); return true; } catch (e) { return false; } }
 function LSdel(k) { try { localStorage.removeItem('ecl_' + k); } catch (e) { } }
+
+/* ===================== ROTATION DES QUESTIONS ===========================
+   Chaque question affichee est notee (stockage « qseen ») avec le numero de
+   son dernier affichage. Series, tests rapides, ecoute et examens tirent
+   d'abord les questions jamais vues, puis celles vues il y a le plus
+   longtemps, au hasard entre questions de meme rang : un test abandonne
+   puis relance ne remontre pas les memes questions.                       */
+var SEEN = null, SEEN_N = 0, seenTimer = null;
+function seenLoad() {
+  if (SEEN) return;
+  var o = LSget('qseen', null);
+  SEEN = (o && o.m) || {}; SEEN_N = (o && o.n) || 0;
+}
+function seenSave() {
+  if (seenTimer) return;
+  seenTimer = setTimeout(seenFlush, 800);
+}
+function seenFlush() {
+  if (seenTimer) { clearTimeout(seenTimer); seenTimer = null; }
+  if (SEEN) LSset('qseen', { n: SEEN_N, m: SEEN });
+}
+/* l'application passe en arriere-plan ou se ferme : rien ne se perd */
+document.addEventListener('visibilitychange', function () { if (document.hidden && seenTimer) seenFlush(); });
+window.addEventListener('pagehide', function () { if (seenTimer) seenFlush(); });
+function strHash(s) {
+  var h = 2166136261;
+  for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(36);
+}
+/* identite d'une question : son numero (ecoute), sinon enonce + bonne reponse */
+function seenKey(x) {
+  if (!x) return '';
+  if (x.id && x.L) return 'L' + x.id;
+  var c = x.c !== undefined ? x.c : (x.o ? x.o[x.a | 0] : '');
+  return strHash(String(x.q) + '|' + String(c));
+}
+function seenMark(x) { var k = seenKey(x); if (!k) return; seenLoad(); SEEN[k] = ++SEEN_N; seenSave(); }
+/* n questions de la liste : jamais vues d'abord, puis les plus anciennes */
+function fresh(list, n) {
+  seenLoad();
+  var a = (list || []).map(function (x) { return { x: x, s: SEEN[seenKey(x)] || 0, r: Math.random() }; });
+  a.sort(function (p, q) { return p.s - q.s || p.r - q.r; });
+  if (n !== undefined) a = a.slice(0, Math.max(0, n));
+  return a.map(function (y) { return y.x; });
+}
 function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
 function dayKey(off) { var d = new Date(); d.setDate(d.getDate() - (off || 0)); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
 function nowMs() { return Date.now(); }
@@ -1022,10 +1067,10 @@ VIEWS.sim = function () {
     var eb = LSget('exam_best', {});
     h += '<div class="secttl">Full exams, real timing</div><div class="bigmenu sm">' +
       big2("go('exam','ecl')", 'headset', 'ECL exam',
-        'Listening + reading &middot; ' + EXAMS.ecl.testMin + ' min' +
+        (formsOn() ? FORMS_N + ' tests &middot; ' : '') + 'Listening + reading &middot; ' + EXAMS.ecl.testMin + ' min' +
         (eb.ecl !== undefined ? ' &middot; best ' + eb.ecl + '%' : '')) +
       big2("go('exam','alcpt')", 'headset', 'ALCPT exam',
-        'Listening + reading &middot; ' + EXAMS.alcpt.testMin + ' min' +
+        (formsOn() ? FORMS_N + ' tests &middot; ' : '') + 'Listening + reading &middot; ' + EXAMS.alcpt.testMin + ' min' +
         (eb.alcpt !== undefined ? ' &middot; best ' + eb.alcpt + '%' : '')) +
       '</div><div class="secttl">Quick timed tests</div>';
   }
@@ -1090,7 +1135,13 @@ VIEWS.exam = function (t) {
     (best !== undefined ? '<p class="fr">Your best result: <b>' + best + '%</b></p>' : '') + '</div>';
   h += audioOK() ? '<div class="note">Use headphones in a quiet place. The voices can be changed in <b>Settings &rsaquo; Audio</b>.</div>'
     : '<div class="banner bad">No audio on this device: in Part 1 the text of each recording is shown instead.</div>';
-  h += '<div class="navrow"><button class="btn" id="examStart" onclick="startExam(\'' + c.t + '\')">Start the exam</button></div>';
+  if (formsOn()) {
+    var nx = formNext(c.t);
+    h += '<div class="navrow"><button class="btn" id="examStart" onclick="startExam(\'' + c.t + '\',' + nx + ')">Start ' + c.name + ' Practice Test ' + (nx + 1) + '</button></div>';
+    h += '<p class="fr">' + FORMS_N + ' different tests, each with the same sections. Tap a number to take or retake any test.</p>' + formsGrid(c.t);
+  } else {
+    h += '<div class="navrow"><button class="btn" id="examStart" onclick="startExam(\'' + c.t + '\')">Start the exam</button></div>';
+  }
   root.innerHTML = L(h + tabbar('revise'));
 };
 
@@ -1167,7 +1218,7 @@ function poolItem(it) {
   return withListen({ q: it.q, o: shuffle(it.o.slice()), c: it.o[it.a], e: it.e || '' }, it);
 }
 function makePool(data) {
-  return shuffle(data).map(poolItem);
+  return fresh(data).map(poolItem);      // jamais vues d'abord
 }
 function startBank(key) {
   var b = BANKS[key]; if (!b) return;
@@ -1278,9 +1329,9 @@ function examListening(n) {
   LISTEN.forEach(function (x) { (byK[x.k] = byK[x.k] || []).push(x); });
   order.forEach(function (k) { want[k] = Math.round(n * share[k]); tot += want[k]; });
   want.s += n - tot;
-  order.forEach(function (k) { all = all.concat(shuffle(byK[k] || []).slice(0, Math.max(0, want[k]))); });
+  order.forEach(function (k) { all = all.concat(fresh(byK[k] || [], want[k])); });
   if (all.length < n) {
-    all = all.concat(shuffle(LISTEN.filter(function (x) { return all.indexOf(x) < 0; })).slice(0, n - all.length));
+    all = all.concat(fresh(LISTEN.filter(function (x) { return all.indexOf(x) < 0; }), n - all.length));
   }
   var out = shuffle(all.filter(function (x) { return x.k === 's' || x.k === 'r'; }));
   ['d', 'c', 'k'].forEach(function (k) { out = out.concat(shuffle(all.filter(function (x) { return x.k === k; }))); });
@@ -1290,22 +1341,116 @@ function examListening(n) {
 /* Partie lecture : moitie grammaire, 30 % vocabulaire, 20 % idiomes. */
 function examReading(n) {
   var ng = Math.round(n * 0.5), nv = Math.round(n * 0.3), ni = n - ng - nv;
-  var pick = shuffle(sectionData('grammar')).slice(0, ng)
-    .concat(shuffle(sectionData('vocab')).slice(0, nv), shuffle(sectionData('idiom')).slice(0, ni));
+  var pick = fresh(sectionData('grammar'), ng)
+    .concat(fresh(sectionData('vocab'), nv), fresh(sectionData('idiom'), ni));
   if (pick.length < n) {
-    pick = pick.concat(shuffle(allQuestions().filter(function (x) { return pick.indexOf(x) < 0; })).slice(0, n - pick.length));
+    pick = pick.concat(fresh(allQuestions().filter(function (x) { return pick.indexOf(x) < 0; }), n - pick.length));
   }
   return shuffle(pick).slice(0, n).map(function (x) { var p = poolItem(x); p.part = 'R'; return p; });
 }
-function startExam(t) {
+/* ============ 50 TESTS NUMEROTES PAR EXAMEN (application) ===================
+   Dans l'application, l'ECL et l'ALCPT ont chacun 50 tests differents
+   (Practice Test 1 a 50). Chaque test a les memes sections : ecoute
+   (15 enonces, 12 questions-reponses, 14 dialogues courts, 5 conversations,
+   4 annonces) puis lecture (25 grammaire, 17 vocabulaire, 8 idiomes).
+   Les tests d'un meme examen se partagent les questions sans se recouvrir
+   tant que la banque suffit (permutations fixes, derivees du numero) ; l'ECL
+   et l'ALCPT utilisent des permutations differentes. « Next test » ouvre le
+   premier test jamais commence : un test abandonne compte comme commence,
+   on n'y retombe donc pas. Le site garde un tirage unique par examen.   */
+var FORMS_N = 50;
+var FORM_L = { s: 15, r: 12, d: 14, c: 5, k: 4 };
+var FORM_R = { grammar: 25, vocab: 17, idiom: 8 };
+function formsOn() { return !window.ECL_WEB && LISTEN.length > 0; }
+function seeded(seed) {
+  var a = seed >>> 0;
+  return function () {
+    a = (a + 0x6D2B79F5) >>> 0;
+    var t = Math.imul(a ^ (a >>> 15), a | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function seedOf(tag) { return parseInt(strHash(tag), 36); }
+function seededShuffle(a, rnd) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = rnd() * (i + 1) | 0, t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+/* w questions du test f : la tranche f d'un flux de permutations de la liste */
+function formSlice(list, w, f, tag) {
+  if (!list.length || w <= 0) return [];
+  var pos = f * w, cyc = Math.floor(pos / list.length), off = pos % list.length;
+  var perm = seededShuffle(list, seeded(seedOf(tag + '|' + cyc)));
+  var out = [], used = {}, guard = 0;
+  while (out.length < w && guard++ < list.length * 3) {
+    if (off >= perm.length) { cyc++; off = 0; perm = seededShuffle(list, seeded(seedOf(tag + '|' + cyc))); }
+    var x = perm[off++], k = seenKey(x);
+    if (!used[k]) { used[k] = 1; out.push(x); }
+  }
+  return out;
+}
+function formPool(t, f, nL, nR) {
+  var byK = {}, lis = [], i;
+  LISTEN.forEach(function (x) { (byK[x.k] = byK[x.k] || []).push(x); });
+  ['s', 'r', 'd', 'c', 'k'].forEach(function (k) { lis = lis.concat(formSlice(byK[k] || [], FORM_L[k], f, t + '|L|' + k)); });
+  if (lis.length < nL) {
+    var keyL = {}; lis.forEach(function (x) { keyL[seenKey(x)] = 1; });
+    lis = lis.concat(formSlice(LISTEN.filter(function (x) { return !keyL[seenKey(x)]; }), nL - lis.length, f, t + '|L|fill'));
+  }
+  var rnd = seeded(seedOf(t + '|order|' + f));
+  var out = seededShuffle(lis.filter(function (x) { return x.k === 's' || x.k === 'r'; }), rnd);
+  ['d', 'c', 'k'].forEach(function (k) { out = out.concat(seededShuffle(lis.filter(function (x) { return x.k === k; }), rnd)); });
+  var Lp = out.slice(0, nL).map(function (x) { var p = poolItem(x); p.part = 'L'; return p; });
+  var rd = [];
+  Object.keys(FORM_R).forEach(function (sec) { rd = rd.concat(formSlice(sectionData(sec), FORM_R[sec], f, t + '|R|' + sec)); });
+  if (rd.length < nR) {
+    var keyR = {}; rd.forEach(function (x) { keyR[seenKey(x)] = 1; });
+    rd = rd.concat(formSlice(allQuestions().filter(function (x) { return !keyR[seenKey(x)]; }), nR - rd.length, f, t + '|R|fill'));
+  }
+  var Rp = seededShuffle(rd, rnd).slice(0, nR).map(function (x) { var p = poolItem(x); p.part = 'R'; return p; });
+  return { L: Lp, R: Rp };
+}
+/* suivi des tests : { ecl: { 'numero': { s: date du dernier depart, p: meilleur %, l: dernier % } } } */
+function formLog() { return LSget('exam_forms', {}); }
+function formNext(t) {
+  var log = formLog()[t] || {}, best = 0, old = Infinity;
+  for (var f = 0; f < FORMS_N; f++) if (!log[f]) return f;
+  for (f = 0; f < FORMS_N; f++) if (log[f].s < old) { old = log[f].s; best = f; }
+  return best;
+}
+function formMark(t, f, pctDone) {
+  var all = formLog(), log = all[t] = all[t] || {}, r = log[f] = log[f] || {};
+  if (pctDone === undefined) r.s = nowMs();
+  else { r.l = pctDone; if (r.p === undefined || r.p < pctDone) r.p = pctDone; }
+  LSset('exam_forms', all);
+}
+function startExam(t, f) {
   var c = EXAMS[t]; if (!c) return;
   if (!LISTEN.length) { toast('The listening questions are missing'); return; }
-  var Lp = examListening(c.nL), Rp = examReading(c.nR);
+  var Lp, Rp, title = c.title, form = (typeof f === 'number' && formsOn()) ? f : undefined;
+  if (form !== undefined) {
+    var fp = formPool(c.t, form, c.nL, c.nR);
+    Lp = fp.L; Rp = fp.R; title = c.name + ' Practice Test ' + (form + 1);
+    formMark(c.t, form);
+  } else { Lp = examListening(c.nL); Rp = examReading(c.nR); }
   var ex = { t: c.t, name: c.name, nL: Lp.length, nR: Rp.length, readMin: c.readMin, win: c.win,
-    part: Lp.length ? 'L' : 'R', start: nowMs() };
-  launch(null, c.title, Lp.concat(Rp), true, ex);
+    part: Lp.length ? 'L' : 'R', start: nowMs(), form: form };
+  launch(null, title, Lp.concat(Rp), true, ex);
   if (ex.part === 'R') { S.timeLeft = c.readMin * 60; ex.endAt = nowMs() + S.timeLeft * 1000; S.timerId = setInterval(tick, 1000); paintTimer(); }
   track('exam_start', { exam: c.t });
+}
+/* grille des 50 tests (application) */
+function formsGrid(t) {
+  var log = formLog()[t] || {}, nx = formNext(t), h = '<div class="secttl">All ' + FORMS_N + ' practice tests</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px">';
+  for (var f = 0; f < FORMS_N; f++) {
+    var r = log[f], done = r && r.p !== undefined, cur = f === nx;
+    h += '<button onclick="startExam(\'' + t + '\',' + f + ')" aria-label="Practice test ' + (f + 1) + '" style="' +
+      'min-height:54px;border-radius:12px;font:inherit;cursor:pointer;padding:4px 2px;line-height:1.15;' +
+      'background:' + (done ? 'var(--card2)' : 'var(--card)') + ';color:var(--ink);' +
+      'border:' + (cur ? '2px solid var(--gold)' : '1px solid var(--line)') + '">' +
+      '<b style="display:block;font-size:17px">' + (f + 1) + '</b>' +
+      '<small style="display:block;font-size:11px;color:' + (done ? 'var(--ok)' : 'var(--mut)') + '">' +
+      (done ? r.p + '%' : (r ? 'started' : (cur ? 'next' : '&nbsp;'))) + '</small></button>';
+  }
+  return h + '</div>';
 }
 
 /* Ecoute en examen : l'enregistrement une fois, puis le temps de reponse,
@@ -1538,6 +1683,7 @@ function renderQ() {
   var q = S.pool[S.idx];
   if (!q) return;
   if (S.exam && S.exam.part === 'break') { examBreak(); return; }
+  seenMark(q);                          // rotation des questions
   var ex = S.exam, isL = !!q.L, tok = ++RQ_TOKEN;
   LP.on = false;
   var h = bar(S.title, S.sim ? '' : '<span class="pts">' + S.score + ' pt</span>', 'quitQuiz()');
@@ -1749,6 +1895,7 @@ function finish(timeout) {
     S.exam.end = nowMs();
     var eb = LSget('exam_best', {});
     if (eb[S.exam.t] === undefined || eb[S.exam.t] < p) { eb[S.exam.t] = p; LSset('exam_best', eb); }
+    if (S.exam.form !== undefined) formMark(S.exam.t, S.exam.form, p);
     track('exam_complete', { exam: S.exam.t, score: p, listening: pct(S.partScore.L, S.exam.nL), reading: pct(S.partScore.R, S.exam.nR), time_up: timeout ? 1 : 0 });
   } else if (S.sim) track('test_complete', { questions: S.pool.length, score: p, time_up: timeout ? 1 : 0 });
   var hist = LSget('hist', []);
@@ -2708,7 +2855,7 @@ function applySkin() {
 }
 
 /* ------------------------------ donnees --------------------------------- */
-var KEYS = ['best', 'hist', 'fav', 'box', 'daily', 'streak', 'goal', 'theme', 'fontsize', 'haptic', 'les_done', 'exam_best'];
+var KEYS = ['best', 'hist', 'fav', 'box', 'daily', 'streak', 'goal', 'theme', 'fontsize', 'haptic', 'les_done', 'exam_best', 'exam_forms'];
 function exportData() {
   var o = { v: APP_VERSION, d: nowMs(), data: {} };
   KEYS.forEach(function (k) { var v = LSget(k, null); if (v !== null) o.data[k] = v; });
