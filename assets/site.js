@@ -572,14 +572,17 @@
   var dataEl = doc.getElementById('demo-data');
   if (!demo || !dataEl) return;
   var Q = JSON.parse(dataEl.textContent), qi = 0;
-  /* The demo does not show the same questions again: each visit takes five
-     questions from the trainer's own question bank (practice/data), the ones
-     never shown in this browser first, then the ones shown longest ago. The
-     five questions written into the page are used until the bank arrives,
-     or if it cannot be loaded. No question is added to the site. */
+  /* Six questions, a new set at every visit: two listening questions (with
+     their recordings), then grammar, vocabulary, a phrasal verb and an idiom,
+     drawn from the trainer's own banks. In each kind, the questions never
+     shown in this browser come first, then the ones shown longest ago. The
+     questions written into the page are used until the banks arrive, or if
+     they cannot be loaded. */
+  var SLOTS = [['listen', 'Listening'], ['listen', 'Listening'], ['grammar', 'Grammar'],
+               ['vocab', 'Vocabulary'], ['phrasal', 'Phrasal verbs'], ['idiom', 'Idioms']];
   var SEEN_KEY = 'ecl_demo_seen';
   function dkey(q) {
-    var t = String(q.q) + '|' + String(q.o[q.a]), h = 2166136261;
+    var t = q.id ? 'L' + q.id : String(q.q) + '|' + String(q.o[q.a]), h = 2166136261;
     for (var i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
     return (h >>> 0).toString(36);
   }
@@ -594,36 +597,76 @@
       .sort(function (a, b) { return a.s - b.s || a.r - b.r; }).slice(0, n).map(function (x) { return x.q; });
   }
   Q = freshest(Q, Q.length);
+  var me = doc.querySelector('script[src*="assets/site.js"]');
+  var root = me ? me.src.replace(/assets\/site\.js.*$/, '') : '/';
+  var LBASE = root + 'assets/audio/listening/';
   (function loadBank() {
-    var me = doc.querySelector('script[src*="assets/site.js"]');
-    var root = me ? me.src.replace(/assets\/site\.js.*$/, '') : '/';
     if (!window.fetch) return;
-    Promise.all(['express_qcm', 'grammar_plus', 'vocab_american'].map(function (f) {
-      return fetch(root + 'practice/data/' + f + '.json').then(function (r) { if (!r.ok) throw r.status; return r.json(); });
-    })).then(function (sets) {
-      var bank = [];
-      sets.forEach(function (set) {
-        (set || []).forEach(function (x) {
-          if (x && x.q && x.o && x.o.length === 4 && x.e) bank.push({ q: x.q, o: x.o, a: x.a | 0, e: x.e, b: 1 });
+    function get(u) { return fetch(root + u).then(function (r) { if (!r.ok) throw r.status; return r.json(); }).catch(function () { return null; }); }
+    Promise.all([get('assets/audio/listening/demo.json'), get('practice/data/express_qcm.json'), get('practice/data/grammar_plus.json'),
+                 get('practice/data/vocab_american.json'), get('practice/data/phrasal_verbs.json'), get('practice/data/idioms_quiz.json')])
+    .then(function (r) {
+      function qcm(list, tag) {
+        var out = [];
+        (list || []).forEach(function (x) {
+          if (x && x.q && x.o && x.o.length === 4) out.push({ q: x.q, o: x.o, a: x.a | 0, e: x.e || '', tag: tag });
         });
-      });
-      if (bank.length < Q.length) return;
+        return out;
+      }
+      var listen = ((r[0] && r[0].items) || []).filter(function (x) { return x && x.L && x.f && x.f.length === x.L.length; })
+        .map(function (x) { return { id: x.id, L: x.L, f: x.f, q: x.q, o: x.o, a: x.a | 0, e: x.e || '', tag: 'Listening' }; });
+      var pools = { listen: listen, grammar: qcm(r[1], 'Grammar').concat(qcm(r[2], 'Grammar')).filter(function (x) { return x.e; }),
+        vocab: qcm(r[3], 'Vocabulary'), phrasal: qcm(r[4], 'Phrasal verbs'), idiom: qcm(r[5], 'Idioms') };
+      var want = {}; SLOTS.forEach(function (sl) { want[sl[0]] = (want[sl[0]] || 0) + 1; });
+      var got = {}; Object.keys(want).forEach(function (k) { got[k] = freshest(pools[k], want[k]); });
+      var set = [];
+      SLOTS.forEach(function (sl) { var x = got[sl[0]].shift(); if (x) set.push(x); });
+      if (set.length < 4) return;
       if (qi !== 0 || demo.classList.contains('answered')) return;   // already in use: keep it
-      Q = freshest(bank, Q.length);
+      Q = set;
       render();
-    }, function () { });
+    });
   })();
   var $q = demo.querySelector('.sheet-q'), $list = demo.querySelector('.bubbles'),
-      $fb = demo.querySelector('.sheet-fb'), $n = demo.querySelector('[data-n]'),
+      $fb = demo.querySelector('.sheet-fb'), $n = demo.querySelector('[data-n]'), $t = demo.querySelector('[data-t]'),
+      $tag = demo.querySelector('[data-tag]'), $play = demo.querySelector('[data-play]'),
       $next = demo.querySelector('[data-next]'), $more = demo.querySelector('[data-more]'),
-      $dots = demo.querySelectorAll('.progress i');
+      $prog = demo.querySelector('.progress');
   var L = 'ABCD';
 
+  /* a listening question plays its own recordings (Kokoro, the trainer's
+     voices); if a file does not play, the browser voice reads the lines */
+  function playListening(q, btn) {
+    if (btn && btn === speakingBtn) { stopSpeak(); return; }
+    var LA = window.ECL_LISTEN;
+    if (LA && LA.play && q.f && q.f.length === q.L.length) {
+      stopSpeak();
+      var g0 = seqGen;
+      speakingBtn = btn; btn.setAttribute('aria-pressed', 'true');
+      var items = q.f.map(function (u, k) { return { u: LBASE + u, g: k ? 450 : 0, k: k }; });
+      var r = rec = LA.play(items, {
+        rate: 1,
+        onend: function () { if (rec === r) rec = null; if (speakingBtn === btn) { btn.setAttribute('aria-pressed', 'false'); speakingBtn = null; } },
+        onfail: function (k) { if (rec === r) rec = null; if (g0 === seqGen && synth) voiceSeq(q.L.slice(k), btn, false); }
+      });
+      return;
+    }
+    speakSeq(q.L, btn);
+  }
+  function transcript(q) {
+    return '<p class="demo-tx">' + q.L.map(function (l) {
+      return '<b>' + (l[0] === 'W' ? 'Woman' : 'Man') + ':</b> ' + esc(l[1]);
+    }).join('<br>') + '</p>';
+  }
   function render() {
     var q = Q[qi];
     stopSpeak();
     seenMark(q);
     $n.textContent = qi + 1;
+    if ($t) $t.textContent = Q.length;
+    if ($tag) { $tag.textContent = q.tag || ''; $tag.hidden = !q.tag; }
+    if ($prog && $prog.children.length !== Q.length) $prog.innerHTML = new Array(Q.length + 1).join('<i></i>');
+    if ($play) $play.hidden = !q.L;
     $q.innerHTML = kw(q.q);
     $list.innerHTML = q.o.map(function (o, i) {
       return '<li><button type="button" class="bub" data-i="' + i + '"><span class="b">' + L[i] +
@@ -633,6 +676,7 @@
     $next.hidden = true;
     demo.classList.remove('answered');
   }
+  if ($play) $play.addEventListener('click', function () { var q = Q[qi]; if (q && q.L) playListening(q, $play); });
   $list.addEventListener('click', function (e) {
     var b = e.target.closest('.bub');
     if (!b || b.disabled) return;
@@ -649,8 +693,9 @@
       if (!ok) bs[i].classList.add('wrong');
       $fb.innerHTML = '<div class="correction' + (ok ? '' : ' bad') + '"><p><b>' +
         (ok ? 'Correct.' : 'Not quite. The answer is ' + L[q.a] + ': ' + kw(q.o[q.a]) + '.') +
-        '</b></p><p>' + kw(q.e) + '</p></div>';
-      $dots[qi].className = ok ? 'done-ok' : 'done-bad';
+        '</b></p>' + (q.L ? transcript(q) : '') + (q.e ? '<p>' + kw(q.e) + '</p>' : '') + '</div>';
+      var dots = $prog ? $prog.children : [];
+      if (dots[qi]) dots[qi].className = ok ? 'done-ok' : 'done-bad';
       if (qi < Q.length - 1) { $next.hidden = false; $next.focus({ preventScroll: true }); }
       else { $more.classList.add('btn-brass'); $more.classList.remove('btn-line'); $more.focus({ preventScroll: true }); }
     }, 180);

@@ -187,9 +187,11 @@ function copyText(s) {
 function adScreen(kind) {
   if (window.Ads) { try { Ads.screen(kind); } catch (e) { } }
 }
+/* serie d'entrainement a l'ecoute (pas un examen) : regle propre dans ads.js */
+function listenRun() { return !!(S.pool && S.pool.length && S.pool[0] && S.pool[0].L && !S.exam && !S.sim); }
 function adAfterSeries() {
   if (!window.Ads) return;
-  try { stopSpeak(); Ads.maybeInterstitial(); } catch (e) { }
+  try { stopSpeak(); Ads.maybeInterstitial(listenRun() ? 'listen' : undefined); } catch (e) { }
 }
 /* Appele a chaque reponse d'un parcours d'entrainement. Sans cela, un
    « Full set » de plusieurs centaines de questions ne compte que pour une
@@ -207,7 +209,11 @@ function adDuringRun() {
   if (!window.Ads || S.sim || S.exam) return;
   /* questions encore a venir : une serie courte garde son annonce pour la
      fin (regle du temps d'utilisation, v5.9.27) */
-  try { Ads.maybeInterstitialMidRun(Math.max(0, S.pool.length - S.idx - 1)); } catch (e) { }
+  var left = Math.max(0, S.pool.length - S.idx - 1);
+  /* ecoute : une annonce toutes les 3 min ou 10 questions, entre deux
+     enregistrements (ads.js, listeningPoint) */
+  if (listenRun() && typeof Ads.listeningPoint === 'function') { try { Ads.listeningPoint(left); } catch (e) { } return; }
+  try { Ads.maybeInterstitialMidRun(left); } catch (e) { }
 }
 /* --- Pause naturelle (v5.9.27) --------------------------------------------
    Quitter ce que l'on lisait (une lecon, les listes de mots, les cartes,
@@ -860,6 +866,20 @@ VIEWS.home = function () {
       '<span class="rbar"><i style="width:' + pct(r.r.i, r.r.p.length) + '%"></i></span></span></button>';
   }
 
+  /* Ecoute en tete : l'epreuve la plus difficile de l'ECL et de l'ALCPT,
+     mise en avant avant toute autre activite. */
+  if (LISTEN.length) {
+    h += '<button class="lhero" onclick="quickListen()" style="display:flex;align-items:center;gap:14px;width:100%;' +
+      'text-align:left;margin:4px 0 12px;padding:16px 16px;border-radius:16px;border:2px solid var(--gold);' +
+      'background:var(--card);color:var(--ink);font:inherit;cursor:pointer">' +
+      '<span style="flex:0 0 auto;display:flex;align-items:center;justify-content:center;width:46px;height:46px;' +
+      'border-radius:50%;background:var(--gold);color:var(--onGold)">' + ico('headset') + '</span>' +
+      '<span style="flex:1 1 auto;min-width:0"><b style="display:block;font-size:17px">Listening practice</b>' +
+      '<span style="display:block;font-size:13px;color:var(--mut)">The hardest part of the ECL and the ALCPT &middot; ' +
+      quickN() + ' recordings</span></span>' +
+      '<span style="flex:0 0 auto;font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.06em">Start</span>' +
+      '</button>';
+  }
   h += '<div class="search-launch" onclick="go(\'search\')" role="button">' +
     ico('search', 'sl-i') + '<span>Search a question, an idiom, a verb\u2026</span></div>';
 
@@ -884,14 +904,14 @@ VIEWS.home = function () {
   if (lesTile) h += '<div class="bigmenu ls-top">' + lesTile.replace('class="tile"', 'class="tile ls-tile" id="lessonsTile"') + '</div>';
   h += '<div class="secttl">Areas of study</div>';
   h += '<div class="bigmenu">' +
+    (LISTEN.length ? big('listen', 'headset', 'Listening',
+        'Statements, dialogs, conversations, talks', LISTEN.length, sectionMastery('listen')) : '') +
     big('grammar', 'book', 'Grammar',
         'Tenses, structures, drills, verbs', sectionData('grammar').length, sectionMastery('grammar')) +
     big('vocab', 'speech', 'Vocabulary',
         'Vocabulary in context, American register', sectionData('vocab').length, sectionMastery('vocab')) +
     big('idiom', 'star', 'Idioms &amp; Phrasal',
         'Idiomatic expressions and phrasal verbs', sectionData('idiom').length, sectionMastery('idiom')) +
-    (LISTEN.length ? big('listen', 'headset', 'Listening',
-        'Statements, dialogs, conversations, talks', LISTEN.length, sectionMastery('listen')) : '') +
     big('test', 'target', 'Tests',
         'Module test, ECL and ALCPT timed exams', MODULE_TEST.length, sectionMastery('test')) +
     big('reference', 'layers', 'Reference Library',
@@ -1122,30 +1142,19 @@ function quickListen() { launch(null, 'Quick listening', makePool(LISTEN).slice(
              consignes) ; lecture 35 min, 12 s pour repondre.             */
 var EXAMS = {
   ecl: { t: 'ecl', name: 'ECL', title: 'ECL timed exam', nL: 50, nR: 50, readMin: 40, win: 15, listenMin: 25, testMin: 65, realMin: 75 },
-  alcpt: { t: 'alcpt', name: 'ALCPT', title: 'ALCPT timed exam', nL: 50, nR: 50, readMin: 35, win: 12, listenMin: 20, testMin: 55, realMin: 70 }
+  alcpt: { t: 'alcpt', name: 'ALCPT', title: 'ALCPT timed exam', nL: 60, nR: 40, readMin: 28, win: 12, listenMin: 24, testMin: 52, realMin: 70 }
 };
 VIEWS.exam = function (t) {
-  var c = EXAMS[t] || EXAMS.ecl, best = LSget('exam_best', {})[c.t];
-  var h = bar(c.title);
-  h += '<div class="gcard exam-card"><div class="eyebrow">Real exam timing</div>' +
-    '<h3>' + c.name + ': 100 questions in about ' + c.testMin + ' minutes</h3>' +
-    '<ol class="exam-parts">' +
-    '<li><b>Part 1, Listening</b>: ' + c.nL + ' questions, about ' + c.listenMin + ' minutes. Each recording plays <b>once</b>. ' +
-      'When it ends you have ' + c.win + ' seconds to answer, then the next one starts by itself. No going back.</li>' +
-    '<li><b>Part 2, Reading</b>: ' + c.nR + ' questions on grammar, vocabulary and idioms in <b>' + c.readMin + ' minutes</b>.</li></ol>' +
-    '<p class="fr">No feedback during the exam. At the end: your score by part, then every mistake with its explanation ' +
-    'and the text of the recording.</p>' +
-    '<p class="fr">The real ' + c.name + ' takes about ' + c.realMin + ' minutes with the instructions. ' +
-    'Your percentage is a practice result, not an official ' + c.name + ' score.</p>' +
-    (best !== undefined ? '<p class="fr">Your best result: <b>' + best + '%</b></p>' : '') + '</div>';
-  h += audioOK() ? '<div class="note">Use headphones in a quiet place. The voices can be changed in <b>Settings &rsaquo; Audio</b>.</div>'
-    : '<div class="banner bad">No audio on this device: in Part 1 the text of each recording is shown instead.</div>';
+  /* directement les numeros des tests (pas de long texte de presentation) */
+  var c = EXAMS[t] || EXAMS.ecl;
+  var h = bar(c.name + ' tests');
+  if (!audioOK()) h += '<div class="banner bad">No audio on this device: in the listening part the text of each recording is shown instead.</div>';
   if (formsOn()) {
     var nx = formNext(c.t);
-    h += '<div class="navrow"><button class="btn" id="examStart" onclick="startExam(\'' + c.t + '\',' + nx + ')">Start ' + c.name + ' Practice Test ' + (nx + 1) + '</button></div>';
-    h += '<p class="fr">' + FORMS_N + ' different tests, each with the same sections. Tap a number to take or retake any test.</p>' + formsGrid(c.t);
+    h += '<div class="navrow"><button class="btn" id="examStart" onclick="startExam(\'' + c.t + '\',' + nx + ')">Start Test ' + (nx + 1) + '</button></div>';
+    h += formsGrid(c.t);
   } else {
-    h += '<div class="navrow"><button class="btn" id="examStart" onclick="startExam(\'' + c.t + '\')">Start the exam</button></div>';
+    h += '<div class="navrow"><button class="btn" id="examStart" onclick="startExam(\'' + c.t + '\')">Start the test</button></div>';
   }
   root.innerHTML = L(h + tabbar('revise'));
 };
@@ -1353,19 +1362,22 @@ function examReading(n) {
   }
   return shuffle(pick).slice(0, n).map(function (x) { var p = poolItem(x); p.part = 'R'; return p; });
 }
-/* ============ 50 TESTS NUMEROTES PAR EXAMEN ================================
-   Dans l'application, l'ECL et l'ALCPT ont chacun 50 tests differents
-   (Practice Test 1 a 50). Chaque test a les memes sections : ecoute
-   (15 enonces, 12 questions-reponses, 14 dialogues courts, 5 conversations,
-   4 annonces) puis lecture (25 grammaire, 17 vocabulaire, 8 idiomes).
+/* ============ 75 TESTS NUMEROTES PAR EXAMEN ================================
+   L'ECL et l'ALCPT ont chacun 75 tests differents (Test 1 a Test 75).
+   Tous les tests d'un examen ont les memes sections (FORM_L, FORM_R) :
+   ECL, ecoute 15 enonces, 12 questions-reponses, 14 dialogues courts,
+   5 conversations, 4 annonces, puis lecture 25 grammaire, 17 vocabulaire,
+   8 idiomes ; ALCPT, ecoute 18 / 14 / 17 / 6 / 5 (60), lecture 20 / 14 / 6.
    Les tests d'un meme examen se partagent les questions sans se recouvrir
    tant que la banque suffit (permutations fixes, derivees du numero) ; l'ECL
    et l'ALCPT utilisent des permutations differentes. « Next test » ouvre le
    premier test jamais commence : un test abandonne compte comme commence,
    on n'y retombe donc pas. Application et site web ont les memes tests. */
-var FORMS_N = 50;
-var FORM_L = { s: 15, r: 12, d: 14, c: 5, k: 4 };
-var FORM_R = { grammar: 25, vocab: 17, idiom: 8 };
+var FORMS_N = 75;
+/* sections de chaque test : ECL 50 ecoute + 50 lecture ; ALCPT 60 ecoute
+   (comme le test officiel) + 40 lecture */
+var FORM_L = { ecl: { s: 15, r: 12, d: 14, c: 5, k: 4 }, alcpt: { s: 18, r: 14, d: 17, c: 6, k: 5 } };
+var FORM_R = { ecl: { grammar: 25, vocab: 17, idiom: 8 }, alcpt: { grammar: 20, vocab: 14, idiom: 6 } };
 function formsOn() { return LISTEN.length > 0; }
 function seeded(seed) {
   var a = seed >>> 0;
@@ -1394,7 +1406,8 @@ function formSlice(list, w, f, tag) {
 function formPool(t, f, nL, nR) {
   var byK = {}, lis = [], i;
   LISTEN.forEach(function (x) { (byK[x.k] = byK[x.k] || []).push(x); });
-  ['s', 'r', 'd', 'c', 'k'].forEach(function (k) { lis = lis.concat(formSlice(byK[k] || [], FORM_L[k], f, t + '|L|' + k)); });
+  var FL = FORM_L[t] || FORM_L.ecl, FR = FORM_R[t] || FORM_R.ecl;
+  ['s', 'r', 'd', 'c', 'k'].forEach(function (k) { lis = lis.concat(formSlice(byK[k] || [], FL[k], f, t + '|L|' + k)); });
   if (lis.length < nL) {
     var keyL = {}; lis.forEach(function (x) { keyL[seenKey(x)] = 1; });
     lis = lis.concat(formSlice(LISTEN.filter(function (x) { return !keyL[seenKey(x)]; }), nL - lis.length, f, t + '|L|fill'));
@@ -1404,7 +1417,7 @@ function formPool(t, f, nL, nR) {
   ['d', 'c', 'k'].forEach(function (k) { out = out.concat(seededShuffle(lis.filter(function (x) { return x.k === k; }), rnd)); });
   var Lp = out.slice(0, nL).map(function (x) { var p = poolItem(x); p.part = 'L'; return p; });
   var rd = [];
-  Object.keys(FORM_R).forEach(function (sec) { rd = rd.concat(formSlice(sectionData(sec), FORM_R[sec], f, t + '|R|' + sec)); });
+  Object.keys(FR).forEach(function (sec) { rd = rd.concat(formSlice(sectionData(sec), FR[sec], f, t + '|R|' + sec)); });
   if (rd.length < nR) {
     var keyR = {}; rd.forEach(function (x) { keyR[seenKey(x)] = 1; });
     rd = rd.concat(formSlice(allQuestions().filter(function (x) { return !keyR[seenKey(x)]; }), nR - rd.length, f, t + '|R|fill'));
@@ -1432,7 +1445,7 @@ function startExam(t, f) {
   var Lp, Rp, title = c.title, form = (typeof f === 'number' && formsOn()) ? f : undefined;
   if (form !== undefined) {
     var fp = formPool(c.t, form, c.nL, c.nR);
-    Lp = fp.L; Rp = fp.R; title = c.name + ' Practice Test ' + (form + 1);
+    Lp = fp.L; Rp = fp.R; title = c.name + ' Test ' + (form + 1);
     formMark(c.t, form);
   } else { Lp = examListening(c.nL); Rp = examReading(c.nR); }
   var ex = { t: c.t, name: c.name, nL: Lp.length, nR: Rp.length, readMin: c.readMin, win: c.win,
@@ -1443,11 +1456,11 @@ function startExam(t, f) {
 }
 /* grille des 50 tests */
 function formsGrid(t) {
-  var log = formLog()[t] || {}, nx = formNext(t), h = '<div class="secttl">All ' + FORMS_N + ' practice tests</div>' +
+  var log = formLog()[t] || {}, nx = formNext(t), h = '<div class="secttl">Tests 1 to ' + FORMS_N + '</div>' +
     '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px">';
   for (var f = 0; f < FORMS_N; f++) {
     var r = log[f], done = r && r.p !== undefined, cur = f === nx;
-    h += '<button onclick="startExam(\'' + t + '\',' + f + ')" aria-label="Practice test ' + (f + 1) + '" style="' +
+    h += '<button onclick="startExam(\'' + t + '\',' + f + ')" aria-label="Test ' + (f + 1) + '" style="' +
       'min-height:54px;border-radius:12px;font:inherit;cursor:pointer;padding:4px 2px;line-height:1.15;' +
       'background:' + (done ? 'var(--card2)' : 'var(--card)') + ';color:var(--ink);' +
       'border:' + (cur ? '2px solid var(--gold)' : '1px solid var(--line)') + '">' +
