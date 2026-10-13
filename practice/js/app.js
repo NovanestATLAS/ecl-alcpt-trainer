@@ -1373,8 +1373,8 @@ function examReading(n) {
   }
   return shuffle(pick).slice(0, n).map(function (x) { var p = poolItem(x); p.part = 'R'; return p; });
 }
-/* ============ 90 TESTS ALCPT/ECL NUMEROTES =================================
-   Une seule serie de 90 tests (Test 1 a Test 90), tous avec les memes
+/* ============ 80 TESTS ALCPT/ECL NUMEROTES =================================
+   Une seule serie de 80 tests (Test 1 a Test 80), tous avec les memes
    sections (FORM_L, FORM_R) : ecoute 15 enonces, 12 questions-reponses,
    14 dialogues courts, 5 conversations, 4 annonces, puis lecture 25
    grammaire, 17 vocabulaire, 8 idiomes.
@@ -1383,7 +1383,7 @@ function examReading(n) {
    et l'ALCPT utilisent des permutations differentes. « Next test » ouvre le
    premier test jamais commence : un test abandonne compte comme commence,
    on n'y retombe donc pas. Application et site web ont les memes tests. */
-var FORMS_N = 90;
+var FORMS_N = 80;
 /* sections de chaque test : 50 ecoute + 50 lecture */
 var FORM_L = { ae: { s: 15, r: 12, d: 14, c: 5, k: 4 } };
 var FORM_R = { ae: { grammar: 25, vocab: 17, idiom: 8 } };
@@ -1402,7 +1402,7 @@ function seededShuffle(a, rnd) { a = a.slice(); for (var i = a.length - 1; i > 0
 /* w questions du test f : une seule permutation fixe de la liste, parcourue
    en boucle (le test f prend les places f*w a f*w+w-1). Un meme element ne
    revient donc qu'apres n/w tests (n = taille de la liste) : jamais en
-   ecoute tant que la banque suffit pour les 90 tests, et en lecture au
+   ecoute tant que la banque suffit pour les 80 tests, et en lecture au
    moins 20 tests plus loin (grammaire, vocabulaire, idiomes). */
 function formSlice(list, w, f, tag) {
   if (!list.length || w <= 0) return [];
