@@ -1399,15 +1399,18 @@ function seeded(seed) {
 }
 function seedOf(tag) { return parseInt(strHash(tag), 36); }
 function seededShuffle(a, rnd) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = rnd() * (i + 1) | 0, t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
-/* w questions du test f : la tranche f d'un flux de permutations de la liste */
+/* w questions du test f : une seule permutation fixe de la liste, parcourue
+   en boucle (le test f prend les places f*w a f*w+w-1). Un meme element ne
+   revient donc qu'apres n/w tests (n = taille de la liste) : jamais en
+   ecoute tant que la banque suffit pour les 90 tests, et en lecture au
+   moins 20 tests plus loin (grammaire, vocabulaire, idiomes). */
 function formSlice(list, w, f, tag) {
   if (!list.length || w <= 0) return [];
-  var pos = f * w, cyc = Math.floor(pos / list.length), off = pos % list.length;
-  var perm = seededShuffle(list, seeded(seedOf(tag + '|' + cyc)));
-  var out = [], used = {}, guard = 0;
-  while (out.length < w && guard++ < list.length * 3) {
-    if (off >= perm.length) { cyc++; off = 0; perm = seededShuffle(list, seeded(seedOf(tag + '|' + cyc))); }
-    var x = perm[off++], k = seenKey(x);
+  var perm = seededShuffle(list, seeded(seedOf(tag))), n = perm.length;
+  var out = [], used = {}, pos = (f * w) % n, guard = 0;
+  while (out.length < Math.min(w, n) && guard++ < n * 2) {
+    var x = perm[pos]; pos = (pos + 1) % n;
+    var k = seenKey(x);
     if (!used[k]) { used[k] = 1; out.push(x); }
   }
   return out;
