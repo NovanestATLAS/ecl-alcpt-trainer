@@ -6,9 +6,9 @@
    tools/listening-audio/): the man (am_michael for L01-L155, am_liam from
    L156) and the woman (af_heart), one file per line, named after the
    question (L04-2.mp3 = 2nd line of question L04). manifest.js
-   (window.ECL_LISTEN_AUDIO) gives the hash of every recorded line; the
-   texts come from listening-data.js, and the lines of the test pages,
-   which do not load it, are listed apart.
+   (window.ECL_LISTEN_AUDIO) gives the hash of every recorded line and a
+   mark of its text; the texts come from listening-data.js, and the lines
+   of the test pages, which do not load it, are listed apart.
 
    Only listening has a voice on the website: grammar, vocabulary, idioms
    and the lessons are not read aloud.
@@ -34,6 +34,17 @@
      first time a line is looked up: listening-data.js loads after this file. */
   var M = g.ECL_LISTEN_AUDIO || {};
   var files = null;
+  /* mark of a line's exact text (FNV-1a, 32 bits, base 36), the same as
+     text_mark() in tools/listening-audio/generate.py */
+  function mark(s) {
+    var h = 0x811c9dc5;
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+    return h.toString(36);
+  }
+  /* a recording is used only when the text on screen is the text it was
+     made from: a question file and a manifest of different versions (a
+     browser or CDN cache just after an update) can never pair a question
+     with another question's recording; the browser voice reads it instead */
   function build() {
     files = {};
     var t = M.t || {}, k;
@@ -42,7 +53,11 @@
     items.forEach(function (it) {
       var h = H[it.id];
       if (!h || !it.L || h.length !== it.L.length) return;
-      it.L.forEach(function (l, n) { files[(l[0] === 'W' ? 'W' : 'M') + '|' + l[1]] = it.id + '-' + (n + 1) + '.mp3?v=' + h[n]; });
+      it.L.forEach(function (l, n) {
+        var p = String(h[n]).split('.');
+        if (p.length !== 2 || p[1] !== mark(String(l[1]))) return;
+        files[(l[0] === 'W' ? 'W' : 'M') + '|' + l[1]] = it.id + '-' + (n + 1) + '.mp3?v=' + p[0];
+      });
     });
     return files;
   }
