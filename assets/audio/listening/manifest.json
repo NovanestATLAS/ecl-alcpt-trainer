@@ -10,7 +10,7 @@
  },
  "speed": 1.0,
  "format": "MP3 48k mono 24000 Hz",
- "count": 3979,
+ "count": 3978,
  "items": {
   "L01": [
    {
@@ -9729,15 +9729,15 @@
     "file": "L426-1.mp3",
     "role": "M",
     "voice": "am_liam",
-    "text": "How's Private Diaz doing with the rifle qualification?",
-    "hash": "021e283a25"
+    "text": "Why did the first sergeant cancel the Friday afternoon formation?",
+    "hash": "75f2b9143c"
    },
    {
     "file": "L426-2.mp3",
     "role": "W",
     "voice": "af_heart",
-    "text": "She used to miss half her shots, but now she's one of the best shooters in the platoon.",
-    "hash": "b39d2e9ad3"
+    "text": "The battalion commander gave everyone a four-day weekend for winning the safety award.",
+    "hash": "aab5fccdca"
    }
   ],
   "L427": [
@@ -10296,15 +10296,15 @@
     "file": "L461-1.mp3",
     "role": "W",
     "voice": "af_heart",
-    "text": "You drove the new cargo truck out to the training area. How did it handle?",
-    "hash": "c344125ab9"
+    "text": "Why is Specialist Reed washing all the trucks by himself?",
+    "hash": "1690c767c1"
    },
    {
     "file": "L461-2.mp3",
     "role": "M",
     "voice": "am_liam",
-    "text": "Smooth on the highway, but it burns through fuel faster than anything else in the motor pool.",
-    "hash": "dcaa982571"
+    "text": "He forgot to turn in his dispatch paperwork last week, so the motor sergeant gave him extra duty.",
+    "hash": "06e6d0c2e0"
    }
   ],
   "L462": [
@@ -10520,15 +10520,15 @@
     "file": "L475-1.mp3",
     "role": "W",
     "voice": "af_heart",
-    "text": "You've been at the clinic since eight. What's taking so long?",
-    "hash": "c90c1f1886"
+    "text": "Why did the clinic send you to the hospital downtown?",
+    "hash": "ea113efbf6"
    },
    {
     "file": "L475-2.mp3",
     "role": "M",
     "voice": "am_liam",
-    "text": "They needed one more X-ray, and the technician doesn't come in until after lunch.",
-    "hash": "8119974a74"
+    "text": "They don't have an MRI machine on post, and the specialist I need only works there on Thursdays.",
+    "hash": "b88d55e778"
    }
   ],
   "L476": [
@@ -10543,8 +10543,8 @@
     "file": "L476-2.mp3",
     "role": "W",
     "voice": "af_heart",
-    "text": "Sure, but not before Friday. I'm buried in paperwork for the inspection.",
-    "hash": "d098cc50da"
+    "text": "Sure, but it'll have to wait until after the inspection on Friday.",
+    "hash": "244a1d7a4f"
    }
   ],
   "L477": [
@@ -11976,15 +11976,15 @@
     "file": "L566-1.mp3",
     "role": "M",
     "voice": "am_liam",
-    "text": "The dental clinic is closed Friday for a training holiday.",
-    "hash": "36cb82d17d"
+    "text": "The dental clinic just called. They want to move your cleaning from Friday to next Tuesday.",
+    "hash": "25704b8181"
    },
    {
     "file": "L566-2.mp3",
     "role": "W",
     "voice": "af_heart",
-    "text": "Then I'll have to reschedule my cleaning. I'll call them first thing in the morning.",
-    "hash": "b2decfd7a0"
+    "text": "Tuesday's no good; I'm at the range all day. I'll call them back first thing in the morning.",
+    "hash": "9e7601683d"
    }
   ],
   "L567": [
@@ -12136,15 +12136,15 @@
     "file": "L576-1.mp3",
     "role": "M",
     "voice": "am_liam",
-    "text": "Are these tires new, or did someone just clean the old ones?",
-    "hash": "6ea7317af8"
+    "text": "Are we supposed to wear our reflective belts for the morning run?",
+    "hash": "0b9d57b42e"
    },
    {
     "file": "L576-2.mp3",
     "role": "W",
     "voice": "af_heart",
-    "text": "They're new. Supply finally delivered them yesterday after a month of waiting.",
-    "hash": "0b3d4670a2"
+    "text": "Only when it's dark out, and in December that's pretty much the whole run.",
+    "hash": "5dce212556"
    }
   ],
   "L577": [
@@ -12344,15 +12344,15 @@
     "file": "L589-1.mp3",
     "role": "W",
     "voice": "af_heart",
-    "text": "How did your soldiers do on the physical fitness test?",
-    "hash": "d188a602f1"
+    "text": "How many people showed up for the blood drive this morning?",
+    "hash": "85b90f6cd3"
    },
    {
     "file": "L589-2.mp3",
     "role": "M",
     "voice": "am_liam",
-    "text": "Everybody passed, but only because Private Kim beat the run time by two seconds.",
-    "hash": "9e8586ff63"
+    "text": "Over sixty, which is twice what we got last spring.",
+    "hash": "ebd2db6995"
    }
   ],
   "L590": [
@@ -13647,15 +13647,15 @@
     "file": "L670-1.mp3",
     "role": "M",
     "voice": "am_liam",
-    "text": "I heard you got orders for Germany.",
-    "hash": "21b5baecbc"
+    "text": "Did the new desks for the office ever arrive?",
+    "hash": "ea0c9d0505"
    },
    {
     "file": "L670-2.mp3",
     "role": "W",
     "voice": "af_heart",
-    "text": "Wrong country. They're sending me to Italy, but not until the end of January.",
-    "hash": "9c62df63e9"
+    "text": "They came Monday, but they're too wide to fit through the door, so they're sitting in the hallway.",
+    "hash": "caec5dc81d"
    }
   ],
   "L671": [
@@ -14031,15 +14031,15 @@
     "file": "L694-1.mp3",
     "role": "W",
     "voice": "af_heart",
-    "text": "Why is your arm in a sling?",
-    "hash": "2bb28244e8"
+    "text": "Why are you wearing civilian clothes on a duty day?",
+    "hash": "bd37de99e7"
    },
    {
     "file": "L694-2.mp3",
     "role": "M",
     "voice": "am_liam",
-    "text": "I fell climbing out of a truck, and the doctor says no push-ups for a month.",
-    "hash": "14666c9258"
+    "text": "I'm out-processing today. My last formation with this unit was yesterday.",
+    "hash": "1ab3a5b868"
    }
   ],
   "L695": [
@@ -14735,8 +14735,8 @@
     "file": "L738-1.mp3",
     "role": "M",
     "voice": "am_liam",
-    "text": "Why is the office so quiet this morning?",
-    "hash": "263f148aa0"
+    "text": "How come nobody's picking up the phone in the personnel office?",
+    "hash": "e3b20bea41"
    },
    {
     "file": "L738-2.mp3",
@@ -15103,15 +15103,15 @@
     "file": "L761-1.mp3",
     "role": "W",
     "voice": "af_heart",
-    "text": "Why didn't the river crossing training happen yesterday?",
-    "hash": "c7de708f11"
+    "text": "Why was the parachute jump canceled this morning?",
+    "hash": "456f94a402"
    },
    {
     "file": "L761-2.mp3",
     "role": "M",
     "voice": "am_liam",
-    "text": "All that rain upstream made the current too strong to put boats in the water safely.",
-    "hash": "b959228d0f"
+    "text": "The aircraft had a mechanical problem, and the backup plane was already booked by another unit.",
+    "hash": "86611ee5ab"
    }
   ],
   "L762": [
@@ -15615,15 +15615,15 @@
     "file": "L793-1.mp3",
     "role": "M",
     "voice": "am_liam",
-    "text": "Can I see the sergeant major for a minute?",
-    "hash": "564361870b"
+    "text": "Has anyone seen the key to the conference room? The meeting starts in five minutes.",
+    "hash": "75655ed550"
    },
    {
     "file": "L793-2.mp3",
     "role": "W",
     "voice": "af_heart",
-    "text": "He's tied up with the budget until three, but I can squeeze you in right after that.",
-    "hash": "864575b9ae"
+    "text": "Try the front desk. Whoever used the room last was supposed to drop it off there.",
+    "hash": "25b6a1e178"
    }
   ],
   "L794": [
@@ -15679,22 +15679,15 @@
     "file": "L797-1.mp3",
     "role": "M",
     "voice": "am_liam",
-    "text": "How long will you be gone for the training in Georgia?",
-    "hash": "a674d176e9"
+    "text": "Are you working the holiday weekend?",
+    "hash": "b20d249aa1"
    },
    {
     "file": "L797-2.mp3",
     "role": "W",
     "voice": "af_heart",
-    "text": "Six weeks on paper.",
-    "hash": "a57124f27f"
-   },
-   {
-    "file": "L797-3.mp3",
-    "role": "M",
-    "voice": "am_liam",
-    "text": "On paper? The guys from my unit who went last year were stuck there almost two months.",
-    "hash": "2f575080bc"
+    "text": "Saturday and Sunday, yes, but I get Monday and Tuesday off to make up for it.",
+    "hash": "4e90557083"
    }
   ],
   "L798": [
@@ -16934,15 +16927,15 @@
     "file": "L875-1.mp3",
     "role": "W",
     "voice": "af_heart",
-    "text": "I've had this cough for over a week now.",
-    "hash": "f5e27a1bb7"
+    "text": "The clinic gave me antibiotics, but I'm already feeling fine after two days.",
+    "hash": "912ebdd44a"
    },
    {
     "file": "L875-2.mp3",
     "role": "M",
     "voice": "am_liam",
-    "text": "Then you'd better get it checked at the clinic before it turns into something worse.",
-    "hash": "a2401cc14d"
+    "text": "Don't stop taking them, though. You're supposed to finish the whole bottle, even if you feel better.",
+    "hash": "4395a94bf0"
    }
   ],
   "L876": [
@@ -17126,15 +17119,15 @@
     "file": "L887-1.mp3",
     "role": "W",
     "voice": "af_heart",
-    "text": "I can't get this lug nut loose. It won't budge.",
-    "hash": "4e012308d9"
+    "text": "Do I have to fill up the tank before I return the truck to the motor pool?",
+    "hash": "deb77f441e"
    },
    {
     "file": "L887-2.mp3",
     "role": "M",
     "voice": "am_liam",
-    "text": "Here, use the longer wrench. You'll get a lot more leverage.",
-    "hash": "5ec2a3668c"
+    "text": "Only if it's below half. Otherwise the dispatcher won't care either way.",
+    "hash": "4bbe8de772"
    }
   ],
   "L888": [
@@ -17222,15 +17215,15 @@
     "file": "L893-1.mp3",
     "role": "W",
     "voice": "af_heart",
-    "text": "The soldiers on the night shift haven't eaten anything since lunch.",
-    "hash": "ba321f6a34"
+    "text": "The new soldiers still haven't been issued their cold-weather gear.",
+    "hash": "b949b26296"
    },
    {
     "file": "L893-2.mp3",
     "role": "M",
     "voice": "am_liam",
-    "text": "The cooks set aside some meals for them; they're keeping warm behind the serving line.",
-    "hash": "227fad74db"
+    "text": "Supply promised it by Wednesday, so we'll hold the winter training until Thursday.",
+    "hash": "94eb3c1d98"
    }
   ],
   "L894": [
@@ -31053,15 +31046,15 @@
     "file": "L2380-1.mp3",
     "role": "M",
     "voice": "am_liam",
-    "text": "Have you finished the online security training? It's due today.",
-    "hash": "963d7372e0"
+    "text": "Did you get a chance to look over the new leave policy?",
+    "hash": "8b7a52f6f7"
    },
    {
     "file": "L2380-2.mp3",
     "role": "W",
     "voice": "af_heart",
-    "text": "I'm on the last module, but the website keeps kicking me out.",
-    "hash": "19b62a313c"
+    "text": "I skimmed it. The biggest change is that requests now need to be in thirty days ahead instead of fifteen.",
+    "hash": "2e575d5331"
    }
   ],
   "L2381": [
