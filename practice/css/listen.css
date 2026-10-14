@@ -28,10 +28,7 @@
 .lsp.w{color:var(--c3,#9064BE)}
 .qbox.lq .qtext{font-weight:600}
 
-/* examen : barre du temps de reponse */
-.lc-time{height:7px;margin-top:11px;border-radius:99px;background:var(--track,var(--card));overflow:hidden;opacity:.45;transition:opacity .2s}
-.lc-time.on{opacity:1}
-.lc-time i{display:block;height:100%;width:100%;border-radius:99px;background:var(--brass,#C9A227);transition:width .2s linear}
+/* examen : message de l'etape en cours */
 .lc-exam .lc-st{font-weight:700;color:var(--ink)}
 
 /* --------------------------------- examens ------------------------------ */

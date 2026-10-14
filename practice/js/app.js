@@ -250,9 +250,10 @@ function adClosed() {
   listenResumeSoon();
 }
 /* Question d'ecoute a l'ecran a la fermeture de l'annonce (v5.9.27) :
-   son enregistrement n'a pas pu passer sous l'annonce ; il demarre alors
-   depuis le debut, comme a l'ouverture d'une question. (En lecture
-   automatique, autoResumeSoon s'en charge deja.) */
+   son enregistrement n'a pas pu passer sous l'annonce ; en ecoute
+   automatique, il repart depuis le debut, comme a l'ouverture d'une
+   question (en mode manuel, il attend Play). (En lecture automatique
+   generale, autoResumeSoon s'en charge deja.) */
 function listenResumeSoon() {
   setTimeout(function () {
     if (AD_OPEN || APP_PAUSED || document.hidden || autoOn()) return;
@@ -1489,34 +1490,26 @@ var EX = { timer: null, gen: 0 };
 function examClear() { if (EX.timer) { clearInterval(EX.timer); EX.timer = null; } }
 function examStop() { EX.gen++; examClear(); }
 function examStatus(t) { var st = document.getElementById('lcSt'); if (st) st.textContent = t; }
-function examBar(f, on) {
-  var w = document.getElementById('lcTime'), b = document.getElementById('lcBar');
-  if (w) w.classList.toggle('on', !!on);
-  if (b) b.style.width = (Math.round(Math.max(0, Math.min(1, f)) * 1000) / 10) + '%';
-}
 function examItemStart() {
   examStop();
   var gen = EX.gen, q = S.pool[S.idx];
   if (!S.exam || S.exam.part !== 'L' || !q || !q.L || S.view !== 'quiz') return;
   if (S.paused) { examStatus('Paused. Tap Resume to hear the recording again.'); return; }
-  examBar(1, false);
   if (!audioOK()) {
-    examStatus('Read the text, then answer.');
+    examStatus('Read the text, then choose the right answer.');
     examWindow(gen, S.exam.win + Math.min(25, Math.round(lLines(q.L).join(' ').length / 14)));
     return;
   }
-  /* 10 s pour lire les choix, puis l'enregistrement, puis 10 s pour repondre */
+  /* 10 s pour lire les choix, puis l'enregistrement, puis 10 s pour repondre.
+     Un message simple par etape, sans barre ni secondes qui defilent
+     (elles derangeaient la concentration) ; le temps compte quand meme. */
   var end = nowMs() + L_READ_S * 1000;
-  examStatus('Read the choices: ' + L_READ_S + ' s');
-  examBar(1, true);
+  examStatus('Read the answers.');
   EX.timer = setInterval(function () {
     if (gen !== EX.gen || !S.exam || S.paused || S.view !== 'quiz') { examClear(); return; }
-    var left = (end - nowMs()) / 1000;
-    examBar(left / L_READ_S, true);
-    examStatus('Read the choices: ' + Math.max(0, Math.ceil(left)) + ' s');
-    if (left > 0) return;
-    examClear(); examBar(1, false);
-    examStatus('Listen…');
+    if ((end - nowMs()) / 1000 > 0) return;
+    examClear();
+    examStatus('Listen.');
     lSay(q.L, function () { if (gen === EX.gen && !S.paused) examWindow(gen, S.exam.win); });
   }, 200);
 }
@@ -1524,14 +1517,10 @@ function examWindow(gen, secs) {
   examClear();
   if (gen !== EX.gen || !S.exam) return;
   var end = nowMs() + secs * 1000;
-  examStatus('Answer now: ' + secs + ' s');
-  examBar(1, true);
+  examStatus('Choose the right answer.');
   EX.timer = setInterval(function () {
     if (gen !== EX.gen || !S.exam || S.view !== 'quiz') { examClear(); return; }
-    var left = (end - nowMs()) / 1000;
-    examBar(left / secs, true);
-    examStatus('Answer now: ' + Math.max(0, Math.ceil(left)) + ' s');
-    if (left <= 0) { examClear(); nextQ(); }
+    if (end - nowMs() <= 0) { examClear(); nextQ(); }
   }, 200);
 }
 /* Pause (bouton, appel, application en arriere-plan) : a la reprise,
@@ -1541,7 +1530,6 @@ function examPause(silent) {
   S.paused = true;
   examStop(); stopSpeak();
   examStatus('Paused. Tap Resume to hear the recording again.');
-  examBar(1, false);
   paintTimer();
   if (!silent) toast('Exam paused');
 }
@@ -1657,8 +1645,7 @@ function listenCard(q) {
   var h = '<div class="lcard' + (ex ? ' lc-exam' : '') + '" id="lcard">' +
     '<div class="lc-top"><span class="lc-ic">' + ico('headset') + '</span>' +
     '<span class="lc-k">' + esc(LKIND_ONE[q.k] || 'Listening') + '</span>' +
-    '<span class="lc-st" id="lcSt">' + (a ? (ex ? 'The recording plays once.' : 'Listen, then answer.') : 'No audio here: read the text.') + '</span></div>';
-  if (ex || listenAuto()) h += '<div class="lc-time" id="lcTime" aria-hidden="true"><i id="lcBar"></i></div>';
+    '<span class="lc-st" id="lcSt">' + (a ? (ex ? 'The recording plays once.' : listenAuto() ? 'Listen, then answer.' : 'Press Play to listen, then answer.') : 'No audio here: read the text.') + '</span></div>';
   if (!ex) {
     h += '<div class="lc-btns">' +
       (a ? '<button class="btn lc-b" id="listenBtn" onclick="lToggle()">' + ico('play', 'inl') + ' <span id="lcPlayT">Play</span></button>' +
@@ -1674,25 +1661,22 @@ var LP = { on: false };
    Comme en test : 10 s pour lire les choix, l'enregistrement, puis 10 s au
    plus pour repondre ; ensuite la question suivante arrive seule. Une
    question laissee sans reponse est comptee fausse (la bonne reponse est
-   montree 2 s). Sans le mode automatique, Play lance l'enregistrement
-   aussitot, sans attente. Application : le mode Auto general ; site web :
+   montree 2 s). Sans le mode automatique (reglage par defaut), rien ne
+   part seul : Play lance l'enregistrement aussitot, sans attente. Application : le mode Auto general ; site web :
    son propre reglage (la lecture des autres questions y est retiree). */
 function listenAuto() { return readOn() ? autoOn() : !!LSget('lauto', 0); }
 var LAUTO = { timer: null, gen: 0 };
 function lAutoClear() { if (LAUTO.timer) { clearInterval(LAUTO.timer); LAUTO.timer = null; } }
-function lAutoStop() { LAUTO.gen++; lAutoClear(); examBar(1, false); }
+function lAutoStop() { LAUTO.gen++; lAutoClear(); }
+/* une etape minutee : un message fixe, sans barre ni secondes affichees */
 function lAutoCount(gen, idx, secs, label, done) {
   lAutoClear();
   var end = nowMs() + secs * 1000, st = document.getElementById('lcSt');
-  if (st) st.textContent = label + ': ' + secs + ' s';
-  examBar(1, true);
+  if (st) st.textContent = label;
   LAUTO.timer = setInterval(function () {
     if (gen !== LAUTO.gen || S.idx !== idx || S.view !== 'quiz' || S.exam) { lAutoClear(); return; }
     if (AD_OPEN || APP_PAUSED || document.hidden) return;            // en pause : le temps attend
-    var left = (end - nowMs()) / 1000, st2 = document.getElementById('lcSt');
-    examBar(left / secs, true);
-    if (st2) st2.textContent = label + ': ' + Math.max(0, Math.ceil(left)) + ' s';
-    if (left <= 0) { lAutoClear(); examBar(1, false); done(); }
+    if (end - nowMs() <= 0) { lAutoClear(); done(); }
   }, 200);
 }
 function lAutoStart() {
@@ -1700,11 +1684,11 @@ function lAutoStart() {
   if (!q || !q.L || S.exam || S.view !== 'quiz') return;
   lAutoStop();
   var gen = LAUTO.gen, idx = S.idx;
-  lAutoCount(gen, idx, L_READ_S, 'Read the choices', function () {
+  lAutoCount(gen, idx, L_READ_S, 'Read the answers.', function () {
     if (gen !== LAUTO.gen || S.idx !== idx) return;
     lPlay(false, function () {
       if (gen !== LAUTO.gen || S.idx !== idx || S.view !== 'quiz') return;
-      lAutoCount(gen, idx, L_ANSWER_S, 'Answer now', function () {
+      lAutoCount(gen, idx, L_ANSWER_S, 'Choose the right answer.', function () {
         if (gen !== LAUTO.gen || S.idx !== idx) return;
         if (!S.locked) lAutoMiss();
         setTimeout(function () { if (gen === LAUTO.gen && S.idx === idx && S.view === 'quiz') nextQ(); }, S.answers[idx] && S.answers[idx].picked < 0 ? 2000 : 0);
@@ -1736,7 +1720,7 @@ function lPaint(on) {
   }
   if (!S.exam) {
     var st = document.getElementById('lcSt');
-    if (st) st.textContent = on ? 'Playing…' : (S.locked ? 'Replay it as often as you like.' : 'Listen, then answer.');
+    if (st) st.textContent = on ? 'Listen.' : (S.locked ? 'Replay it as often as you like.' : 'Listen, then answer.');
   }
 }
 /* bouton Play / Stop */
@@ -1760,17 +1744,17 @@ function lReveal(auto) {
   if (b) b.hidden = true;
   if (!auto && S.lrev) S.lrev[S.idx] = 1;
 }
-/* Affichage d'une question d'ecoute : en entrainement, l'enregistrement
-   part tout seul (sauf si la question a deja ete traitee) ; en examen,
-   le deroulement minute commence. */
+/* Affichage d'une question d'ecoute : en examen, le deroulement minute
+   commence ; en entrainement automatique, 10 s de lecture puis
+   l'enregistrement. En mode manuel (par defaut), rien ne part tout seul :
+   l'enregistrement attend que l'utilisateur appuie sur Play. */
 function lStart() {
   var q = S.pool[S.idx];
   if (!q || !q.L || S.view !== 'quiz') return;
   if (S.exam) { examItemStart(); return; }
   if (AD_OPEN || APP_PAUSED || document.hidden || !audioOK()) return;
   if (S.answers && S.answers[S.idx]) { if (autoOn()) autoStartQuestion(); return; }
-  if (listenAuto()) { lAutoStart(); return; }   // 10 s de lecture, l'enregistrement, 10 s pour repondre
-  if (!LP.on) lPlay(false, null);          // deja lance par l'utilisateur : on ne relance pas
+  if (listenAuto()) lAutoStart();          // 10 s de lecture, l'enregistrement, 10 s pour repondre
 }
 function revPlay(i) { var w = S.wrongs[i]; if (w && w.L && audioOK()) lSay(w.L, null); }
 
