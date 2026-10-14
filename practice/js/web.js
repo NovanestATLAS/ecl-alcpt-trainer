@@ -281,6 +281,7 @@
       try { history.replaceState({ ecl: 0 }, '', location.pathname); } catch (e) { }
       if (want.set && g.BANKS[want.set]) g.startBank(want.set);
       else if (want.start === 'quick') g.quickMixed();
+      else if (want.start === 'listen' && g.LISTEN && g.LISTEN.length) g.quickListen();
       else if (want.start === 'review') g.startSmartReview();
       else if (want.go && g.VIEWS[want.go]) g.go(want.go);
     }, 100);

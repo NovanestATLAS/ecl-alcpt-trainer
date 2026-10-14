@@ -187,9 +187,11 @@ function copyText(s) {
 function adScreen(kind) {
   if (window.Ads) { try { Ads.screen(kind); } catch (e) { } }
 }
+/* serie d'entrainement a l'ecoute (pas un examen) : regle propre dans ads.js */
+function listenRun() { return !!(S.pool && S.pool.length && S.pool[0] && S.pool[0].L && !S.exam && !S.sim); }
 function adAfterSeries() {
   if (!window.Ads) return;
-  try { stopSpeak(); Ads.maybeInterstitial(); } catch (e) { }
+  try { stopSpeak(); Ads.maybeInterstitial(listenRun() ? 'listen' : undefined); } catch (e) { }
 }
 /* Appele a chaque reponse d'un parcours d'entrainement. Sans cela, un
    « Full set » de plusieurs centaines de questions ne compte que pour une
@@ -207,7 +209,11 @@ function adDuringRun() {
   if (!window.Ads || S.sim || S.exam) return;
   /* questions encore a venir : une serie courte garde son annonce pour la
      fin (regle du temps d'utilisation, v5.9.27) */
-  try { Ads.maybeInterstitialMidRun(Math.max(0, S.pool.length - S.idx - 1)); } catch (e) { }
+  var left = Math.max(0, S.pool.length - S.idx - 1);
+  /* ecoute : une annonce toutes les 3 min ou 10 questions, entre deux
+     enregistrements (ads.js, listeningPoint) */
+  if (listenRun() && typeof Ads.listeningPoint === 'function') { try { Ads.listeningPoint(left); } catch (e) { } return; }
+  try { Ads.maybeInterstitialMidRun(left); } catch (e) { }
 }
 /* --- Pause naturelle (v5.9.27) --------------------------------------------
    Quitter ce que l'on lisait (une lecon, les listes de mots, les cartes,
@@ -295,7 +301,7 @@ function plainTxt(t) { return String(t == null ? '' : t).replace(/\*/g, ''); }
 
 function spkNow(t) { if (audioOK() && t) { autoCancel(); Speech.stop(); Speech.speak(t); } }
 /* Toute interruption volontaire annule aussi l'enchainement automatique. */
-function stopSpeak() { autoCancel(); if (window.Speech) Speech.stop(); }
+function stopSpeak() { autoCancel(); lAutoStop(); if (window.Speech) Speech.stop(); }
 
 /* --- Preparation du texte pour une lecture EN ANGLAIS uniquement ---------
    La synthese est en mode anglais : on ne lui donne jamais de francais, sous
@@ -523,16 +529,28 @@ function autoStartQuestion() {
   if (AD_OPEN || !autoOn() || !audioOK() || S.view !== 'quiz' || S.exam) return;
   var q = S.pool[S.idx]; if (!q) return;
   var answered = !S.sim && S.answers && S.answers[S.idx];
-  /* question d'ecoute : on rejoue l'enregistrement, jamais les choix */
+  /* question d'ecoute : 10 s de lecture, l'enregistrement, 10 s pour
+     repondre ; deja traitee : on la rejoue avec sa correction */
   if (q.L) {
-    if (!S.exam && !(LP.on && !answered)) lPlay(false, answered ? function () { autoReadAnswer(null); } : null);
+    if (!answered) { if (!S.exam) lAutoStart(); return; }
+    if (!S.exam && !LP.on) lPlay(false, function () { autoReadAnswer(null); });
     return;
   }
   autoReadQuestion(answered ? function () { autoReadAnswer(null); } : null);
 }
 
 /* Bascule du bouton. Le bouton barre signale l'etat inactif. */
+/* etat du bouton Auto pour la question affichee */
+function autoCur() { var q = S.pool && S.pool[S.idx]; return q && q.L ? listenAuto() : autoOn(); }
 function toggleAuto() {
+  if (!readOn()) {                         // site web : ecoute automatique seulement
+    var lon = !LSget('lauto', 0);
+    LSset('lauto', lon ? 1 : 0);
+    buzz(8); paintAutoBtn();
+    if (lon) { toast('Automatic listening on: 10 s to read, the recording, 10 s to answer'); renderQ(); }
+    else { lAutoStop(); stopSpeak(); toast('Automatic listening off'); renderQ(); }
+    return;
+  }
   var on = !autoOn();
   LSset('autoaudio', on ? 1 : 0);
   buzz(8);
@@ -542,7 +560,7 @@ function toggleAuto() {
 }
 function paintAutoBtn() {
   var el = document.getElementById('autoBtn'); if (!el) return;
-  var on = autoOn();
+  var on = autoCur();
   el.className = 'chip auto' + (on ? ' on' : ' off');
   el.setAttribute('aria-pressed', on ? 'true' : 'false');
   el.innerHTML = ico(on ? 'sound' : 'soundoff', 'inl') + ' Auto';
@@ -860,6 +878,20 @@ VIEWS.home = function () {
       '<span class="rbar"><i style="width:' + pct(r.r.i, r.r.p.length) + '%"></i></span></span></button>';
   }
 
+  /* Ecoute en tete : l'epreuve la plus difficile de l'ECL et de l'ALCPT,
+     mise en avant avant toute autre activite. */
+  if (LISTEN.length) {
+    h += '<button class="lhero" onclick="quickListen()" style="display:flex;align-items:center;gap:14px;width:100%;' +
+      'text-align:left;margin:4px 0 12px;padding:16px 16px;border-radius:16px;border:2px solid var(--gold);' +
+      'background:var(--card);color:var(--ink);font:inherit;cursor:pointer">' +
+      '<span style="flex:0 0 auto;display:flex;align-items:center;justify-content:center;width:46px;height:46px;' +
+      'border-radius:50%;background:var(--gold);color:var(--onGold)">' + ico('headset') + '</span>' +
+      '<span style="flex:1 1 auto;min-width:0"><b style="display:block;font-size:17px">Listening practice</b>' +
+      '<span style="display:block;font-size:13px;color:var(--mut)">The hardest part of the ECL and the ALCPT &middot; ' +
+      quickN() + ' recordings</span></span>' +
+      '<span style="flex:0 0 auto;font-size:12px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.06em">Start</span>' +
+      '</button>';
+  }
   h += '<div class="search-launch" onclick="go(\'search\')" role="button">' +
     ico('search', 'sl-i') + '<span>Search a question, an idiom, a verb\u2026</span></div>';
 
@@ -884,14 +916,14 @@ VIEWS.home = function () {
   if (lesTile) h += '<div class="bigmenu ls-top">' + lesTile.replace('class="tile"', 'class="tile ls-tile" id="lessonsTile"') + '</div>';
   h += '<div class="secttl">Areas of study</div>';
   h += '<div class="bigmenu">' +
+    (LISTEN.length ? big('listen', 'headset', 'Listening',
+        'Statements, dialogs, conversations, talks', LISTEN.length, sectionMastery('listen')) : '') +
     big('grammar', 'book', 'Grammar',
         'Tenses, structures, drills, verbs', sectionData('grammar').length, sectionMastery('grammar')) +
     big('vocab', 'speech', 'Vocabulary',
         'Vocabulary in context, American register', sectionData('vocab').length, sectionMastery('vocab')) +
     big('idiom', 'star', 'Idioms &amp; Phrasal',
         'Idiomatic expressions and phrasal verbs', sectionData('idiom').length, sectionMastery('idiom')) +
-    (LISTEN.length ? big('listen', 'headset', 'Listening',
-        'Statements, dialogs, conversations, talks', LISTEN.length, sectionMastery('listen')) : '') +
     big('test', 'target', 'Tests',
         'Module test, ECL and ALCPT timed exams', MODULE_TEST.length, sectionMastery('test')) +
     big('reference', 'layers', 'Reference Library',
@@ -1070,13 +1102,10 @@ VIEWS.sim = function () {
   /* Examens complets (v5.9.26) : ecoute puis lecture, minutage reel. */
   if (LISTEN.length) {
     var eb = LSget('exam_best', {});
-    h += '<div class="secttl">Full exams, real timing</div><div class="bigmenu sm">' +
-      big2("go('exam','ecl')", 'headset', 'ECL exam',
-        (formsOn() ? FORMS_N + ' tests &middot; ' : '') + 'Listening + reading &middot; ' + EXAMS.ecl.testMin + ' min' +
-        (eb.ecl !== undefined ? ' &middot; best ' + eb.ecl + '%' : '')) +
-      big2("go('exam','alcpt')", 'headset', 'ALCPT exam',
-        (formsOn() ? FORMS_N + ' tests &middot; ' : '') + 'Listening + reading &middot; ' + EXAMS.alcpt.testMin + ' min' +
-        (eb.alcpt !== undefined ? ' &middot; best ' + eb.alcpt + '%' : '')) +
+    h += '<div class="secttl">Full tests, real timing</div><div class="bigmenu sm">' +
+      big2("go('exam','ae')", 'headset', 'ALCPT/ECL tests',
+        (formsOn() ? FORMS_N + ' tests &middot; ' : '') + '50 listening + 50 reading &middot; ' + EXAMS.ae.testMin + ' min' +
+        (eb.ae !== undefined ? ' &middot; best ' + eb.ae + '%' : '')) +
       '</div><div class="secttl">Quick timed tests</div>';
   }
   h += '<div class="note">Questions drawn at random from the ' + allQuestions().length +
@@ -1110,42 +1139,33 @@ VIEWS.listen = function () {
 };
 function quickListen() { launch(null, 'Quick listening', makePool(LISTEN).slice(0, quickN()), false); }
 
-/* ===================== EXAMENS CHRONOMETRES (v5.9.26) ======================
-   Comme les vrais tests : 100 questions, la partie ecoute d'abord (chaque
-   enregistrement une seule fois, un temps de reponse fixe, puis la question
-   suivante arrive seule), la partie lecture ensuite avec son propre
-   chronometre. Aucune correction pendant l'examen ; a la fin, le score par
-   partie et toutes les fautes avec leur explication et le texte entendu.
-     ECL   : 50 ecoute + 50 lecture, environ 65 min (75 min avec les
-             consignes, DLIELC) ; lecture 40 min, 15 s pour repondre.
-     ALCPT : 50 ecoute + 50 lecture, environ 55 min (70 min avec les
-             consignes) ; lecture 35 min, 12 s pour repondre.             */
+/* ===================== TESTS CHRONOMETRES ALCPT/ECL ========================
+   Comme les vrais tests : 100 questions, la partie ecoute d'abord, puis la
+   lecture avec son propre chronometre. Pour chaque question d'ecoute :
+   10 s pour lire les choix, l'enregistrement une seule fois, puis 10 s au
+   plus pour repondre ; la question suivante arrive seule (ou des que le
+   candidat a repondu et touche Next). Aucune correction pendant le test ;
+   a la fin, le score par partie et toutes les fautes avec leur explication
+   et le texte entendu.                                                     */
 var EXAMS = {
-  ecl: { t: 'ecl', name: 'ECL', title: 'ECL timed exam', nL: 50, nR: 50, readMin: 40, win: 15, listenMin: 25, testMin: 65, realMin: 75 },
-  alcpt: { t: 'alcpt', name: 'ALCPT', title: 'ALCPT timed exam', nL: 50, nR: 50, readMin: 35, win: 12, listenMin: 20, testMin: 55, realMin: 70 }
+  ae: { t: 'ae', name: 'ALCPT/ECL', title: 'ALCPT/ECL tests', nL: 50, nR: 50, readMin: 40, win: 10, listenMin: 25, testMin: 65, realMin: 75 }
 };
+/* anciens liens (go('exam','ecl'), go('exam','alcpt')) : la meme serie */
+EXAMS.ecl = EXAMS.ae; EXAMS.alcpt = EXAMS.ae;
+/* ecoute en examen et en ecoute automatique : 10 s pour lire les choix,
+   l'enregistrement, puis 10 s au plus pour repondre */
+var L_READ_S = 10, L_ANSWER_S = 10;
 VIEWS.exam = function (t) {
-  var c = EXAMS[t] || EXAMS.ecl, best = LSget('exam_best', {})[c.t];
-  var h = bar(c.title);
-  h += '<div class="gcard exam-card"><div class="eyebrow">Real exam timing</div>' +
-    '<h3>' + c.name + ': 100 questions in about ' + c.testMin + ' minutes</h3>' +
-    '<ol class="exam-parts">' +
-    '<li><b>Part 1, Listening</b>: ' + c.nL + ' questions, about ' + c.listenMin + ' minutes. Each recording plays <b>once</b>. ' +
-      'When it ends you have ' + c.win + ' seconds to answer, then the next one starts by itself. No going back.</li>' +
-    '<li><b>Part 2, Reading</b>: ' + c.nR + ' questions on grammar, vocabulary and idioms in <b>' + c.readMin + ' minutes</b>.</li></ol>' +
-    '<p class="fr">No feedback during the exam. At the end: your score by part, then every mistake with its explanation ' +
-    'and the text of the recording.</p>' +
-    '<p class="fr">The real ' + c.name + ' takes about ' + c.realMin + ' minutes with the instructions. ' +
-    'Your percentage is a practice result, not an official ' + c.name + ' score.</p>' +
-    (best !== undefined ? '<p class="fr">Your best result: <b>' + best + '%</b></p>' : '') + '</div>';
-  h += audioOK() ? '<div class="note">Use headphones in a quiet place. The voices can be changed in <b>Settings &rsaquo; Audio</b>.</div>'
-    : '<div class="banner bad">No audio on this device: in Part 1 the text of each recording is shown instead.</div>';
+  /* directement les numeros des tests (pas de long texte de presentation) */
+  var c = EXAMS[t] || EXAMS.ae;
+  var h = bar(c.name + ' tests');
+  if (!audioOK()) h += '<div class="banner bad">No audio on this device: in the listening part the text of each recording is shown instead.</div>';
   if (formsOn()) {
     var nx = formNext(c.t);
-    h += '<div class="navrow"><button class="btn" id="examStart" onclick="startExam(\'' + c.t + '\',' + nx + ')">Start ' + c.name + ' Practice Test ' + (nx + 1) + '</button></div>';
-    h += '<p class="fr">' + FORMS_N + ' different tests, each with the same sections. Tap a number to take or retake any test.</p>' + formsGrid(c.t);
+    h += '<div class="navrow"><button class="btn" id="examStart" onclick="startExam(\'' + c.t + '\',' + nx + ')">Start Test ' + (nx + 1) + '</button></div>';
+    h += formsGrid(c.t);
   } else {
-    h += '<div class="navrow"><button class="btn" id="examStart" onclick="startExam(\'' + c.t + '\')">Start the exam</button></div>';
+    h += '<div class="navrow"><button class="btn" id="examStart" onclick="startExam(\'' + c.t + '\')">Start the test</button></div>';
   }
   root.innerHTML = L(h + tabbar('revise'));
 };
@@ -1353,19 +1373,20 @@ function examReading(n) {
   }
   return shuffle(pick).slice(0, n).map(function (x) { var p = poolItem(x); p.part = 'R'; return p; });
 }
-/* ============ 50 TESTS NUMEROTES PAR EXAMEN ================================
-   Dans l'application, l'ECL et l'ALCPT ont chacun 50 tests differents
-   (Practice Test 1 a 50). Chaque test a les memes sections : ecoute
-   (15 enonces, 12 questions-reponses, 14 dialogues courts, 5 conversations,
-   4 annonces) puis lecture (25 grammaire, 17 vocabulaire, 8 idiomes).
+/* ============ 80 TESTS ALCPT/ECL NUMEROTES =================================
+   Une seule serie de 80 tests (Test 1 a Test 80), tous avec les memes
+   sections (FORM_L, FORM_R) : ecoute 15 enonces, 12 questions-reponses,
+   14 dialogues courts, 5 conversations, 4 annonces, puis lecture 25
+   grammaire, 17 vocabulaire, 8 idiomes.
    Les tests d'un meme examen se partagent les questions sans se recouvrir
    tant que la banque suffit (permutations fixes, derivees du numero) ; l'ECL
    et l'ALCPT utilisent des permutations differentes. « Next test » ouvre le
    premier test jamais commence : un test abandonne compte comme commence,
    on n'y retombe donc pas. Application et site web ont les memes tests. */
-var FORMS_N = 50;
-var FORM_L = { s: 15, r: 12, d: 14, c: 5, k: 4 };
-var FORM_R = { grammar: 25, vocab: 17, idiom: 8 };
+var FORMS_N = 80;
+/* sections de chaque test : 50 ecoute + 50 lecture */
+var FORM_L = { ae: { s: 15, r: 12, d: 14, c: 5, k: 4 } };
+var FORM_R = { ae: { grammar: 25, vocab: 17, idiom: 8 } };
 function formsOn() { return LISTEN.length > 0; }
 function seeded(seed) {
   var a = seed >>> 0;
@@ -1378,15 +1399,18 @@ function seeded(seed) {
 }
 function seedOf(tag) { return parseInt(strHash(tag), 36); }
 function seededShuffle(a, rnd) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = rnd() * (i + 1) | 0, t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
-/* w questions du test f : la tranche f d'un flux de permutations de la liste */
+/* w questions du test f : une seule permutation fixe de la liste, parcourue
+   en boucle (le test f prend les places f*w a f*w+w-1). Un meme element ne
+   revient donc qu'apres n/w tests (n = taille de la liste) : jamais en
+   ecoute tant que la banque suffit pour les 80 tests, et en lecture au
+   moins 20 tests plus loin (grammaire, vocabulaire, idiomes). */
 function formSlice(list, w, f, tag) {
   if (!list.length || w <= 0) return [];
-  var pos = f * w, cyc = Math.floor(pos / list.length), off = pos % list.length;
-  var perm = seededShuffle(list, seeded(seedOf(tag + '|' + cyc)));
-  var out = [], used = {}, guard = 0;
-  while (out.length < w && guard++ < list.length * 3) {
-    if (off >= perm.length) { cyc++; off = 0; perm = seededShuffle(list, seeded(seedOf(tag + '|' + cyc))); }
-    var x = perm[off++], k = seenKey(x);
+  var perm = seededShuffle(list, seeded(seedOf(tag))), n = perm.length;
+  var out = [], used = {}, pos = (f * w) % n, guard = 0;
+  while (out.length < Math.min(w, n) && guard++ < n * 2) {
+    var x = perm[pos]; pos = (pos + 1) % n;
+    var k = seenKey(x);
     if (!used[k]) { used[k] = 1; out.push(x); }
   }
   return out;
@@ -1394,7 +1418,8 @@ function formSlice(list, w, f, tag) {
 function formPool(t, f, nL, nR) {
   var byK = {}, lis = [], i;
   LISTEN.forEach(function (x) { (byK[x.k] = byK[x.k] || []).push(x); });
-  ['s', 'r', 'd', 'c', 'k'].forEach(function (k) { lis = lis.concat(formSlice(byK[k] || [], FORM_L[k], f, t + '|L|' + k)); });
+  var FL = FORM_L[t] || FORM_L.ae, FR = FORM_R[t] || FORM_R.ae;
+  ['s', 'r', 'd', 'c', 'k'].forEach(function (k) { lis = lis.concat(formSlice(byK[k] || [], FL[k], f, t + '|L|' + k)); });
   if (lis.length < nL) {
     var keyL = {}; lis.forEach(function (x) { keyL[seenKey(x)] = 1; });
     lis = lis.concat(formSlice(LISTEN.filter(function (x) { return !keyL[seenKey(x)]; }), nL - lis.length, f, t + '|L|fill'));
@@ -1404,7 +1429,7 @@ function formPool(t, f, nL, nR) {
   ['d', 'c', 'k'].forEach(function (k) { out = out.concat(seededShuffle(lis.filter(function (x) { return x.k === k; }), rnd)); });
   var Lp = out.slice(0, nL).map(function (x) { var p = poolItem(x); p.part = 'L'; return p; });
   var rd = [];
-  Object.keys(FORM_R).forEach(function (sec) { rd = rd.concat(formSlice(sectionData(sec), FORM_R[sec], f, t + '|R|' + sec)); });
+  Object.keys(FR).forEach(function (sec) { rd = rd.concat(formSlice(sectionData(sec), FR[sec], f, t + '|R|' + sec)); });
   if (rd.length < nR) {
     var keyR = {}; rd.forEach(function (x) { keyR[seenKey(x)] = 1; });
     rd = rd.concat(formSlice(allQuestions().filter(function (x) { return !keyR[seenKey(x)]; }), nR - rd.length, f, t + '|R|fill'));
@@ -1432,7 +1457,7 @@ function startExam(t, f) {
   var Lp, Rp, title = c.title, form = (typeof f === 'number' && formsOn()) ? f : undefined;
   if (form !== undefined) {
     var fp = formPool(c.t, form, c.nL, c.nR);
-    Lp = fp.L; Rp = fp.R; title = c.name + ' Practice Test ' + (form + 1);
+    Lp = fp.L; Rp = fp.R; title = c.name + ' Test ' + (form + 1);
     formMark(c.t, form);
   } else { Lp = examListening(c.nL); Rp = examReading(c.nR); }
   var ex = { t: c.t, name: c.name, nL: Lp.length, nR: Rp.length, readMin: c.readMin, win: c.win,
@@ -1443,11 +1468,11 @@ function startExam(t, f) {
 }
 /* grille des 50 tests */
 function formsGrid(t) {
-  var log = formLog()[t] || {}, nx = formNext(t), h = '<div class="secttl">All ' + FORMS_N + ' practice tests</div>' +
+  var log = formLog()[t] || {}, nx = formNext(t), h = '<div class="secttl">Tests 1 to ' + FORMS_N + '</div>' +
     '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px">';
   for (var f = 0; f < FORMS_N; f++) {
     var r = log[f], done = r && r.p !== undefined, cur = f === nx;
-    h += '<button onclick="startExam(\'' + t + '\',' + f + ')" aria-label="Practice test ' + (f + 1) + '" style="' +
+    h += '<button onclick="startExam(\'' + t + '\',' + f + ')" aria-label="Test ' + (f + 1) + '" style="' +
       'min-height:54px;border-radius:12px;font:inherit;cursor:pointer;padding:4px 2px;line-height:1.15;' +
       'background:' + (done ? 'var(--card2)' : 'var(--card)') + ';color:var(--ink);' +
       'border:' + (cur ? '2px solid var(--gold)' : '1px solid var(--line)') + '">' +
@@ -1480,12 +1505,20 @@ function examItemStart() {
     examWindow(gen, S.exam.win + Math.min(25, Math.round(lLines(q.L).join(' ').length / 14)));
     return;
   }
-  examStatus('Get ready…');
-  setTimeout(function () {
-    if (gen !== EX.gen || S.paused || S.view !== 'quiz') return;
+  /* 10 s pour lire les choix, puis l'enregistrement, puis 10 s pour repondre */
+  var end = nowMs() + L_READ_S * 1000;
+  examStatus('Read the choices: ' + L_READ_S + ' s');
+  examBar(1, true);
+  EX.timer = setInterval(function () {
+    if (gen !== EX.gen || !S.exam || S.paused || S.view !== 'quiz') { examClear(); return; }
+    var left = (end - nowMs()) / 1000;
+    examBar(left / L_READ_S, true);
+    examStatus('Read the choices: ' + Math.max(0, Math.ceil(left)) + ' s');
+    if (left > 0) return;
+    examClear(); examBar(1, false);
     examStatus('Listen…');
     lSay(q.L, function () { if (gen === EX.gen && !S.paused) examWindow(gen, S.exam.win); });
-  }, 700);
+  }, 200);
 }
 function examWindow(gen, secs) {
   examClear();
@@ -1625,8 +1658,8 @@ function listenCard(q) {
     '<div class="lc-top"><span class="lc-ic">' + ico('headset') + '</span>' +
     '<span class="lc-k">' + esc(LKIND_ONE[q.k] || 'Listening') + '</span>' +
     '<span class="lc-st" id="lcSt">' + (a ? (ex ? 'The recording plays once.' : 'Listen, then answer.') : 'No audio here: read the text.') + '</span></div>';
-  if (ex) h += '<div class="lc-time" id="lcTime" aria-hidden="true"><i id="lcBar"></i></div>';
-  else {
+  if (ex || listenAuto()) h += '<div class="lc-time" id="lcTime" aria-hidden="true"><i id="lcBar"></i></div>';
+  if (!ex) {
     h += '<div class="lc-btns">' +
       (a ? '<button class="btn lc-b" id="listenBtn" onclick="lToggle()">' + ico('play', 'inl') + ' <span id="lcPlayT">Play</span></button>' +
            '<button class="btn ghost lc-b" id="lcSlow" onclick="lPlay(true)">' + ico('slow', 'inl') + ' Slower</button>' : '') +
@@ -1637,6 +1670,62 @@ function listenCard(q) {
   return h;
 }
 var LP = { on: false };
+/* --- Ecoute automatique (entrainement) ---------------------------------
+   Comme en test : 10 s pour lire les choix, l'enregistrement, puis 10 s au
+   plus pour repondre ; ensuite la question suivante arrive seule. Une
+   question laissee sans reponse est comptee fausse (la bonne reponse est
+   montree 2 s). Sans le mode automatique, Play lance l'enregistrement
+   aussitot, sans attente. Application : le mode Auto general ; site web :
+   son propre reglage (la lecture des autres questions y est retiree). */
+function listenAuto() { return readOn() ? autoOn() : !!LSget('lauto', 0); }
+var LAUTO = { timer: null, gen: 0 };
+function lAutoClear() { if (LAUTO.timer) { clearInterval(LAUTO.timer); LAUTO.timer = null; } }
+function lAutoStop() { LAUTO.gen++; lAutoClear(); examBar(1, false); }
+function lAutoCount(gen, idx, secs, label, done) {
+  lAutoClear();
+  var end = nowMs() + secs * 1000, st = document.getElementById('lcSt');
+  if (st) st.textContent = label + ': ' + secs + ' s';
+  examBar(1, true);
+  LAUTO.timer = setInterval(function () {
+    if (gen !== LAUTO.gen || S.idx !== idx || S.view !== 'quiz' || S.exam) { lAutoClear(); return; }
+    if (AD_OPEN || APP_PAUSED || document.hidden) return;            // en pause : le temps attend
+    var left = (end - nowMs()) / 1000, st2 = document.getElementById('lcSt');
+    examBar(left / secs, true);
+    if (st2) st2.textContent = label + ': ' + Math.max(0, Math.ceil(left)) + ' s';
+    if (left <= 0) { lAutoClear(); examBar(1, false); done(); }
+  }, 200);
+}
+function lAutoStart() {
+  var q = S.pool[S.idx];
+  if (!q || !q.L || S.exam || S.view !== 'quiz') return;
+  lAutoStop();
+  var gen = LAUTO.gen, idx = S.idx;
+  lAutoCount(gen, idx, L_READ_S, 'Read the choices', function () {
+    if (gen !== LAUTO.gen || S.idx !== idx) return;
+    lPlay(false, function () {
+      if (gen !== LAUTO.gen || S.idx !== idx || S.view !== 'quiz') return;
+      lAutoCount(gen, idx, L_ANSWER_S, 'Answer now', function () {
+        if (gen !== LAUTO.gen || S.idx !== idx) return;
+        if (!S.locked) lAutoMiss();
+        setTimeout(function () { if (gen === LAUTO.gen && S.idx === idx && S.view === 'quiz') nextQ(); }, S.answers[idx] && S.answers[idx].picked < 0 ? 2000 : 0);
+      });
+    });
+  });
+}
+/* temps ecoule sans reponse : comptee fausse, la bonne reponse est montree */
+function lAutoMiss() {
+  var q = S.pool[S.idx]; if (!q || S.locked) return;
+  S.locked = true;
+  paintAnswered(-1, false);
+  S.wrongs.push(wrongOf(q, '(no answer)'));
+  adCountAnswer(1);
+  boxAdd(q.q, [q.c].concat(q.o.filter(function (o) { return o !== q.c; })), 0, q.e, q);
+  addAnswered(1);
+  S.answers[S.idx] = { picked: -1, good: false };
+  showVerdict(false, q);
+  lReveal(true); if (!LP.on) lPaint(false);
+  var nb = document.getElementById('nextBtn'); if (nb) nb.disabled = false;
+}
 var RQ_TOKEN = 0;           // chaque affichage de question perime les lectures programmees
 function lPaint(on) {
   LP.on = !!on;
@@ -1652,6 +1741,7 @@ function lPaint(on) {
 }
 /* bouton Play / Stop */
 function lToggle() {
+  lAutoStop();                             // Play a la main : pas d'attente, pas de minuterie
   if (LP.on) { stopSpeak(); lPaint(false); return; }
   lPlay(false, null);
 }
@@ -1679,6 +1769,7 @@ function lStart() {
   if (S.exam) { examItemStart(); return; }
   if (AD_OPEN || APP_PAUSED || document.hidden || !audioOK()) return;
   if (S.answers && S.answers[S.idx]) { if (autoOn()) autoStartQuestion(); return; }
+  if (listenAuto()) { lAutoStart(); return; }   // 10 s de lecture, l'enregistrement, 10 s pour repondre
   if (!LP.on) lPlay(false, null);          // deja lance par l'utilisateur : on ne relance pas
 }
 function revPlay(i) { var w = S.wrongs[i]; if (w && w.L && audioOK()) lSay(w.L, null); }
@@ -1691,6 +1782,7 @@ function renderQ() {
   seenMark(q);                          // rotation des questions
   var ex = S.exam, isL = !!q.L, tok = ++RQ_TOKEN;
   LP.on = false;
+  lAutoStop();                          // minuterie d'ecoute automatique de la question precedente
   var h = bar(S.title, S.sim ? '' : '<span class="pts">' + S.score + ' pt</span>', 'quitQuiz()');
   h += '<div class="pill"><div class="bar" style="width:' + pct(S.idx, S.pool.length) + '%"></div></div>';
   if (ex) {
@@ -1704,10 +1796,10 @@ function renderQ() {
 
   h += '<div class="qbox' + (isL ? ' lq' : '') + '">' + (isL ? listenCard(q) : '') +
     '<div class="qtext">' + fmt(q.q) + '</div><div class="qtools">' +
-    (audioOK() && !ex && readOn() ? '<button class="chip auto' + (autoOn() ? ' on' : ' off') + '" id="autoBtn" ' +
-      'onclick="toggleAuto()" aria-pressed="' + (autoOn() ? 'true' : 'false') +
-      '" aria-label="Automatic reading">' +
-      ico(autoOn() ? 'sound' : 'soundoff', 'inl') + ' Auto</button>' : '') +
+    (audioOK() && !ex && (readOn() || isL) ? '<button class="chip auto' + (autoCur() ? ' on' : ' off') + '" id="autoBtn" ' +
+      'onclick="toggleAuto()" aria-pressed="' + (autoCur() ? 'true' : 'false') +
+      '" aria-label="' + (isL ? 'Automatic listening' : 'Automatic reading') + '">' +
+      ico(autoCur() ? 'sound' : 'soundoff', 'inl') + ' Auto</button>' : '') +
     (audioOK() && !isL && !ex && readOn() ? '<button class="chip" id="listenBtn" onclick="listenQuestion()">' +
       ico('sound', 'inl') + ' Listen</button>' : '') +
     '<button class="chip star' + (isFav(q.q, q.id) ? ' on' : '') + '" id="favBtn" onclick="favCurrent()">' +
@@ -1799,7 +1891,9 @@ function pick(i) {
   /* Mode automatique : on lit la correction, puis on passe seul a la
      question suivante apres AUTO_GAP_MS. Sinon on garde l'ancien
      comportement : la reponse n'est lue que si l'utilisateur ecoutait. */
-  if (autoOn() && audioOK()) {
+  if (q.L && listenAuto()) {
+    /* ecoute automatique : la fenetre de 10 s continue, puis la suite */
+  } else if (autoOn() && audioOK()) {
     autoReadAnswer(function () {
       autoTimer = setTimeout(function () {
         autoTimer = null;
