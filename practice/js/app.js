@@ -1151,8 +1151,8 @@ VIEWS.sim = function () {
 VIEWS.listen = function () {
   var h = bar('Listening');
   h += '<div class="note">' + LISTEN.length + ' recordings in American English, with a man\'s voice and a woman\'s voice, ' +
-    'as in the ECL and the ALCPT. Each one plays by itself: replay it, slow it down or show its text whenever you need. ' +
-    'After your answer, you see the text and the explanation.</div>';
+    'as in the ECL and the ALCPT. Read the choices, then press <b>Play</b>; with <b>Auto</b> on, each recording plays as soon as its question appears. ' +
+    'Replay it or slow it down whenever you need. After your answer, you see the text and the explanation, and you can tap a word to translate it.</div>';
   h += '<div class="bigmenu sm">' +
     big2("quickListen()", 'zap', 'Quick listening', quickN() + ' random recordings') +
     big2("startAll('listen','Listening - full set')", 'target', 'Full set', 'All the recordings, in a new order', LISTEN.length) +
