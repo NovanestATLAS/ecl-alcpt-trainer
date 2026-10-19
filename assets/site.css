@@ -409,8 +409,8 @@ html.no-voice .say{display:none}
 .qc-sheet{padding:6px 26px 16px 54px}
 .qc-list,.prose .qc-list{list-style:none;margin:0;padding:0}
 .prose .qc-item{margin:0;padding:16px 0;border-bottom:1px solid var(--rule-2)}
-.qc-q{display:flex;gap:10px;margin:0 0 10px;font-weight:500;font-size:1.1rem}
-.qc-n{flex:none;display:inline-grid;place-items:center;width:26px;height:26px;margin-top:1px;border-radius:50%;background:var(--navy);
+.qc-q{position:relative;padding-left:36px;margin:0 0 10px;font-weight:500;font-size:1.1rem}
+.qc-n{position:absolute;left:0;top:1px;display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--navy);
   color:#fff;font:700 .85rem var(--display)}
 .prose .qc .bubbles{padding:0;gap:6px}
 .prose .qc .bubbles li{margin:0}
