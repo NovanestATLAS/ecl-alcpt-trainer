@@ -246,8 +246,33 @@ function adOpening() { AD_OPEN = true; stopSpeak(); }
 function adClosed() {
   if (!AD_OPEN) return;
   AD_OPEN = false;
+  if (EXAM_AD.hold) { EXAM_AD.hold = false; examAdResume(); return; }
   autoResumeSoon();
   listenResumeSoon();
+}
+/* --- Annonce pendant un test ALCPT/ECL (application) ----------------------
+   La partie ecoute est longue : une annonce plein ecran apres les questions
+   15, 30 et 45, et une a la fin de la partie ecoute (apres la 50e, sur
+   l'ecran de passage a la lecture). Elle s'ouvre ENTRE deux questions : la
+   question suivante s'affiche en pause, sans minuterie, et ne commence (10 s
+   de lecture des choix, l'enregistrement, le temps de reponse) qu'a la
+   fermeture de l'annonce. Le chronometre de la lecture ne demarre qu'au
+   bouton « Start Part 2 ». Sans annonce chargee, le test continue aussitot. */
+var EXAM_AD_EVERY = 15;
+var EXAM_AD = { hold: false };
+function examAdDue(done) {        // done = questions d'ecoute terminees
+  return !!(S.exam && done > 0 && (done % EXAM_AD_EVERY === 0 || done === S.exam.nL));
+}
+function examAdBreak(done) {
+  if (!window.Ads || typeof Ads.examBreak !== 'function') return false;
+  try { Ads.examBreak(done === S.exam.nL ? 'end of listening' : 'after question ' + done); } catch (e) { }
+  return AD_OPEN;                  // adOpening() est appele avant l'ouverture
+}
+function examAdResume() {
+  if (S.view !== 'quiz' || !S.exam || S.exam.part !== 'L' || !S.paused) return;
+  S.paused = false;
+  paintTimer();
+  examItemStart();
 }
 /* Question d'ecoute a l'ecran a la fermeture de l'annonce (v5.9.27) :
    son enregistrement n'a pas pu passer sous l'annonce ; en ecoute
@@ -302,7 +327,7 @@ function plainTxt(t) { return String(t == null ? '' : t).replace(/\*/g, ''); }
 
 function spkNow(t) { if (audioOK() && t) { autoCancel(); Speech.stop(); Speech.speak(t); } }
 /* Toute interruption volontaire annule aussi l'enchainement automatique. */
-function stopSpeak() { autoCancel(); lAutoStop(); if (window.Speech) Speech.stop(); }
+function stopSpeak() { autoCancel(); if (window.Speech) Speech.stop(); }
 
 /* --- Preparation du texte pour une lecture EN ANGLAIS uniquement ---------
    La synthese est en mode anglais : on ne lui donne jamais de francais, sous
@@ -530,10 +555,10 @@ function autoStartQuestion() {
   if (AD_OPEN || !autoOn() || !audioOK() || S.view !== 'quiz' || S.exam) return;
   var q = S.pool[S.idx]; if (!q) return;
   var answered = !S.sim && S.answers && S.answers[S.idx];
-  /* question d'ecoute : 10 s de lecture, l'enregistrement, 10 s pour
-     repondre ; deja traitee : on la rejoue avec sa correction */
+  /* question d'ecoute : l'enregistrement part aussitot, la reponse est
+     libre (pas de minuterie) ; deja traitee : on la rejoue avec sa correction */
   if (q.L) {
-    if (!answered) { if (!S.exam) lAutoStart(); return; }
+    if (!answered) { if (!S.exam && !LP.on) lPlay(false, null); return; }
     if (!S.exam && !LP.on) lPlay(false, function () { autoReadAnswer(null); });
     return;
   }
@@ -548,8 +573,8 @@ function toggleAuto() {
     var lon = !LSget('lauto', 0);
     LSset('lauto', lon ? 1 : 0);
     buzz(8); paintAutoBtn();
-    if (lon) { toast('Automatic listening on: 10 s to read, the recording, 10 s to answer'); renderQ(); }
-    else { lAutoStop(); stopSpeak(); toast('Automatic listening off'); renderQ(); }
+    if (lon) { toast('Automatic listening on: each recording plays as soon as its question appears'); renderQ(); }
+    else { stopSpeak(); toast('Automatic listening off'); renderQ(); }
     return;
   }
   var on = !autoOn();
@@ -1143,19 +1168,21 @@ function quickListen() { launch(null, 'Quick listening', makePool(LISTEN).slice(
 /* ===================== TESTS CHRONOMETRES ALCPT/ECL ========================
    Comme les vrais tests : 100 questions, la partie ecoute d'abord, puis la
    lecture avec son propre chronometre. Pour chaque question d'ecoute :
-   10 s pour lire les choix, l'enregistrement une seule fois, puis 10 s au
+   10 s pour lire les choix, l'enregistrement une seule fois, puis 17 s au
    plus pour repondre ; la question suivante arrive seule (ou des que le
-   candidat a repondu et touche Next). Aucune correction pendant le test ;
+   candidat a repondu et touche Next). Application : une annonce plein
+   ecran apres les questions d'ecoute 15, 30 et 45 et a la fin de la partie
+   ecoute, test en pause pendant l'annonce (examAdBreak). Aucune correction pendant le test ;
    a la fin, le score par partie et toutes les fautes avec leur explication
    et le texte entendu.                                                     */
 var EXAMS = {
-  ae: { t: 'ae', name: 'ALCPT/ECL', title: 'ALCPT/ECL tests', nL: 50, nR: 50, readMin: 40, win: 10, listenMin: 25, testMin: 65, realMin: 75 }
+  ae: { t: 'ae', name: 'ALCPT/ECL', title: 'ALCPT/ECL tests', nL: 50, nR: 50, readMin: 40, win: 17, listenMin: 25, testMin: 65, realMin: 75 }
 };
 /* anciens liens (go('exam','ecl'), go('exam','alcpt')) : la meme serie */
 EXAMS.ecl = EXAMS.ae; EXAMS.alcpt = EXAMS.ae;
-/* ecoute en examen et en ecoute automatique : 10 s pour lire les choix,
-   l'enregistrement, puis 10 s au plus pour repondre */
-var L_READ_S = 10, L_ANSWER_S = 10;
+/* ecoute en examen : 10 s pour lire les choix, l'enregistrement, puis
+   EXAMS.ae.win (17 s) au plus pour repondre */
+var L_READ_S = 10;
 VIEWS.exam = function (t) {
   /* directement les numeros des tests (pas de long texte de presentation) */
   var c = EXAMS[t] || EXAMS.ae;
@@ -1500,7 +1527,7 @@ function examItemStart() {
     examWindow(gen, S.exam.win + Math.min(25, Math.round(lLines(q.L).join(' ').length / 14)));
     return;
   }
-  /* 10 s pour lire les choix, puis l'enregistrement, puis 10 s pour repondre.
+  /* 10 s pour lire les choix, puis l'enregistrement, puis 17 s pour repondre.
      Un message simple par etape, sans barre ni secondes qui defilent
      (elles derangeaient la concentration) ; le temps compte quand meme. */
   var end = nowMs() + L_READ_S * 1000;
@@ -1658,58 +1685,13 @@ function listenCard(q) {
 }
 var LP = { on: false };
 /* --- Ecoute automatique (entrainement) ---------------------------------
-   Comme en test : 10 s pour lire les choix, l'enregistrement, puis 10 s au
-   plus pour repondre ; ensuite la question suivante arrive seule. Une
-   question laissee sans reponse est comptee fausse (la bonne reponse est
-   montree 2 s). Sans le mode automatique (reglage par defaut), rien ne
-   part seul : Play lance l'enregistrement aussitot, sans attente. Application : le mode Auto general ; site web :
-   son propre reglage (la lecture des autres questions y est retiree). */
+   Mode automatique : l'enregistrement de chaque question part des qu'elle
+   s'affiche (apres Next) ; l'utilisateur repond librement, sans minuterie,
+   puis touche Next. Sans le mode automatique (reglage par defaut), rien ne
+   part seul : l'enregistrement attend Play. Application : le mode Auto
+   general ; site web : son propre reglage (la lecture des autres questions
+   y est retiree). */
 function listenAuto() { return readOn() ? autoOn() : !!LSget('lauto', 0); }
-var LAUTO = { timer: null, gen: 0 };
-function lAutoClear() { if (LAUTO.timer) { clearInterval(LAUTO.timer); LAUTO.timer = null; } }
-function lAutoStop() { LAUTO.gen++; lAutoClear(); }
-/* une etape minutee : un message fixe, sans barre ni secondes affichees */
-function lAutoCount(gen, idx, secs, label, done) {
-  lAutoClear();
-  var end = nowMs() + secs * 1000, st = document.getElementById('lcSt');
-  if (st) st.textContent = label;
-  LAUTO.timer = setInterval(function () {
-    if (gen !== LAUTO.gen || S.idx !== idx || S.view !== 'quiz' || S.exam) { lAutoClear(); return; }
-    if (AD_OPEN || APP_PAUSED || document.hidden) return;            // en pause : le temps attend
-    if (end - nowMs() <= 0) { lAutoClear(); done(); }
-  }, 200);
-}
-function lAutoStart() {
-  var q = S.pool[S.idx];
-  if (!q || !q.L || S.exam || S.view !== 'quiz') return;
-  lAutoStop();
-  var gen = LAUTO.gen, idx = S.idx;
-  lAutoCount(gen, idx, L_READ_S, 'Read the answers.', function () {
-    if (gen !== LAUTO.gen || S.idx !== idx) return;
-    lPlay(false, function () {
-      if (gen !== LAUTO.gen || S.idx !== idx || S.view !== 'quiz') return;
-      lAutoCount(gen, idx, L_ANSWER_S, 'Choose the right answer.', function () {
-        if (gen !== LAUTO.gen || S.idx !== idx) return;
-        if (!S.locked) lAutoMiss();
-        setTimeout(function () { if (gen === LAUTO.gen && S.idx === idx && S.view === 'quiz') nextQ(); }, S.answers[idx] && S.answers[idx].picked < 0 ? 2000 : 0);
-      });
-    });
-  });
-}
-/* temps ecoule sans reponse : comptee fausse, la bonne reponse est montree */
-function lAutoMiss() {
-  var q = S.pool[S.idx]; if (!q || S.locked) return;
-  S.locked = true;
-  paintAnswered(-1, false);
-  S.wrongs.push(wrongOf(q, '(no answer)'));
-  adCountAnswer(1);
-  boxAdd(q.q, [q.c].concat(q.o.filter(function (o) { return o !== q.c; })), 0, q.e, q);
-  addAnswered(1);
-  S.answers[S.idx] = { picked: -1, good: false };
-  showVerdict(false, q);
-  lReveal(true); if (!LP.on) lPaint(false);
-  var nb = document.getElementById('nextBtn'); if (nb) nb.disabled = false;
-}
 var RQ_TOKEN = 0;           // chaque affichage de question perime les lectures programmees
 function lPaint(on) {
   LP.on = !!on;
@@ -1725,7 +1707,6 @@ function lPaint(on) {
 }
 /* bouton Play / Stop */
 function lToggle() {
-  lAutoStop();                             // Play a la main : pas d'attente, pas de minuterie
   if (LP.on) { stopSpeak(); lPaint(false); return; }
   lPlay(false, null);
 }
@@ -1745,16 +1726,16 @@ function lReveal(auto) {
   if (!auto && S.lrev) S.lrev[S.idx] = 1;
 }
 /* Affichage d'une question d'ecoute : en examen, le deroulement minute
-   commence ; en entrainement automatique, 10 s de lecture puis
-   l'enregistrement. En mode manuel (par defaut), rien ne part tout seul :
-   l'enregistrement attend que l'utilisateur appuie sur Play. */
+   commence ; en entrainement automatique, l'enregistrement part aussitot.
+   En mode manuel (par defaut), rien ne part tout seul : l'enregistrement
+   attend que l'utilisateur appuie sur Play. */
 function lStart() {
   var q = S.pool[S.idx];
   if (!q || !q.L || S.view !== 'quiz') return;
   if (S.exam) { examItemStart(); return; }
   if (AD_OPEN || APP_PAUSED || document.hidden || !audioOK()) return;
   if (S.answers && S.answers[S.idx]) { if (autoOn()) autoStartQuestion(); return; }
-  if (listenAuto()) lAutoStart();          // 10 s de lecture, l'enregistrement, 10 s pour repondre
+  if (listenAuto() && !LP.on) lPlay(false, null);   // automatique : tout de suite, reponse libre
 }
 function revPlay(i) { var w = S.wrongs[i]; if (w && w.L && audioOK()) lSay(w.L, null); }
 
@@ -1766,7 +1747,6 @@ function renderQ() {
   seenMark(q);                          // rotation des questions
   var ex = S.exam, isL = !!q.L, tok = ++RQ_TOKEN;
   LP.on = false;
-  lAutoStop();                          // minuterie d'ecoute automatique de la question precedente
   var h = bar(S.title, S.sim ? '' : '<span class="pts">' + S.score + ' pt</span>', 'quitQuiz()');
   h += '<div class="pill"><div class="bar" style="width:' + pct(S.idx, S.pool.length) + '%"></div></div>';
   if (ex) {
@@ -1876,7 +1856,8 @@ function pick(i) {
      question suivante apres AUTO_GAP_MS. Sinon on garde l'ancien
      comportement : la reponse n'est lue que si l'utilisateur ecoutait. */
   if (q.L && listenAuto()) {
-    /* ecoute automatique : la fenetre de 10 s continue, puis la suite */
+    /* ecoute automatique : reponse libre ; Next lance la question suivante,
+       dont l'enregistrement part aussitot */
   } else if (autoOn() && audioOK()) {
     autoReadAnswer(function () {
       autoTimer = setTimeout(function () {
@@ -1950,7 +1931,16 @@ function nextQ() {
   S.idx++;
   S.listenUsed = false;                                   // remise a zero par question
   S.locked = !!(!S.sim && S.answers && S.answers[S.idx]); // deja repondue ?
-  if (S.exam && q.part === 'L' && S.pool[S.idx].part !== 'L') { examBreak(); return; }
+  if (S.exam && q.part === 'L' && S.pool[S.idx].part !== 'L') {
+    examBreak();
+    if (examAdDue(S.exam.nL)) examAdBreak(S.exam.nL);    // fin de l'ecoute
+    return;
+  }
+  /* test ALCPT/ECL : annonce apres les questions d'ecoute 15, 30 et 45 ; la
+     question suivante attend, en pause, la fermeture de l'annonce */
+  if (S.exam && q.part === 'L' && examAdDue(S.idx) && examAdBreak(S.idx)) {
+    S.paused = true; EXAM_AD.hold = true;
+  }
   renderQ(); saveRun();
   window.scrollTo(0, 0);
 }
