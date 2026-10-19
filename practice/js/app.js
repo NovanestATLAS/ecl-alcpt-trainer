@@ -10,7 +10,7 @@
      . Themes, confort de lecture, export / import des donnees
    =========================================================================== */
 
-var APP_VERSION = '5.9.28';
+var APP_VERSION = '5.9.32';
 
 /* v5.9.26
      . Ecoute : 155 questions (js/listening-data.js), une voix d'homme et une
