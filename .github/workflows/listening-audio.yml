@@ -55,7 +55,10 @@ jobs:
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq espeak-ng ffmpeg
           pip install -q torch --index-url https://download.pytorch.org/whl/cpu
-          pip install -q "kokoro==0.9.4" soundfile
+          # spaCy's helper libraries released on Oct 24, 2026 (preshed 3.0.14 and
+          # others) crash spaCy 3.8 when it loads ("Python int too large to
+          # convert to C ssize_t"): keep the versions that worked before.
+          pip install -q "kokoro==0.9.4" soundfile "preshed==3.0.13" "cymem==2.0.13" "murmurhash==1.0.15" "srsly==2.5.4"
       - name: Cache the Kokoro model
         uses: actions/cache@v4
         with:
