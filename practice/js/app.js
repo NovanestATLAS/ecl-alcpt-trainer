@@ -1180,9 +1180,9 @@ var EXAMS = {
 };
 /* anciens liens (go('exam','ecl'), go('exam','alcpt')) : la meme serie */
 EXAMS.ecl = EXAMS.ae; EXAMS.alcpt = EXAMS.ae;
-/* ecoute en examen : 10 s pour lire les choix, l'enregistrement, puis
+/* ecoute en examen : 7 s pour lire la question et les choix, l'enregistrement, puis
    EXAMS.ae.win (17 s) au plus pour repondre */
-var L_READ_S = 10;
+var L_READ_S = 7;
 VIEWS.exam = function (t) {
   /* directement les numeros des tests (pas de long texte de presentation) */
   var c = EXAMS[t] || EXAMS.ae;
@@ -1527,11 +1527,11 @@ function examItemStart() {
     examWindow(gen, S.exam.win + Math.min(25, Math.round(lLines(q.L).join(' ').length / 14)));
     return;
   }
-  /* 10 s pour lire les choix, puis l'enregistrement, puis 17 s pour repondre.
+  /* 7 s pour lire la question et les choix, puis l'enregistrement, puis 17 s pour repondre.
      Un message simple par etape, sans barre ni secondes qui defilent
      (elles derangeaient la concentration) ; le temps compte quand meme. */
   var end = nowMs() + L_READ_S * 1000;
-  examStatus('Read the answers.');
+  examStatus('Read the question.');
   EX.timer = setInterval(function () {
     if (gen !== EX.gen || !S.exam || S.paused || S.view !== 'quiz') { examClear(); return; }
     if ((end - nowMs()) / 1000 > 0) return;
