@@ -1125,6 +1125,8 @@ VIEWS.test = function () {
 
 VIEWS.sim = function () {
   var h = bar('Practice test (timed)');
+  h += '<label class="switch" style="margin:0 0 6px"><input type="checkbox"' + (simFbOn() ? ' checked' : '') +
+    ' onchange="LSset(\'simfb\',this.checked?1:0);VIEWS.sim()"> Show right or wrong after each answer</label>';
   /* Examens complets (v5.9.26) : ecoute puis lecture, minutage reel. */
   if (LISTEN.length) {
     var eb = LSget('exam_best', {});
@@ -1135,8 +1137,10 @@ VIEWS.sim = function () {
       '</div><div class="secttl">Quick timed tests</div>';
   }
   h += '<div class="note">Questions drawn at random from the ' + allQuestions().length +
-    ' questions in the app. No feedback during the test: ' +
-    'select, confirm, and the full report comes at the end.</div>';
+    ' questions in the app. ' + (simFbOn()
+      ? 'After each answer you see at once if it is right, without the explanation, and you cannot change it. ' +
+        'The full report with the explanations comes at the end.</div>'
+      : 'No feedback during the test: select, confirm, and the full report comes at the end.</div>');
   h += '<div class="bigmenu sm">' +
     big2("startSim(20)", 'zap', 'Flash test', '20 questions in ' + simMinutes(20) + ' minutes') +
     big2("startSim(40)", 'clock', 'Half test', '40 questions in ' + simMinutes(40) + ' minutes') +
@@ -1323,6 +1327,10 @@ function startRetry() {
 function secPerQ() { var v = parseInt(LSget('secq', 30), 10); return (v >= 15 && v <= 90) ? v : 30; }
 function setSecPerQ(v) { LSset('secq', v); toast('Timing: ' + v + ' seconds per question'); VIEWS.settings(); }
 function simMinutes(n) { return Math.round(n * secPerQ() / 60); }
+/* Tests chronometres : juste ou faux montre a chaque reponse (sans
+   explication, sans second choix). Interrupteur sur l'ecran des tests ;
+   eteint, le test se passe comme le vrai examen. */
+function simFbOn() { return !!LSget('simfb', 1); }
 
 function startSim(n, min) {
   var mn = (typeof min === 'number' && min > 0) ? min : simMinutes(n);
@@ -1359,6 +1367,7 @@ function launch(key, title, pool, sim, exam) {
   clearTimer();
   S.key = key; S.title = title; S.pool = pool; S.idx = 0; S.score = 0; S.wrongs = [];
   S.locked = false; S.sim = !!sim; S.simSel = -1; S.paused = false;
+  S.simFb = !!sim && simFbOn();   // fixe pour toute la duree du test
   S.lastGood = false; S.shareData = null; S.runAnswered = 0; S.runCorrect = 0;
   S.answers = [];        // etat par question en entrainement (pour revenir en arriere)
   S.listenUsed = false;  // l'utilisateur a-t-il demande la lecture audio ?
@@ -1592,7 +1601,8 @@ function examBreak() {
   h += '<div class="gcard exam-break"><div class="eyebrow">Part 1 is over</div>' +
     '<h3>Part 2: Reading</h3>' +
     '<p class="fr">' + ex.nR + ' questions on grammar, vocabulary and idioms in <b>' + ex.readMin + ' minutes</b>. ' +
-    'Choose an answer, then press <b>Next</b>: you can change your choice until you move on. ' +
+    (S.simFb ? 'Choose an answer: you see at once if it is right, then press <b>Next</b>. '
+      : 'Choose an answer, then press <b>Next</b>: you can change your choice until you move on. ') +
     'The clock starts when you press the button and does not stop, as in the real test.</p>' +
     '<div class="navrow"><button class="btn" id="examGo" onclick="examStartReading()">Start Part 2</button></div></div>' +
     '<div class="navrow"><button class="btn ghost" onclick="quitQuiz()">Give up</button></div>';
@@ -1772,7 +1782,7 @@ function renderQ() {
       '<span>Question <b>' + (S.idx - base + 1) + '</b> / ' + (inL ? ex.nL : ex.nR) + '</span></div>';
   } else {
     h += '<div class="qmeta"><span>Question <b>' + (S.idx + 1) + '</b> / ' + S.pool.length + '</span>' +
-      '<span>' + (S.sim ? 'Feedback at the end' : 'Immediate feedback') + '</span></div>';
+      '<span>' + (S.sim ? (S.simFb ? 'Explanations at the end' : 'Feedback at the end') : 'Immediate feedback') + '</span></div>';
   }
 
   h += '<div class="qbox' + (isL ? ' lq' : '') + '">' + (isL ? listenCard(q) : '') +
@@ -1810,6 +1820,7 @@ function renderQ() {
 
   // Rejoue l'etat d'une question deja repondue quand on y revient.
   if (!S.sim && S.answers && S.answers[S.idx]) restoreAnswered();
+  if (S.sim && S.simFb && S.simSel >= 0) simShow();
 
   /* Lecture : l'enregistrement d'une question d'ecoute ; sinon, en lecture
      automatique, l'enonce et les choix. On la declenche apres l'affichage,
@@ -1841,7 +1852,9 @@ function pick(i) {
   var q = S.pool[S.idx];
   if (!q || (S.exam && S.exam.part === 'break')) return;
   if (S.sim) {
+    if (S.simFb && S.simSel >= 0) return;   // juste ou faux deja montre : pas de second choix
     S.simSel = i;
+    if (S.simFb) { simShow(); buzz(q.o[i] === q.c ? 10 : [18, 60, 18]); return; }
     q.o.forEach(function (o, j) {
       var el = document.getElementById('opt' + j);
       if (el) el.className = 'opt' + (j === i ? ' sel' : '');
@@ -1898,6 +1911,12 @@ function paintAnswered(picked, good) {
     if (o === q.c) el.classList.add('right');
     else if (j === picked) el.classList.add('wrong');
   });
+}
+/* Test chronometre : la bonne reponse en vert, le mauvais choix en rouge
+   (les couleurs de l'entrainement), sans explication ; choix verrouille. */
+function simShow() {
+  paintAnswered(S.simSel);
+  var nb = document.getElementById('nextBtn'); if (nb) nb.disabled = false;
 }
 function showVerdict(good, q) {
   var fb = document.getElementById('fb'); if (!fb) return;
