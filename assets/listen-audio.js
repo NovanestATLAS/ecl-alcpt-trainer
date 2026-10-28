@@ -183,12 +183,21 @@
   function stopMine() { if (cur) { var c = cur; cur = null; c.stop(); } }
   var quiet = { stop: function () { } };   // tts.js speak() without its own stop() (and its 'end' event)
   function isArr(x) { return Object.prototype.toString.call(x) === '[object Array]'; }
+  /* Website only: listening lines play one step slower than the trainer
+     asks. Play now has the former "Slower" speed, and Slower goes one step
+     below it. app.js and tts.js, shared with the Android app, are unchanged. */
+  var LISTEN_MUL = 0.8;
 
   S.on = function (n, fn) { (subs[n] = subs[n] || []).push(fn); return raw.on.apply(S, arguments); };
   S.off = function (n) { subs[n] = []; return raw.off.apply(S, arguments); };
   S.speak = function (text, opts) {
     opts = opts || {};
     var roles = opts.roles && isArr(text);
+    if (roles) {
+      var o1 = {}; for (var y in opts) if (opts.hasOwnProperty(y)) o1[y] = opts[y];
+      o1.rateMul = (opts.rateMul > 0 ? opts.rateMul : 1) * LISTEN_MUL;
+      opts = o1;
+    }
     var parts = isArr(text) ? text : [text];
     var lines = parts.map(function (t, k) { return [roles ? (opts.roles[k] === 'W' ? 'W' : 'M') : '', t]; });
     var items = roles ? plan(lines, opts.gap || 0) : null;
@@ -212,7 +221,7 @@
       return;
     }
     stopMine();
-    return raw.speak.apply(S, arguments);
+    return raw.speak.call(S, text, opts);
   };
   S.stop = function () { stopMine(); return raw.stop.apply(S, arguments); };
   S.isSpeaking = function () { return !!cur || raw.isSpeaking.apply(S, arguments); };

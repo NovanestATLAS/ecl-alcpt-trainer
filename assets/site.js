@@ -145,6 +145,16 @@
     if (html.classList.contains('slow-voice')) r = Math.min(r, 0.78);
     return Math.min(1.4, Math.max(0.6, r));
   }
+  /* listening lines (recordings, and the browser voice when a recording does
+     not play): normal is the former "Slower speech" speed, and "Slower
+     speech" goes one step below it. Any other reading keeps rate(). */
+  function listenRate() {
+    var r = 0.92;
+    try { r = parseFloat(localStorage.getItem('et_rate')) || 0.92; } catch (e) { }
+    r = Math.min(r, 0.78);
+    if (html.classList.contains('slow-voice')) r *= 0.85;
+    return Math.min(1.4, Math.max(0.6, r));
+  }
   function stopSpeak() {
     seqGen++;
     if (rec) { rec.stop(); rec = null; }
@@ -154,7 +164,7 @@
   }
   function utter(text, who) {
     var u = new SpeechSynthesisUtterance(String(text).replace(/_{2,}/g, ', blank, '));
-    u.lang = 'en-US'; u.rate = rate();
+    u.lang = 'en-US'; u.rate = who ? listenRate() : rate();
     if (!voice) voice = pickVoice();
     if (who && (!voiceM || !voiceF)) { voiceM = pickVoiceM(); voiceF = pickVoiceF(); }
     var one = !voiceM || !voiceF || voiceM === voiceF;
@@ -177,7 +187,7 @@
       var g0 = seqGen;
       if (btn) { speakingBtn = btn; btn.setAttribute('aria-pressed', 'true'); }
       var r = rec = LA.play(items, {
-        rate: rate() / LA.defRate,
+        rate: listenRate() / LA.defRate,
         onend: function () { if (rec === r) rec = null; if (btn && speakingBtn === btn) { btn.setAttribute('aria-pressed', 'false'); speakingBtn = null; } },
         onfail: function (k) { if (rec === r) rec = null; if (g0 === seqGen && synth) voiceSeq(lines.slice(k), btn, false); }
       });
@@ -645,7 +655,7 @@
       speakingBtn = btn; btn.setAttribute('aria-pressed', 'true');
       var items = q.f.map(function (u, k) { return { u: LBASE + u, g: k ? 450 : 0, k: k }; });
       var r = rec = LA.play(items, {
-        rate: 1,
+        rate: listenRate() / LA.defRate,
         onend: function () { if (rec === r) rec = null; if (speakingBtn === btn) { btn.setAttribute('aria-pressed', 'false'); speakingBtn = null; } },
         onfail: function (k) { if (rec === r) rec = null; if (g0 === seqGen && synth) voiceSeq(q.L.slice(k), btn, false); }
       });
