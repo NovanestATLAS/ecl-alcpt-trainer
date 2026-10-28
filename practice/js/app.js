@@ -1514,8 +1514,11 @@ function formsGrid(t) {
 /* Ecoute en examen : l'enregistrement une fois, puis le temps de reponse,
    puis la question suivante. EX.gen perime toute suite restee en vol. */
 var EX = { timer: null, gen: 0 };
-function examClear() { if (EX.timer) { clearInterval(EX.timer); EX.timer = null; } }
+function examClear() { if (EX.timer) { clearInterval(EX.timer); EX.timer = null; } EX.now = null; examNowBtn(false); }
 function examStop() { EX.gen++; examClear(); }
+/* bouton « Play now » : actif pendant le temps de lecture de la question */
+function examNowBtn(on) { var b = document.getElementById('lcNow'); if (b) b.disabled = !on; }
+function examPlayNow() { if (EX.now) EX.now(); }
 function examStatus(t) { var st = document.getElementById('lcSt'); if (st) st.textContent = t; }
 function examItemStart() {
   examStop();
@@ -1529,16 +1532,25 @@ function examItemStart() {
   }
   /* 7 s pour lire la question et les choix, puis l'enregistrement, puis 17 s pour repondre.
      Un message simple par etape, sans barre ni secondes qui defilent
-     (elles derangeaient la concentration) ; le temps compte quand meme. */
+     (elles derangeaient la concentration) ; le temps compte quand meme.
+     « Play now » lance l'enregistrement avant la fin des 7 s. */
   var end = nowMs() + L_READ_S * 1000;
   examStatus('Read the question.');
-  EX.timer = setInterval(function () {
-    if (gen !== EX.gen || !S.exam || S.paused || S.view !== 'quiz') { examClear(); return; }
-    if ((end - nowMs()) / 1000 > 0) return;
+  function listen() {
     examClear();
     examStatus('Listen.');
     lSay(q.L, function () { if (gen === EX.gen && !S.paused) examWindow(gen, S.exam.win); });
+  }
+  EX.timer = setInterval(function () {
+    if (gen !== EX.gen || !S.exam || S.paused || S.view !== 'quiz') { examClear(); return; }
+    if ((end - nowMs()) / 1000 > 0) return;
+    listen();
   }, 200);
+  EX.now = function () {
+    if (gen !== EX.gen || !S.exam || S.paused || S.view !== 'quiz') return;
+    listen();
+  };
+  examNowBtn(true);
 }
 function examWindow(gen, secs) {
   examClear();
@@ -1679,6 +1691,11 @@ function listenCard(q) {
            '<button class="btn ghost lc-b" id="lcSlow" onclick="lPlay(true)">' + ico('slow', 'inl') + ' Slower</button>' : '') +
       '<button class="btn ghost lc-b" id="lcRev" onclick="lReveal()"' + (open ? ' hidden' : '') + '>' +
       ico('eye', 'inl') + ' Show the text</button></div>';
+  } else if (a) {
+    /* examen : « Play now » lance l'enregistrement sans attendre la fin du
+       temps de lecture (actif seulement pendant ce temps : une seule ecoute) */
+    h += '<div class="lc-btns"><button class="btn lc-b" id="lcNow" onclick="examPlayNow()" disabled>' +
+      ico('play', 'inl') + ' Play now</button></div>';
   }
   h += '<div class="lc-tx" id="lcTx"' + (open ? '' : ' hidden') + '>' + transcriptHtml(q.L) + '</div></div>';
   return h;
