@@ -153,7 +153,7 @@
       var file = uri ? toFile(uri, 'ecl-practice-score.png') : null;
       function done(r) { if (ok) ok(r || { completed: true }); }
       if (navigator.share) {
-        var data = { title: opt.subject || 'My ECL practice test score', text: msg };
+        var data = { title: opt.subject || 'My English practice score', text: msg };
         if (file && navigator.canShare && navigator.canShare({ files: [file] })) data.files = [file];
         navigator.share(data).then(function () { done(); }, function (e) {
           if (e && e.name === 'AbortError') { done({ completed: false }); return; }
