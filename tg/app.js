@@ -423,8 +423,8 @@
     sheet.dataset.c = campaign || 'home';
     document.getElementById('goPlay').classList.toggle('hidden', IS_IOS);
     document.getElementById('sheetP').textContent = IS_IOS
-      ? 'The full trainer has 3,811 questions, 4,051 recorded listening questions and 80 timed ALCPT/ECL tests. Open it on the website (the app is for Android).'
-      : 'The full trainer has 3,811 questions, 4,051 recorded listening questions and 80 timed ALCPT/ECL tests. Free on Android (works offline) and on the website.';
+      ? 'The full trainer has 4,309 questions, 5,037 recorded listening questions and 80 timed practice sets. Open it on the website (the app is for Android).'
+      : 'The full trainer has 4,309 questions, 5,037 recorded listening questions and 80 timed practice sets. Free on Android (works offline) and on the website.';
     sheet.classList.remove('hidden'); sheetBg.classList.remove('hidden');
     void sheet.offsetWidth;
     sheet.classList.add('open'); sheetBg.classList.add('open');

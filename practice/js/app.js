@@ -1116,23 +1116,23 @@ VIEWS.test = function () {
     big2("startBank('t_mod')", 'board', 'Module test',
       'Graded questions' + (best.t_mod !== undefined ? ', record ' + best.t_mod + '%' : '') +
       (r && r.i > 0 ? ', resume at Q' + (r.i + 1) : ''), MODULE_TEST.length) +
-    big2("go('sim')", 'clock', 'Practice test (timed)', 'ECL and ALCPT exams, quick timed tests') +
+    big2("go('sim')", 'clock', 'Timed practice', 'Full practice sets and quick timed tests') +
     '</div>';
   h += '<div class="note">The module test resumes where you left off. ' +
-    'The practice tests are always taken in one sitting, as in the real exam.</div>';
+    'The timed practice sets are always taken in one sitting.</div>';
   root.innerHTML = L(h + tabbar('revise'));
 };
 
 VIEWS.sim = function () {
-  var h = bar('Practice test (timed)');
+  var h = bar('Timed practice');
   h += '<label class="switch" style="margin:0 0 6px"><input type="checkbox"' + (simFbOn() ? ' checked' : '') +
     ' onchange="LSset(\'simfb\',this.checked?1:0);VIEWS.sim()"> Show right or wrong after each answer</label>';
   /* Examens complets (v5.9.26) : ecoute puis lecture, minutage reel. */
   if (LISTEN.length) {
     var eb = LSget('exam_best', {});
-    h += '<div class="secttl">Full tests, real timing</div><div class="bigmenu sm">' +
-      big2("go('exam','ae')", 'headset', 'ALCPT/ECL tests',
-        (formsOn() ? FORMS_N + ' tests &middot; ' : '') + '50 listening + 50 reading &middot; ' + EXAMS.ae.testMin + ' min' +
+    h += '<div class="secttl">Full timed sets</div><div class="bigmenu sm">' +
+      big2("go('exam','ae')", 'headset', 'Full practice sets',
+        (formsOn() ? FORMS_N + ' sets &middot; ' : '') + '50 listening + 50 reading &middot; ' + EXAMS.ae.testMin + ' min' +
         (eb.ae !== undefined ? ' &middot; best ' + eb.ae + '%' : '')) +
       '</div><div class="secttl">Quick timed tests</div>';
   }
@@ -1154,16 +1154,16 @@ VIEWS.sim = function () {
 /* ============================ HUB : ECOUTE (v5.9.26) ===================== */
 VIEWS.listen = function () {
   var h = bar('Listening');
-  h += '<div class="note">' + LISTEN.length + ' recordings in American English, with a man\'s voice and a woman\'s voice, ' +
-    'as in the ECL and the ALCPT. Read the choices, then press <b>Play</b>; with <b>Auto</b> on, each recording plays as soon as its question appears. ' +
+  h += '<div class="note">' + LISTEN.length + ' recordings in American English, with a man\'s voice and a woman\'s voice. ' +
+    'Read the choices, then press <b>Play</b>; with <b>Auto</b> on, each recording plays as soon as its question appears. ' +
     'Replay it or slow it down whenever you need. After your answer, you see the text and the explanation, and you can tap a word to translate it.</div>';
   h += '<div class="bigmenu sm">' +
     big2("quickListen()", 'zap', 'Quick listening', quickN() + ' random recordings') +
     big2("startAll('listen','Listening - full set')", 'target', 'Full set', 'All the recordings, in a new order', LISTEN.length) +
     '</div><div class="secttl">By type</div>';
   ['s', 'r', 'd', 'c', 'k'].forEach(function (k) { var b = BANKS['l_' + k]; if (b) h += bankEntry(b, LKIND_DESC[k]); });
-  h += '<div class="secttl">Timed exams</div>' +
-    entry("go('sim')", 'ECL and ALCPT exams', 'Listening, then reading, with the real timing', '');
+  h += '<div class="secttl">Timed practice</div>' +
+    entry("go('sim')", 'Full practice sets', 'Listening, then reading, timed', '');
   h += '<div class="note">The man\'s and the woman\'s voices can be changed in <b>Settings &rsaquo; Audio</b>.</div>';
   root.innerHTML = L(h + tabbar('revise'));
 };
@@ -1180,7 +1180,7 @@ function quickListen() { launch(null, 'Quick listening', makePool(LISTEN).slice(
    a la fin, le score par partie et toutes les fautes avec leur explication
    et le texte entendu.                                                     */
 var EXAMS = {
-  ae: { t: 'ae', name: 'ALCPT/ECL', title: 'ALCPT/ECL tests', nL: 50, nR: 50, readMin: 40, win: 17, listenMin: 25, testMin: 65, realMin: 75 }
+  ae: { t: 'ae', name: 'Practice set', title: 'Full practice sets', nL: 50, nR: 50, readMin: 40, win: 17, listenMin: 25, testMin: 65, realMin: 75 }
 };
 /* anciens liens (go('exam','ecl'), go('exam','alcpt')) : la meme serie */
 EXAMS.ecl = EXAMS.ae; EXAMS.alcpt = EXAMS.ae;
@@ -1190,14 +1190,14 @@ var L_READ_S = 7;
 VIEWS.exam = function (t) {
   /* directement les numeros des tests (pas de long texte de presentation) */
   var c = EXAMS[t] || EXAMS.ae;
-  var h = bar(c.name + ' tests');
+  var h = bar(c.title);
   if (!audioOK()) h += '<div class="banner bad">No audio on this device: in the listening part the text of each recording is shown instead.</div>';
   if (formsOn()) {
     var nx = formNext(c.t);
-    h += '<div class="navrow"><button class="btn" id="examStart" onclick="startExam(\'' + c.t + '\',' + nx + ')">Start Test ' + (nx + 1) + '</button></div>';
+    h += '<div class="navrow"><button class="btn" id="examStart" onclick="startExam(\'' + c.t + '\',' + nx + ')">Start set ' + (nx + 1) + '</button></div>';
     h += formsGrid(c.t);
   } else {
-    h += '<div class="navrow"><button class="btn" id="examStart" onclick="startExam(\'' + c.t + '\')">Start the test</button></div>';
+    h += '<div class="navrow"><button class="btn" id="examStart" onclick="startExam(\'' + c.t + '\')">Start the set</button></div>';
   }
   root.innerHTML = L(h + tabbar('revise'));
 };
@@ -1334,7 +1334,7 @@ function simFbOn() { return !!LSget('simfb', 1); }
 
 function startSim(n, min) {
   var mn = (typeof min === 'number' && min > 0) ? min : simMinutes(n);
-  launch(null, 'ECL practice test - ' + n + ' questions', makePool(allQuestions()).slice(0, n), true);
+  launch(null, 'Timed practice - ' + n + ' questions', makePool(allQuestions()).slice(0, n), true);
   /* le chronometre s'affiche tout de suite (avant : apres une seconde) */
   S.timeLeft = mn * 60; S.timerId = setInterval(tick, 1000); paintTimer();
 }
@@ -1494,7 +1494,7 @@ function startExam(t, f) {
   var Lp, Rp, title = c.title, form = (typeof f === 'number' && formsOn()) ? f : undefined;
   if (form !== undefined) {
     var fp = formPool(c.t, form, c.nL, c.nR);
-    Lp = fp.L; Rp = fp.R; title = c.name + ' Test ' + (form + 1);
+    Lp = fp.L; Rp = fp.R; title = c.name + ' ' + (form + 1);
     formMark(c.t, form);
   } else { Lp = examListening(c.nL); Rp = examReading(c.nR); }
   var ex = { t: c.t, name: c.name, nL: Lp.length, nR: Rp.length, readMin: c.readMin, win: c.win,
@@ -1505,11 +1505,11 @@ function startExam(t, f) {
 }
 /* grille des 50 tests */
 function formsGrid(t) {
-  var log = formLog()[t] || {}, nx = formNext(t), h = '<div class="secttl">Tests 1 to ' + FORMS_N + '</div>' +
+  var log = formLog()[t] || {}, nx = formNext(t), h = '<div class="secttl">Sets 1 to ' + FORMS_N + '</div>' +
     '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px">';
   for (var f = 0; f < FORMS_N; f++) {
     var r = log[f], done = r && r.p !== undefined, cur = f === nx;
-    h += '<button onclick="startExam(\'' + t + '\',' + f + ')" aria-label="Test ' + (f + 1) + '" style="' +
+    h += '<button onclick="startExam(\'' + t + '\',' + f + ')" aria-label="Set ' + (f + 1) + '" style="' +
       'min-height:54px;border-radius:12px;font:inherit;cursor:pointer;padding:4px 2px;line-height:1.15;' +
       'background:' + (done ? 'var(--card2)' : 'var(--card)') + ';color:var(--ink);' +
       'border:' + (cur ? '2px solid var(--gold)' : '1px solid var(--line)') + '">' +
@@ -2041,11 +2041,11 @@ function examReport() {
   var pl = pct(sc.L, ex.nL), pr = pct(sc.R, ex.nR), tip = '';
   if (ex.nL && ex.nR && pl + 10 <= pr) tip = ' Listening is your weaker part: practice it in <b>Listening</b>, then take the exam again.';
   else if (ex.nL && ex.nR && pr + 10 <= pl) tip = ' Reading is your weaker part: work on grammar and vocabulary, then take the exam again.';
-  return '<div class="gcard exam-rep"><h3>' + esc(ex.name) + ' exam: score by part</h3>' +
+  return '<div class="gcard exam-rep"><h3>Score by part</h3>' +
     (ex.nL ? row('Part 1 &middot; Listening', sc.L, ex.nL) : '') +
     (ex.nR ? row('Part 2 &middot; Reading', sc.R, ex.nR) : '') +
     '<p class="fr">Time: about ' + mins + ' minute' + (mins > 1 ? 's' : '') + '. ' +
-    'A practice result in percent, not an official ' + esc(ex.name) + ' score.' + tip + '</p></div>';
+    'A practice result in percent, not an official ECL or ALCPT score.' + tip + '</p></div>';
 }
 function renderResult(timeout) {
   var n = S.pool.length, p = pct(S.score, n), v;
@@ -2288,7 +2288,7 @@ function shareApi() {
 }
 function shareAvailable() { return !!shareApi(); }
 function shareText(d) {
-  return 'I scored ' + d.score + '/' + d.total + ' on an ' + (d.kind || 'ECL') + ' practice test. ' +
+  return 'I scored ' + d.score + '/' + d.total + ' on a timed English practice set. ' +
     '1,900+ explained questions, read aloud, works offline: ' + SHARE_URL;
 }
 var shareBusy = false;
@@ -2308,7 +2308,7 @@ function shareScore() {
   scoreCard(d, function (uri) {
     var opt = {
       message: shareText(d),
-      subject: 'My ' + (d.kind || 'ECL') + ' practice test score',   // sert aussi de nom au fichier image
+      subject: 'My English practice score',   // sert aussi de nom au fichier image
       chooserTitle: 'Share your score'
     };
     if (uri) opt.files = [uri];
@@ -2388,7 +2388,7 @@ function drawCard(d, logo) {
   /* Libelle */
   g.textAlign = 'center';
   g.fillStyle = MUT; g.font = '600 30px ' + SANS;
-  cardSpacing(g, '8px'); g.fillText((d.kind || 'ECL') + ' PRACTICE TEST', cx, 336); cardSpacing(g, '0px');
+  cardSpacing(g, '8px'); g.fillText('ENGLISH PRACTICE', cx, 336); cardSpacing(g, '0px');
 
   /* Anneau de score */
   var cy = 575, R = 180;
@@ -3047,7 +3047,6 @@ var QFIX = [
   ["GRAMMAR_PLUS", "I'd rather you _______ mention this to anyone.", {"o": ["didn't", "don't", "won't", "hadn't"]}],
   ["MODULE_TEST", "Surprisingly, the people of that country ______ any gum disease.", {"o": ["doesn't have", "don't have", "hasn't", "isn't having"]}],
   ["MODULE_TEST", "Just as I was walking into the classroom, the bell ______.", {"o": ["ring", "ringing", "rang", "has rung"]}],
-  ["MODULE_TEST", "While you are taking the ECL tomorrow, I ______ your papers.", {"o": ["read", "was reading", "will be reading", "have read"]}],
   ["MODULE_TEST", "We ______ the flight tickets yet.", {"o": ["don't book", "hasn't booked", "have booked", "haven't booked"]}],
   ["VOCAB_AM", "Would you like a cookie with your coffee? A “cookie” is:", {"o": ["a small, flat, sweet baked treat", "a slice of bread", "a candy bar", "a cracker with cheese"], "e": "Cookie (US) = biscuit (UK). In American English, a *biscuit* is a small soft bread roll."}],
   ["VOCAB_AM", "“To relieve” a unit means:", {"e": "To relieve a unit = to replace it with another unit in its position, so that it can rest or move elsewhere."}],
@@ -3069,7 +3068,6 @@ var QFIX = [
   ["EXPRESS_QCM", "While I was driving to work this morning, I _____ to my new Celine Dion Cassette.", {"q": "When the alarm went off, the soldiers ______.", "o": ["sleep", "were sleeping", "are sleeping", "sleeping"], "a": 1, "e": "An action in progress (*were sleeping*) interrupted by a short action in the simple past (*went off*)."}],
   ["EXPRESS_QCM", "Last week, he promised me that he _____ attend yesterday's meeting.", {"e": "Reported speech: the reporting verb *promised* is in the past, so *will* becomes *would*."}],
   ["EXPRESS_QCM", "There was a fire _____ the library yesterday.", {"e": "Use *in* for something inside a building: in the library, in the dorms, in the hotel."}],
-  ["EXPRESS_QCM", "They will not qualify him because his ECL is still _____ 80.", {"e": "A number can be *under* (below) another number: his ECL score is under 80. The temperature is below zero."}],
   ["EXPRESS_QCM", "If I were a person who _____ a million dollars, I would retire immediately.", {"e": "The unreal part is having a million dollars, so the verb after *who* is in the past too: if I were a person who *had* a million dollars, I would retire."}],
   ["EXPRESS_QCM", "Blake is 17 years old. Neil is 18 years old. Craig is 16 years old.", {"o": ["Neil is younger than Blake.", "Blake is older than Neil.", "Craig is younger than Neil.", "Craig is older than Blake."], "a": 2, "e": "Craig (16) is younger than Neil (18). Neil is the oldest and Craig is the youngest."}],
   ["EXPRESS_QCM", "That car is relatively inexpensive. _____, I think you should buy it.", {"e": "*Therefore* is a linking word that introduces a result. At the start of a sentence it is followed by a comma: You are studying a lot. Therefore, you should do well on the next test."}],
@@ -3081,7 +3079,6 @@ var QFIX = [
   ["EXPRESS_QCM", "The children are playing _____ the street again.", {"o": ["in", "at", "up", "through"], "e": "*In the street* = in the area of the road. *At* is used for a point, not for an area."}],
   ["EXPRESS_QCM", "He makes a living _____ recycling old newspaper and magazines.", {"q": "He makes a living _____ recycling old newspapers and magazines.", "e": "*By* + -ing tells how someone does something: he makes a living by recycling. She improved her English by reading every day."}],
   ["EXPRESS_QCM", "I heard some bad news _____ the radio this morning.", {"e": "*On the radio*, *on TV*, *on the Internet*: use *on* for the media."}],
-  ["EXPRESS_QCM", "The next ECL will _____ easy.", {"e": "After a modal (*will, might, should*...), use the base form of the verb: *will be*."}],
   ["EXPRESS_QCM", "The escaped prisoner _____ last night near the airport.", {"e": "*Last night* calls for the past, and the prisoner did not catch anyone: he *was caught* (passive)."}],
   ["EXPRESS_QCM", "Yesterday, the news about the earthquakes in Chile and Peru _____bad.", {"q": "Yesterday, the news about the earthquakes in Chile and Peru _____ bad.", "e": "*Yesterday* calls for the past, and *news* is singular: the news *was* bad."}],
   ["EXPRESS_QCM", "If I finish my homework early, I _____ to the gym and work out.", {"e": "First conditional with *might*: a possible result in the future (*will* would make it certain)."}],
