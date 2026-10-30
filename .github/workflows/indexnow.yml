@@ -1,0 +1,28 @@
+# Tells Bing, Yandex and the other IndexNow search engines which pages changed,
+# a few minutes after each push to main (once GitHub Pages has published them).
+# Free, no account, no secret: the key is the public file at the site root.
+# Google does not use IndexNow; it reads the sitemap (submit it in Search Console).
+name: IndexNow
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**.html'
+      - 'sitemap.xml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Wait for GitHub Pages to publish the new pages
+        run: sleep 150
+      - name: Send the changed pages to IndexNow
+        run: python3 tools/indexnow/ping.py "${{ github.event.before }}" "${{ github.sha }}"
