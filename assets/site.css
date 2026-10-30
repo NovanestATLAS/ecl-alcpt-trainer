@@ -678,3 +678,24 @@ html.no-voice .qc-hint::before{content:"Audio is not available in this browser. 
 .cf-status{margin:0;font-weight:600}
 .cf-status.ok{color:var(--ok)}
 .cf-status.bad{color:var(--bad)}
+
+/* ------------------------- languages (English, Arabic, French) ------------------------- */
+.foot-langs{display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;margin:30px 0 0}
+.foot-langs span{color:#9FB0C6}
+.foot-langs a[aria-current]{text-decoration:underline;text-underline-offset:3px}
+.langs-line a{font-weight:600}
+[lang="ar"] body,body[lang="ar"]{font-family:'Barlow',system-ui,-apple-system,'Segoe UI',Tahoma,'Noto Sans Arabic','Noto Naskh Arabic',sans-serif}
+html[lang="ar"] *{letter-spacing:0 !important}
+html[lang="ar"] .prose,html[lang="ar"] .dek{line-height:1.85}
+html[lang="ar"] h1,html[lang="ar"] h2,html[lang="ar"] h3{line-height:1.4}
+[dir="rtl"] .skip{left:auto;right:-999px}
+[dir="rtl"] .skip:focus{right:12px}
+[dir="rtl"] .nav{margin-left:0;margin-right:auto}
+[dir="rtl"] .nav .btn{margin-left:0;margin-right:10px}
+[dir="rtl"] .menu-btn{margin-left:0;margin-right:auto}
+[dir="rtl"] .prose ul,[dir="rtl"] .prose ol{padding-left:0;padding-right:1.3em}
+[dir="rtl"] .prose th,[dir="rtl"] .prose td{text-align:right;padding:10px 0 10px 12px}
+[dir="rtl"] .prose blockquote{padding:4px 18px 4px 0;border-left:0;border-right:4px solid var(--brass)}
+[dir="rtl"] .note-box{border-left:1px solid var(--rule);border-right:4px solid var(--brass);border-radius:12px 0 0 12px}
+[dir="rtl"] .sources ul{padding-left:0;padding-right:1.2em}
+@media (max-width:900px){[dir="rtl"] .nav .btn{margin:8px 0 0}}
