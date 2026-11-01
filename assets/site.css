@@ -318,7 +318,7 @@ ins.adsbygoogle[data-ad-status="unfilled"]{display:none!important}
   --c1:#2F6FDE;--c1-ink:#1D4FA8;--c1-soft:#E9F0FD;  --c2:#1E8657;--c2-ink:#166B45;--c2-soft:#E3F3EA;
   --c3:#C98A12;--c3-ink:#87590A;--c3-soft:#FBF0D9;  --c4:#C0392B;--c4-ink:#9D2C20;--c4-soft:#FBE9E7;
   --c5:#7B4FA2;--c5-ink:#62398A;--c5-soft:#F2EAF9;  --c6:#1D7A70;--c6-ink:#14625A;--c6-soft:#E0F2EF;
-  --c7:#C2571A;--c7-ink:#99410F;--c7-soft:#FCEBDD;  --on-th:#FFFFFF;
+  --c7:#BF5518;--c7-ink:#99410F;--c7-soft:#FCEBDD;  --on-th:#FFFFFF;
 }
 .c1{--c:var(--c1);--c-ink:var(--c1-ink);--c-soft:var(--c1-soft)}
 .c2{--c:var(--c2);--c-ink:var(--c2-ink);--c-soft:var(--c2-soft)}
@@ -326,6 +326,8 @@ ins.adsbygoogle[data-ad-status="unfilled"]{display:none!important}
 .c4{--c:var(--c4);--c-ink:var(--c4-ink);--c-soft:var(--c4-soft)}
 .c5{--c:var(--c5);--c-ink:var(--c5-ink);--c-soft:var(--c5-soft)}
 .c6{--c:var(--c6);--c-ink:var(--c6-ink);--c-soft:var(--c6-soft)}
+/* gold is too light for white text: navy text on gold badges (WCAG AA in both themes) */
+.lbadge.c3,.pb.c3,.vchip.c3 span{color:#0A1830}
 .th-grammar{--th:var(--c1);--th-ink:var(--c1-ink);--th-soft:var(--c1-soft)}
 .th-vocab{--th:var(--c6);--th-ink:var(--c6-ink);--th-soft:var(--c6-soft)}
 .th-phrasal{--th:var(--c7);--th-ink:var(--c7-ink);--th-soft:var(--c7-soft)}

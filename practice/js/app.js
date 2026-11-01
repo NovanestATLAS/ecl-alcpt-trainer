@@ -879,7 +879,7 @@ VIEWS.home = function () {
   /* Bandeau compact : le logo et le nom tiennent sur une seule ligne,
      au lieu du grand bloc centre qui occupait le tiers de l'ecran. */
   var h = '<header class="topbrand">' +
-    '<img class="tb-mark" src="img/logo.png" alt="">' +
+    '<img class="tb-mark" src="img/logo.webp" alt="">' +
     '<div class="tb-txt"><span class="tb-name">ECL TRAINER</span>' +
     '<span class="tb-sub">American English</span></div>' +
     '<button class="tb-set" onclick="goTab(\'settings\')" aria-label="Settings">' +
@@ -3114,7 +3114,7 @@ function afterLoad() {
   goTab('home');
 }
 function boot() {
-  root.innerHTML = L('<div class="boot"><img class="brandmark boot-mark" src="img/logo.png" alt="">' +
+  root.innerHTML = L('<div class="boot"><img class="brandmark boot-mark" src="img/logo.webp" alt="">' +
     '<p>Loading\u2026</p></div>');
   applySkin();
   if (window.Speech) {
