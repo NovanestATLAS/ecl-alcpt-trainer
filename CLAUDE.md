@@ -19,8 +19,9 @@ Permanent rules for every session.
   apps or books. Never claim "real", "official" or "actual test" questions.
 - Keep the disclaimer: not affiliated with DLIELC, the U.S. Department of Defense or any government. No seals,
   insignia or government-style design.
-- `ads.txt` must keep the AdSense line exactly. Ads never sit inside a question, between a question and its
-  answers, or next to answer buttons.
+- `ads.txt` must keep the AdSense line exactly. `app-ads.txt` holds the same line so AdMob can verify the ECL app
+  (com.ecltrainer.english) when its Google Play listing names this site as the developer website. Ads never sit
+  inside a question, between a question and its answers, or next to answer buttons.
 
 ## SEO
 - One `<h1>`, no skipped heading levels, title ≤ 60 characters, meta description ≤ 160, absolute self canonical,
