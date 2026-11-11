@@ -23,6 +23,10 @@ Permanent rules for every session.
   (com.ecltrainer.english) when its Google Play listing names this site as the developer website. Ads never sit
   inside a question, between a question and its answers, or next to answer buttons.
 
+## Question counts
+- Every count shown on a page comes from the question banks. After changing a bank or a count, run
+  `python3 tools/site-counts.py` (add `--fix` to rewrite stale numbers); it must print "All counts match."
+
 ## SEO
 - One `<h1>`, no skipped heading levels, title ≤ 60 characters, meta description ≤ 160, absolute self canonical,
   `hreflang` en/fr/ar/x-default on pages that have translations, BreadcrumbList on inner pages, no fake ratings.

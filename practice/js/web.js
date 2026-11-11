@@ -4,7 +4,6 @@
      . links such as practice/?go=grammar or ?set=g_x_Modals open a section
      . keyboard: A-D or 1-4 to answer, Enter for next, L to listen
      . texts that only made sense on Android are adapted
-     . "Get the app" card, slim banner and an occasional end-of-set prompt
      . AdSense units in the right column and on the results screen, once
        their numbers are filled in assets/config.js
    ========================================================================== */
@@ -68,30 +67,6 @@
   setInterval(anchorAd, 1200);
   g.addEventListener('resize', anchorAd);
 
-  /* --------------------------- slim app banner --------------------------- */
-  var banner = doc.getElementById('appBanner');
-  if (banner && !isIOS && ls('banner_hidden') !== '1') banner.hidden = false;
-  var bx = banner && banner.querySelector('button');
-  if (bx) bx.addEventListener('click', function () { banner.hidden = true; ls('banner_hidden', '1'); });
-
-  /* ------------------------ end-of-set app prompt ------------------------ */
-  var dlg = doc.getElementById('promo');
-  W.onSetEnd = function () {
-    if (!dlg || isIOS) return;
-    var sets = (parseInt(ls('sets'), 10) || 0) + 1;
-    ls('sets', String(sets));
-    var last = parseInt(ls('promo_at'), 10) || 0, now = Date.now();
-    if (sets < 2 || now - last < 3 * 24 * 3600 * 1000) return;
-    ls('promo_at', String(now));
-    setTimeout(function () {
-      if (g.S && g.S.view !== 'result') return;
-      try { if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', ''); } catch (e) { }
-    }, 600);
-  };
-  if (dlg) dlg.addEventListener('click', function (e) {
-    if (e.target === dlg || e.target.closest('[data-close]')) { try { dlg.close(); } catch (x) { dlg.removeAttribute('open'); } }
-  });
-
   /* ---------------------------- privacy link ----------------------------- */
   doc.addEventListener('click', function (e) {
     var t = e.target.closest && e.target.closest('[data-privacy-choices]');
@@ -146,10 +121,6 @@
       c.setAttribute('data-w', '1');
       var p = c.querySelector('p.fr');
       if (p) p.innerHTML = p.innerHTML.replace('ECL English Trainer, ', 'ECL &amp; ALCPT English Trainer, website edition, ');
-      var a = doc.createElement('p'); a.className = 'fr';
-      a.innerHTML = 'Also available as a free Android app that works offline: ' +
-        '<a data-google-vignette="false" href="' + W.playLink('settings') + '" target="_blank" rel="noopener">Google Play</a>.';
-      c.appendChild(a);
     });
   }
 
