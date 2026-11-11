@@ -1,0 +1,61 @@
+<section class="adv-sec" id="inquiry" style="padding-bottom:56px">
+  <div class="wrap">
+    <h2>Discuss an advertising partnership</h2>
+    <p class="adv-intro">Fill in the form and we will get back to you at the email address you give. Fields marked with * are required.</p>
+    <form class="cform adv-form" id="adv-form" novalidate>
+      <div class="cf-row">
+        <label class="cf-f"><span>Full name *</span><input id="adv-name" name="name" type="text" autocomplete="name" maxlength="80" required></label>
+        <label class="cf-f"><span>Company or organization *</span><input id="adv-company" name="company" type="text" autocomplete="organization" maxlength="120" required></label>
+      </div>
+      <div class="cf-row">
+        <label class="cf-f"><span>Business email address *</span><input id="adv-email" name="email" type="email" autocomplete="email" inputmode="email" maxlength="120" required></label>
+        <label class="cf-f"><span>Company website or product URL <i>(optional)</i></span><input id="adv-website" name="website" type="text" inputmode="url" autocomplete="url" maxlength="200" placeholder="https://"></label>
+      </div>
+      <label class="cf-f"><span>Type of business *</span><select id="adv-btype" name="btype" required>
+        <option value="">Choose one</option>
+        <option>English language school</option>
+        <option>Online English course</option>
+        <option>Educational application</option>
+        <option>Examination preparation service</option>
+        <option>Publisher or educational book provider</option>
+        <option>E-learning platform</option>
+        <option>Training institution</option>
+        <option>Technology or productivity service</option>
+        <option>Other</option>
+      </select></label>
+      <fieldset><legend>Advertising format you are interested in * <i>(choose one or more)</i></legend>
+        <div class="adv-checks">
+          <label><input type="checkbox" name="formats" value="Website banner"> Website banner</label>
+          <label><input type="checkbox" name="formats" value="Sponsored content"> Sponsored content</label>
+          <label><input type="checkbox" name="formats" value="Featured educational partner"> Featured educational partner</label>
+          <label><input type="checkbox" name="formats" value="Android application promotion"> Android application promotion</label>
+          <label><input type="checkbox" name="formats" value="Other"> Other</label>
+        </div>
+      </fieldset>
+      <div class="cf-row">
+        <label class="cf-f"><span>Preferred campaign duration</span><select name="duration">
+          <option>Open to discussion</option>
+          <option>One week</option>
+          <option>Two weeks</option>
+          <option>One month</option>
+          <option>Three months or longer</option>
+        </select></label>
+        <label class="cf-f"><span>Estimated advertising budget <i>(optional)</i></span><select name="budget">
+          <option>Prefer to discuss</option>
+          <option>Under $50</option>
+          <option>$50 to $100</option>
+          <option>$100 to $250</option>
+          <option>Above $250</option>
+        </select></label>
+      </div>
+      <label class="cf-f"><span>Message / advertising proposal *</span><textarea id="adv-message" name="message" rows="7" maxlength="3000" required></textarea></label>
+      <div class="adv-agree"><input id="adv-privacy" type="checkbox" name="privacy" required><label for="adv-privacy">I have read the <a href="#privacy-note">privacy notice</a> below. *</label></div>
+      <input class="cf-hp" type="checkbox" name="botcheck" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <div class="cf-send"><button class="btn btn-navy btn-lg" type="submit">Submit Advertising Inquiry</button><p class="cf-status" role="status" aria-live="polite"></p></div>
+    </form>
+    <div id="privacy-note" class="adv-policy">
+      <h3 style="margin:0 0 6px">Privacy notice for advertising inquiries</h3>
+      <p style="margin:0">What you type in this form is sent by Web3Forms, an email delivery service, to our advertising inbox. We use it only to read and answer your inquiry and to discuss a possible partnership. We do not sell it or share it, and we do not add it to a mailing list. Web3Forms processes it under its own <a href="https://web3forms.com/privacy" rel="noopener">privacy policy</a>. Please do not include sensitive personal information. More in our <a href="../privacy.html#advertiser-inquiries">privacy policy</a>.</p>
+    </div>
+  </div>
+</section>

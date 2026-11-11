@@ -18,10 +18,6 @@
                    https://web3forms.com (free). Messages go to the email
                    address the key was created with; that address never
                    appears in the site. Leave '' to switch the form off.
-   advertiseKey  : access key of the advertiser inquiry form (advertise-with-us/),
-                   created at https://web3forms.com with the advertising
-                   inbox as the address. Same rules as contactKey: the address
-                   never appears in the site. Leave '' to switch the form off.
    ========================================================================== */
 window.ECL_CONFIG = {
   adsenseClient: 'ca-pub-3709043100488694',
@@ -31,6 +27,5 @@ window.ECL_CONFIG = {
     article: ''
   },
   ga4: 'G-N7NPLR56K1',
-  contactKey: 'd5dd4775-3f49-4699-8e24-f912ad749d75',
-  advertiseKey: ''
+  contactKey: 'd5dd4775-3f49-4699-8e24-f912ad749d75'
 };
