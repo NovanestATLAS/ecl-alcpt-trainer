@@ -99,7 +99,7 @@ p{margin:0 0 1em}
 .menu-btn{display:none;margin-left:auto;background:none;border:1px solid var(--rule);border-radius:10px;
   width:44px;height:44px;color:var(--ink);cursor:pointer}
 .menu-btn svg{width:22px;height:22px}
-@media (max-width:900px){
+@media (max-width:1139px){
   .site-header .wrap{height:60px;gap:12px}
   .brand span{font-size:1.06rem;white-space:normal}
   .brand .nw{white-space:nowrap}
@@ -620,7 +620,7 @@ html.no-voice .qc-hint::before{content:"Audio is not available in this browser. 
 .correction .qc-exp b{color:var(--ink)}
 .qc-bar{position:sticky;top:68px;z-index:20;display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin:0 0 1em;padding:10px 14px;
   background:color-mix(in srgb,var(--sheet) 94%,transparent);backdrop-filter:blur(6px);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow)}
-@media (max-width:900px){.qc-bar{top:60px}}
+@media (max-width:1139px){.qc-bar{top:60px}}
 .qc-prog{font-weight:600;color:var(--ink-2)}
 .qc-prog b{font:700 1.15rem var(--display);color:var(--ink)}
 .qc-clock{margin-left:auto;font:700 1.35rem/1 var(--display);font-variant-numeric:tabular-nums;color:var(--ink)}
@@ -700,4 +700,12 @@ html[lang="ar"] h1,html[lang="ar"] h2,html[lang="ar"] h3{line-height:1.4}
 [dir="rtl"] .prose blockquote{padding:4px 18px 4px 0;border-left:0;border-right:4px solid var(--brass)}
 [dir="rtl"] .note-box{border-left:1px solid var(--rule);border-right:4px solid var(--brass);border-radius:12px 0 0 12px}
 [dir="rtl"] .sources ul{padding-left:0;padding-right:1.2em}
-@media (max-width:900px){[dir="rtl"] .nav .btn{margin:8px 0 0}}
+@media (max-width:1139px){[dir="rtl"] .nav .btn{margin:8px 0 0}}
+
+/* ---------------------- "Advertise With Us" nav link ---------------------- */
+.nav a.nav-adv{white-space:nowrap;border:1.5px solid var(--brass);color:var(--brass-ink);font-weight:600;padding:6px 12px;margin-left:6px}
+.nav a.nav-adv:hover{background:var(--brass-soft)}
+.nav a.nav-adv[aria-current="page"]{background:var(--brass-soft)}
+@media (max-width:1139px){.nav a.nav-adv{margin:8px 0 0;text-align:center}}
+/* the desktop header has no room for the full label: show "Advertise" (the phone menu and the footer say "Advertise With Us") */
+@media (min-width:1140px){.nav a.nav-adv .adv-x{display:none}}

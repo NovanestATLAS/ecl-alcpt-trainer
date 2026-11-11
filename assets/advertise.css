@@ -1,0 +1,64 @@
+/* advertise.css - the "Advertise With Us" page only (advertise-with-us/). Uses the site's colour variables. */
+.adv-hero{padding:44px 0 36px;background:linear-gradient(180deg,var(--sheet-2),var(--paper));border-bottom:1px solid var(--rule)}
+.adv-hero .eyebrow{display:inline-block;font:700 .78rem/1.3 var(--text);letter-spacing:.07em;text-transform:uppercase;color:var(--brass-ink);margin-bottom:10px}
+.adv-hero h1{max-width:20ch;margin:0 0 14px}
+.adv-hero .lede{max-width:46rem}
+.adv-cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}
+.adv-sec{padding:44px 0 4px}
+.adv-sec>.wrap>h2{margin:0 0 8px}
+.adv-sec>.wrap>.adv-intro{max-width:46rem;color:var(--ink-2);margin-bottom:22px}
+.adv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin:0;padding:0;list-style:none}
+.adv-card{background:var(--sheet);border:1px solid var(--rule);border-radius:14px;padding:18px 20px}
+.adv-card h3{margin:0 0 6px;font-size:1.12rem}
+.adv-card p{margin:0;color:var(--ink-2);font-size:.97rem}
+.adv-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin:0 0 18px;padding:0;list-style:none}
+.adv-stat{background:var(--navy);color:var(--on-navy);border-radius:14px;padding:18px 20px}
+.adv-stat b{display:block;font:700 2.1rem/1.05 var(--display)}
+.adv-stat span{color:var(--navy-mut);font-size:.95rem}
+.adv-note{font-size:.93rem;color:var(--ink-2);max-width:46rem}
+.adv-chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0;padding:0;list-style:none}
+.adv-chips li{background:var(--sheet);border:1px solid var(--rule);border-radius:999px;padding:5px 14px;font-size:.95rem;margin:0}
+.fmt{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:28px;align-items:center;padding:22px 0;border-top:1px solid var(--rule)}
+.fmt:first-of-type{border-top:0}
+.fmt h3{margin:0 0 6px}
+.fmt p{margin:0;color:var(--ink-2)}
+@media (max-width:760px){.fmt{grid-template-columns:1fr;gap:14px}}
+/* illustrations: drawn with CSS, clearly labelled as examples */
+.mock{position:relative;border:1px dashed var(--rule);border-radius:14px;background:var(--sheet-2);padding:16px;overflow:hidden}
+.mock-tag{display:block;font:600 .74rem/1.3 var(--text);letter-spacing:.05em;text-transform:uppercase;color:var(--ink-2);margin-bottom:10px}
+.m-line{height:9px;border-radius:5px;background:var(--rule);margin:7px 0}
+.m-line.w60{width:60%}.m-line.w80{width:80%}.m-line.w40{width:40%}
+.m-ad{display:flex;align-items:center;gap:12px;border:1.5px solid var(--brass);border-radius:10px;background:var(--sheet);padding:10px 14px}
+.m-ad.banner{min-height:56px;justify-content:space-between}
+.m-logo{flex:none;width:36px;height:36px;border-radius:9px;background:var(--navy)}
+.m-copy{flex:1;min-width:0}
+.m-copy .m-line{margin:5px 0}
+.m-btn{flex:none;border-radius:8px;background:var(--brass);width:76px;height:26px}
+.m-label{font:700 .68rem/1 var(--text);letter-spacing:.06em;text-transform:uppercase;color:var(--brass-ink);border:1px solid var(--brass);border-radius:4px;padding:3px 6px;flex:none}
+.m-phone{width:150px;border:2px solid var(--rule);border-radius:16px;background:var(--sheet);padding:10px;margin:0 auto}
+.m-phone .m-ad{padding:8px 10px;min-height:44px}
+.m-featured{display:flex;gap:10px;flex-wrap:wrap}
+.m-featured .m-ad{flex:1 1 130px;flex-direction:column;align-items:flex-start}
+.m-article{border:1.5px solid var(--brass);border-radius:10px;background:var(--sheet);padding:12px 14px}
+.m-article .m-line.title{height:13px;width:70%;background:var(--ink-2);opacity:.55}
+/* steps and policy */
+.adv-steps{counter-reset:s;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:0;padding:0;list-style:none}
+.adv-steps li{counter-increment:s;background:var(--sheet);border:1px solid var(--rule);border-radius:14px;padding:16px 18px;margin:0}
+.adv-steps li::before{content:counter(s);display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--navy);color:var(--on-navy);font:700 .95rem var(--display);margin-bottom:8px}
+.adv-steps b{display:block;margin-bottom:2px}
+.adv-steps span{color:var(--ink-2);font-size:.96rem}
+.adv-policy{background:var(--sheet);border:1px solid var(--rule);border-left:4px solid var(--brass);border-radius:0 14px 14px 0;padding:18px 22px}
+.adv-policy ul{margin:8px 0 0;padding-left:1.2em}
+.adv-policy li{margin:.3em 0}
+/* the form */
+.adv-form{max-width:46rem;margin:0}
+.adv-form fieldset{border:0;margin:0 0 14px;padding:0;min-width:0}
+.adv-form legend{font-weight:600;padding:0;margin-bottom:6px}
+.adv-form legend i{font-style:normal;font-weight:400;color:var(--ink-2);font-size:.92em}
+.adv-checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:6px 16px}
+.adv-checks label{display:flex;align-items:center;gap:10px;min-height:40px;cursor:pointer}
+.cform .adv-checks input,.cform .adv-agree input{width:20px;height:20px;flex:none;margin:0;accent-color:var(--navy)}
+.adv-agree{display:flex;align-items:flex-start;gap:10px;margin:4px 0 16px}
+.adv-agree label{cursor:pointer}
+.cf-err{display:block;color:var(--bad);font-size:.92rem;margin-top:4px}
+.cform [aria-invalid="true"]{border-color:var(--bad)}
