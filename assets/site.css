@@ -711,9 +711,10 @@ html[lang="ar"] h1,html[lang="ar"] h2,html[lang="ar"] h3{line-height:1.4}
 @media (min-width:1140px){.nav a.nav-adv .adv-x{display:none}}
 
 /* ------------------------- home page: app download bar ------------------------- */
-.app-bar{background:var(--navy);padding:10px 0}
+.app-bar{background:var(--navy);padding:12px 0}
 .app-bar .wrap{display:flex;justify-content:center}
-.app-bar .btn{min-height:44px;font-weight:700}
-.app-bar .btn svg{width:20px;height:20px;flex:none}
+.app-bar .btn{min-height:54px;max-width:100%;padding:0 26px;gap:.65em;font-size:clamp(1rem,4.6vw,1.15rem);font-weight:700;box-shadow:0 8px 20px -10px rgba(0,0,0,.6)}
+.app-bar .btn svg{width:24px;height:24px;flex:none}
 .app-bar .btn:focus-visible{outline:3px solid var(--on-navy);outline-offset:3px}
+@media (max-width:340px){.app-bar .wrap{padding:0 12px}.app-bar .btn{padding:0 16px;font-size:.95rem}.app-bar .btn svg{width:22px;height:22px}}
 @media print{.app-bar{display:none}}
