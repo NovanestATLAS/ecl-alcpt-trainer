@@ -709,3 +709,11 @@ html[lang="ar"] h1,html[lang="ar"] h2,html[lang="ar"] h3{line-height:1.4}
 @media (max-width:1139px){.nav a.nav-adv{margin:8px 0 0;text-align:center}}
 /* the desktop header has no room for the full label: show "Advertise" (the phone menu and the footer say "Advertise With Us") */
 @media (min-width:1140px){.nav a.nav-adv .adv-x{display:none}}
+
+/* ------------------------- home page: app download bar ------------------------- */
+.app-bar{background:var(--navy);padding:10px 0}
+.app-bar .wrap{display:flex;justify-content:center}
+.app-bar .btn{min-height:44px;font-weight:700}
+.app-bar .btn svg{width:20px;height:20px;flex:none}
+.app-bar .btn:focus-visible{outline:3px solid var(--on-navy);outline-offset:3px}
+@media print{.app-bar{display:none}}
