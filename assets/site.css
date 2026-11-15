@@ -258,6 +258,8 @@ p{margin:0 0 1em}
 .prose blockquote{margin:1.2em 0;padding:4px 0 4px 18px;border-left:4px solid var(--brass);color:var(--ink-2)}
 .note-box{background:var(--sheet);border:1px solid var(--rule);border-left:4px solid var(--brass);border-radius:0 12px 12px 0;padding:16px 20px;margin:1.5em 0}
 .note-box p:last-child{margin:0}
+.partner-box h2{margin-top:0;font-size:1.25rem}
+.partner-box .btn{text-decoration:none}
 .sources{font-size:.92rem;color:var(--ink-2);border-top:1px solid var(--rule);margin-top:2.5em;padding-top:1em}
 .sources ul{padding-left:1.2em}
 .updated{font-size:.9rem;color:var(--ink-2)}
