@@ -18,6 +18,15 @@
     });
   }
 
+  /* Arabic cross-promotion for our quiz game "Lammat Al-Ma'rifa" (assets/maarifa-promo.js) */
+  (function () {
+    var me = doc.currentScript || doc.querySelector('script[src*="assets/site.js"]');
+    if (!me || !me.src || doc.querySelector('script[src*="maarifa-promo.js"]')) return;
+    var s = doc.createElement('script');
+    s.src = me.src.replace(/site\.js(\?.*)?$/, 'maarifa-promo.js'); s.defer = true;
+    (doc.head || html).appendChild(s);
+  })();
+
   /* "Privacy choices": reopens Google's consent message where it applies */
   doc.addEventListener('click', function (e) {
     var t = e.target.closest ? e.target.closest('[data-privacy-choices]') : null;
