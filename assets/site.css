@@ -258,7 +258,8 @@ p{margin:0 0 1em}
 .prose blockquote{margin:1.2em 0;padding:4px 0 4px 18px;border-left:4px solid var(--brass);color:var(--ink-2)}
 .note-box{background:var(--sheet);border:1px solid var(--rule);border-left:4px solid var(--brass);border-radius:0 12px 12px 0;padding:16px 20px;margin:1.5em 0}
 .note-box p:last-child{margin:0}
-.partner-box h2{margin-top:0;font-size:1.25rem}
+.partner-box{margin-top:2.2em}
+.partner-box h2{margin-top:0}
 .partner-box .btn{text-decoration:none}
 .sources{font-size:.92rem;color:var(--ink-2);border-top:1px solid var(--rule);margin-top:2.5em;padding-top:1em}
 .sources ul{padding-left:1.2em}
@@ -717,3 +718,36 @@ html[lang="ar"] h1,html[lang="ar"] h2,html[lang="ar"] h3{line-height:1.4}
 
 /* Lammat Al-Ma'rifa card place (assets/maarifa-promo.js); empty for visitors who do not get the card */
 .mf-slot:empty{display:none}
+
+/* italki tutor card: original illustration, red button; it comes alive for a few seconds the first time it is on screen
+   (assets/site.js adds .is-live), never flashes, and keeps still for visitors who ask for reduced motion */
+.tutor-card{display:grid;grid-template-columns:150px minmax(0,1fr);gap:18px;align-items:center;margin:1.2em 0 .6em;padding:18px;
+  border-radius:18px;border:1px solid #F3C3CC;background:linear-gradient(135deg,#FFF4F6 0%,#FFE2E8 100%);box-shadow:var(--shadow)}
+.tutor-art{display:block;width:150px;height:auto;direction:ltr;unicode-bidi:isolate}
+.prose ul.tutor-pts,.tutor-pts{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.prose .tutor-pts li,.tutor-pts li{margin:0;padding:4px 10px;border-radius:999px;background:#FFFFFF;border:1px solid #F3C3CC;color:#7A1426;font:600 .84rem/1.35 var(--text)}
+.tutor-pts li::before,.tutor-pts li::marker{content:none}
+.btn-tutor{position:relative;overflow:hidden;isolation:isolate;background:#C8102E;color:#FFFFFF;text-decoration:none;
+  box-shadow:0 3px 0 #8E0B21,0 10px 22px rgba(200,16,46,.28)}
+.btn-tutor:hover,.btn-tutor:focus-visible{background:#AE0D27;color:#FFFFFF}
+.btn-tutor::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:45%;pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-20deg)}
+.tutor-art .tt-bubble,.tutor-art .tt-wave{transform-box:fill-box;transform-origin:left bottom}
+.tutor-card.is-live .btn-tutor{animation:tutorPulse 2.4s ease-in-out .5s 3}
+.tutor-card.is-live .btn-tutor::after{animation:tutorShine 2.4s ease-in-out .5s 3}
+.tutor-card.is-live .tt-bubble{animation:tutorPop .55s cubic-bezier(.2,1.6,.4,1) .15s both}
+.tutor-card.is-live .tt-wave{animation:tutorWave 1.2s ease-in-out 6}
+.tutor-card.is-live .tt-wave2{animation-delay:.2s}
+.tutor-card.is-live .tt-dot{animation:tutorWave 1.6s ease-in-out 5}
+@keyframes tutorShine{0%{left:-60%}55%,100%{left:130%}}
+@keyframes tutorPulse{0%,50%,100%{transform:scale(1)}25%{transform:scale(1.05)}}
+@keyframes tutorPop{0%{transform:scale(.3);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes tutorWave{0%,100%{opacity:.3}50%{opacity:1}}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .tutor-card{background:linear-gradient(135deg,#3D1622 0%,#25101A 100%);border-color:#5E2536}
+  :root:not([data-theme="light"]) .tutor-pts li{background:rgba(255,255,255,.08);border-color:#5E2536;color:#FFD3DB}
+}
+:root[data-theme="dark"] .tutor-card{background:linear-gradient(135deg,#3D1622 0%,#25101A 100%);border-color:#5E2536}
+:root[data-theme="dark"] .tutor-pts li{background:rgba(255,255,255,.08);border-color:#5E2536;color:#FFD3DB}
+@media (max-width:560px){.tutor-card{grid-template-columns:1fr;justify-items:start;gap:12px}.tutor-art{width:136px}.btn-tutor{width:100%}}
+@media (prefers-reduced-motion:reduce){.tutor-card *,.tutor-card *::after{animation:none!important}}

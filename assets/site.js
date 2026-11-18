@@ -27,6 +27,18 @@
     (doc.head || html).appendChild(s);
   })();
 
+  /* italki tutor card: comes alive the first time half of it is on screen (CSS .is-live), counted as italki_view */
+  (function () {
+    var cards = doc.querySelectorAll('[data-tutor]');
+    if (!cards.length) return;
+    function live(c) { c.classList.add('is-live'); if (window.ECL_TRACK) window.ECL_TRACK('italki_view', { page: location.pathname }); }
+    if (!('IntersectionObserver' in window)) { cards.forEach(live); return; }
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) { io.unobserve(e.target); live(e.target); } });
+    }, { threshold: 0.5 });
+    cards.forEach(function (c) { io.observe(c); });
+  })();
+
   /* italki tutor button: its own GA4 event, so clicks show by name in Reports > Engagement > Events */
   doc.addEventListener('click', function (e) {
     var a = e.target.closest ? e.target.closest('a[href*="italki.com"]') : null;

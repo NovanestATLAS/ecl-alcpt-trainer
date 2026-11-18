@@ -26,6 +26,7 @@
   'use strict';
   if (g.MF_PROMO) return;
   var doc = document, html = doc.documentElement;
+  var REDUCED = !!(g.matchMedia && g.matchMedia('(prefers-reduced-motion: reduce)').matches);
   var me = doc.currentScript || doc.querySelector('script[src*="maarifa-promo.js"]');
   var BASE = me && me.src ? me.src.replace(/maarifa-promo\.js[^/]*$/, '') : '/assets/';
   var PKG = 'com.novanest.maani', KEY = 'mf_promo_hide', DAYS = 30;
@@ -135,7 +136,25 @@
     'a.mf-nav b{font-family:"MF Kufi","Segoe UI",Tahoma,sans-serif;font-size:1.25rem;color:#F6B73C;font-weight:700}',
     'a.mf-nav small{font-size:.8rem;color:#C9C5F0}a.mf-nav em{font-style:normal;font-weight:800;font-size:.8rem;color:#1D1846;',
     'background:#F6B73C;border-radius:10px;padding:6px 10px;white-space:nowrap}}',
-    '@media (prefers-reduced-motion:reduce){.mf,.mf *{transition:none!important}}',
+    'a.mf-cta{position:relative;overflow:hidden;isolation:isolate}',
+    'a.mf-cta::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:45%;pointer-events:none;',
+    'background:linear-gradient(100deg,transparent,rgba(255,255,255,.6),transparent);transform:skewX(-20deg)}',
+    '.mf-anim:not(.mf-live) .mf-opts i.ok{background:transparent;border-color:#E3E1F0;color:#2B2760}',
+    '.mf-anim:not(.mf-live) .mf-tick{opacity:0}',
+    '.mf-anim.mf-live .mf-opts i.ok{animation:mfPick .55s cubic-bezier(.2,1.5,.4,1) 1.1s both}',
+    '.mf-anim.mf-live .mf-tick{display:inline-block;animation:mfTick .35s ease-out 1.5s both}',
+    '.mf-anim.mf-live .mf-q{animation:mfFloat 2.6s ease-in-out .2s 3}',
+    '.mf-anim.mf-live a.mf-cta{animation:mfPulse 2.4s ease-in-out 1.8s 3}',
+    '.mf-anim.mf-live a.mf-cta::after{animation:mfShine 2.4s ease-in-out 1.8s 3}',
+    '.mf-anim.mf-live .mf-title svg{animation:mfSpin .9s ease-out .3s both}',
+    '@keyframes mfPick{0%{background:transparent;color:#2B2760;border-color:#E3E1F0;transform:scale(1)}',
+    '60%{transform:scale(1.14)}100%{background:#1E8A4C;border-color:#1E8A4C;color:#fff;transform:scale(1)}}',
+    '@keyframes mfTick{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:scale(1)}}',
+    '@keyframes mfFloat{0%,100%{transform:rotate(-3deg) translateY(0)}50%{transform:rotate(-3deg) translateY(-7px)}}',
+    '@keyframes mfPulse{0%,50%,100%{transform:scale(1)}25%{transform:scale(1.05)}}',
+    '@keyframes mfShine{0%{left:-60%}55%,100%{left:130%}}',
+    '@keyframes mfSpin{from{transform:rotate(-120deg) scale(.5)}to{transform:rotate(0) scale(1)}}',
+    '@media (prefers-reduced-motion:reduce){.mf,.mf *,.mf *::after{transition:none!important;animation:none!important}}',
     '@media print{.mf,.mf-nav{display:none!important}}'
   ].join('');
 
@@ -153,7 +172,8 @@
 
   function card(place, extra) {
     var el = doc.createElement('aside');
-    el.className = 'mf mf--' + (extra || 'inline');
+    el.className = 'mf mf-dark mf--' + (extra || 'inline');
+    if (!REDUCED) el.classList.add('mf-anim');
     el.setAttribute('dir', 'rtl'); el.setAttribute('lang', 'ar'); el.setAttribute('translate', 'no');
     el.setAttribute('data-tr-skip', ''); el.setAttribute('aria-label', 'لمة المعرفة: لعبة أسئلة عربية مجانية');
     el.innerHTML =
@@ -166,7 +186,7 @@
         '<a class="mf-cta" href="' + playUrl(place) + '" target="_blank" rel="noopener">' + PLAY + 'حمّلها مجانًا من Google Play</a>' +
       '</div>' +
       '<div class="mf-art" aria-hidden="true"><div class="mf-q"><span class="mf-cat">العالم العربي</span>' +
-        '<b>ما عاصمة سلطنة عُمان؟</b><span class="mf-opts"><i>الدوحة</i><i class="ok">مسقط ✓</i><i>المنامة</i><i>صلالة</i></span></div></div>';
+        '<b>ما عاصمة سلطنة عُمان؟</b><span class="mf-opts"><i>الدوحة</i><i class="ok">مسقط <span class="mf-tick">✓</span></i><i>المنامة</i><i>صلالة</i></span></div></div>';
     el.querySelector('.mf-x').addEventListener('click', function () {
       set(KEY, String(Date.now()));
       doc.querySelectorAll('aside.mf').forEach(function (c) { c.remove(); });
@@ -188,10 +208,11 @@
 
   var io = null, seen = {};
   function watchView(el, place) {
-    if (!('IntersectionObserver' in g)) return;
+    if (!('IntersectionObserver' in g)) { el.classList.add('mf-live'); return; }
     if (!io) io = new IntersectionObserver(function (es) {
       es.forEach(function (e) {
         if (!e.isIntersecting) return;
+        e.target.classList.add('mf-live');
         var p = e.target.getAttribute('data-mf-place');
         if (p && !seen[p]) { seen[p] = 1; track('maarifa_promo_view', p); }
         io.unobserve(e.target);
@@ -266,7 +287,7 @@
     if (!root || !allowed() || dismissed()) return;
     if (root.querySelector('.mf')) return;
     var c = card('trainer_home', 'trainer');
-    c.classList.add(doc.body.classList.contains('t-paper') ? 'mf-light' : 'mf-dark');
+    c.classList.add('mf-dark');
     root.appendChild(c);
   }
 
