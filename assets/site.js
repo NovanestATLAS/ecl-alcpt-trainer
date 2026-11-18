@@ -27,6 +27,12 @@
     (doc.head || html).appendChild(s);
   })();
 
+  /* italki tutor button: its own GA4 event, so clicks show by name in Reports > Engagement > Events */
+  doc.addEventListener('click', function (e) {
+    var a = e.target.closest ? e.target.closest('a[href*="italki.com"]') : null;
+    if (a && window.ECL_TRACK) window.ECL_TRACK('italki_click', { page: location.pathname });
+  });
+
   /* "Privacy choices": reopens Google's consent message where it applies */
   doc.addEventListener('click', function (e) {
     var t = e.target.closest ? e.target.closest('[data-privacy-choices]') : null;
