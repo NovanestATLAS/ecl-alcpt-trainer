@@ -6,6 +6,9 @@
      . texts that only made sense on Android are adapted
      . AdSense units in the right column and on the results screen, once
        their numbers are filled in assets/config.js
+     . on Android phones only: one card for the free Android app on the
+       results screen, under the buttons (never during a quiz); the x hides
+       it for 30 days
    ========================================================================== */
 (function (g) {
   'use strict';
@@ -171,6 +174,33 @@
     };
   }
 
+  /* ------------------ the Android app, after a finished set ----------------
+     Android phones only (the app is not on iPhone, and a computer cannot
+     install it in one tap). Shown under the result buttons, never during a
+     quiz and never between a question and its answers. */
+  var APP_URL = 'https://play.google.com/store/apps/details?id=com.ecltrainer.english' +
+    '&referrer=utm_source%3Decl-alcpt-trainer.com%26utm_medium%3Dwebsite%26utm_campaign%3Dtrainer_result';
+  function track(name, params) { try { if (g.ECL_TRACK) g.ECL_TRACK(name, params || {}); } catch (e) { } }
+  function appCard(after) {
+    if (!/Android/i.test(ua)) return null;
+    var hid = +(ls('app_hide') || 0);
+    if (hid && Date.now() - hid < 30 * 864e5) return null;
+    var c = doc.createElement('div');
+    c.className = 'w-appres';
+    c.setAttribute('role', 'complementary');
+    c.setAttribute('aria-label', 'Android app');
+    c.innerHTML = '<img src="../assets/img/logo-128.webp" alt="" width="44" height="44">' +
+      '<div class="w-appres-t"><b>Keep practicing offline</b><span>The free Android app has the same questions, ' +
+      'works without internet and reads each question aloud.</span></div>' +
+      '<a class="w-appres-go" data-google-vignette="false" target="_blank" rel="noopener" href="' + APP_URL + '">Get the free app</a>' +
+      '<button type="button" class="w-appres-x" aria-label="Hide for 30 days">&times;</button>';
+    c.querySelector('.w-appres-go').addEventListener('click', function () { track('app_card_click', { placement: 'trainer_result' }); });
+    c.querySelector('.w-appres-x').addEventListener('click', function () { ls('app_hide', String(Date.now())); c.remove(); });
+    after.insertAdjacentElement('afterend', c);
+    track('app_card_view', { placement: 'trainer_result' });
+    return c;
+  }
+
   /* ---------------------------- per screen ------------------------------- */
   function decorate(v) {
     html.setAttribute('data-view', v || '');
@@ -184,14 +214,15 @@
         nav.insertAdjacentElement('afterend', h);
       }
     }
-    if (v === 'result' && !root.querySelector('.w-adres')) {
+    if (v === 'result' && !root.querySelector('.w-adres, .w-appres')) {
       var after = null;
       root.querySelectorAll('.navrow').forEach(function (n) {
         if (n.querySelector('button[onclick*="goTab(\'home\')"]')) after = n;
       });
+      var card = after ? appCard(after) : null;
       if (after && (C.slots || {}).results) {
         var box = doc.createElement('div'); box.className = 'w-adres';
-        after.insertAdjacentElement('afterend', box);
+        (card || after).insertAdjacentElement('afterend', box);
         adUnit(box, 'results');
       }
     }

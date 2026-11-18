@@ -88,6 +88,18 @@ ins.adsbygoogle[data-ad-status="unfilled"]{display:none!important}
 .w-adres{margin:40px 0 24px}
 .w-adres:empty{display:none}
 
+/* Android app card on the results screen (web.js, Android phones only) */
+.w-appres{position:relative;display:grid;grid-template-columns:44px 1fr;gap:10px 12px;align-items:center;margin:28px 0 8px;
+  padding:16px 44px 16px 16px;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--sheetShadow)}
+.w-appres img{width:44px;height:44px;border-radius:10px}
+.w-appres-t b{display:block;font:700 17px/1.2 var(--display);color:var(--ink)}
+.w-appres-t span{display:block;margin-top:3px;font-size:14px;line-height:1.4;color:var(--mut)}
+.w-appres-go{grid-column:1 / -1;display:flex;align-items:center;justify-content:center;min-height:46px;border-radius:10px;
+  background:var(--brass);color:var(--onBrass);font:600 16px var(--display);text-decoration:none}
+.w-appres-go:focus-visible,.w-appres-x:focus-visible{outline:3px solid var(--accentText);outline-offset:2px}
+.w-appres-x{position:absolute;top:6px;right:6px;width:36px;height:36px;border:0;border-radius:50%;background:transparent;
+  color:var(--mut);font-size:24px;line-height:1;cursor:pointer}
+
 /* --------------------------- keyboard help ----------------------------- */
 .w-keys{display:none}
 .w-keys h2{margin:0 0 10px;font:600 15px var(--display);color:var(--ink)}
