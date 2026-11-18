@@ -3,20 +3,10 @@
    (لمة المعرفة, com.novanest.maani), our free Arabic quiz game on Android.
    --------------------------------------------------------------------------
    Loaded by site.js on the content pages and by practice/index.html.
-   Shown only where it is useful and never in the way:
-     . to Arabic speakers: Arabic pages, an Arabic browser language, or a time
-       zone of the Arab world; never on iPhone/iPad (the game is Android only);
-     . lesson, topic and guide pages: one card between two sections near the
-       middle of the article, and on desktop also one in the side column
-       under "Practice now"; never next to an ad, a question or an answer
-       button, and the side card steps aside while questions are on screen;
-     . the most visited pages (home, tests hub, lessons hub, the ALCPT
-       practice test and the ECL practice questions): one card in the place
-       the page marks with <div class="mf-slot" data-mf-place="...">, and
-       no other card on that page;
-     . the mobile menu: one compact line at the bottom;
-     . the trainer: one card at the bottom of the home menu, never during
-       a quiz.
+   Shown only to Arabic speakers (Arabic pages, an Arabic browser language, or a time zone of the Arab
+   world), never on iPhone/iPad (the game is Android only). On the website, assets/promos.js decides where
+   a card goes and takes turns with the ECL app and italki; this file adds the line in the mobile menu and
+   the card at the bottom of the trainer's home menu (never during a quiz).
    The x button hides the cards for 30 days (the menu line stays).
    Test: ?mf=1 shows it to anyone, ?mf=0 hides it.
    No cookie, no personal data: GA4 only counts views and clicks by placement
@@ -65,7 +55,7 @@
     '@font-face{font-family:"MF Kufi";src:url("' + BASE + 'fonts/reemkufi-maarifa.woff2") format("woff2");font-weight:400 700;font-display:swap}',
     /* the card is the picture (img/promo/lammat-almaarifa-*.webp): the whole picture is the Google Play link,
        the button over the drawn x (top left) hides the cards for 30 days */
-    '.mf{position:relative;display:block;box-sizing:border-box;width:100%;max-width:400px;margin:2.2em auto;line-height:0;',
+    '.mf{position:relative;display:block;box-sizing:border-box;width:100%;max-width:300px;margin:2em auto;line-height:0;',
     'border-radius:5.2%/4.15%;overflow:hidden;isolation:isolate;background:#1D1846;box-shadow:0 14px 34px rgba(23,19,74,.35);transition:transform .15s}',
     '.mf:hover{transform:translateY(-2px)}',
     '.mf-pic{display:block;border-radius:inherit}.mf-pic img{display:block;width:100%;height:auto}',
@@ -120,7 +110,7 @@
     el.innerHTML =
       '<a class="mf-pic" href="' + playUrl(place) + '" target="_blank" rel="noopener">' +
         '<img src="' + IMG + '480.webp" srcset="' + IMG + '480.webp 480w, ' + IMG + '840.webp 840w" ' +
-        'sizes="(max-width: 600px) calc(100vw - 32px), 400px" width="840" height="1049" loading="lazy" decoding="async" alt="' + ALT + '"></a>' +
+        'sizes="300px" width="840" height="1049" loading="lazy" decoding="async" alt="' + ALT + '"></a>' +
       '<button type="button" class="mf-x" aria-label="إخفاء هذا الإعلان لمدة 30 يومًا" title="إخفاء"></button>';
     el.querySelector('.mf-x').addEventListener('click', function () {
       set(KEY, String(Date.now()));
@@ -157,64 +147,10 @@
     setTimeout(function () { if (el.isConnected) io.observe(el); }, 0);
   }
 
-  /* ----------------------- where it goes in an article -------------------- */
-  var BAD = '.ad-slot, .qc, .qlist, .faq, .cta-box, .related, .pager, .howto, .bands';
-  function isBad(el) { return !!el && (el.matches(BAD) || !!el.querySelector('.qc, .qlist, .bub, .ad-slot')); }
-  function pickSpot(art) {
-    var kids = [].slice.call(art.children), cands = [];
-    kids.forEach(function (el, i) {
-      if (i < 2) return;
-      var head = el.tagName === 'H2' || (el.tagName === 'SECTION' && el.classList.contains('lsec'));
-      if (!head || isBad(el)) return;
-      if (isBad(kids[i - 1]) || isBad(kids[i - 2])) return;      // keep away from ads and questions above
-      if (el.tagName === 'H2' && isBad(kids[i + 1])) return;      // ... and from questions right below
-      cands.push(i);
-    });
-    if (cands.length < 2) return null;
-    var mid = kids.length * 0.5, best = cands[0];
-    cands.forEach(function (i) { if (Math.abs(i - mid) < Math.abs(best - mid)) best = i; });
-    return kids[best];
-  }
-
-  /* the side card steps aside while questions are on screen */
-  function awayFromQuestions(sideCard) {
-    var qs = doc.querySelectorAll('main .qc, main .qlist');
-    if (!qs.length || !('IntersectionObserver' in g)) return;
-    var on = new Set();
-    var o = new IntersectionObserver(function (es) {
-      es.forEach(function (e) { if (e.isIntersecting) on.add(e.target); else on.delete(e.target); });
-      sideCard.classList.toggle('mf-away', on.size > 0);
-    }, { rootMargin: '0px 0px -10% 0px' });
-    qs.forEach(function (q) { o.observe(q); });
-  }
-
   /* ------------------------------ site pages ------------------------------ */
   function sitePages() {
     var nav = doc.getElementById('nav');
     if (nav && !nav.querySelector('.mf-nav')) nav.appendChild(navItem());
-    if (dismissed()) return;
-    var slots = doc.querySelectorAll('.mf-slot');
-    if (slots.length) {                                        // the page chose its place: one card, there only
-      slots.forEach(function (s, i) {
-        if (i > 0 || s.querySelector('.mf')) return;
-        s.appendChild(card(s.getAttribute('data-mf-place') || 'page', 'inline'));
-      });
-      return;
-    }
-    var art = doc.querySelector('main article.prose'), side = doc.querySelector('main .aside');
-    if (!art) return;
-    var testPage = !!art.querySelector('.qc[data-mode="test"]');
-    if (side && !testPage && !side.querySelector('.mf')) {
-      var sc = card('sidebar', 'aside'), first = side.querySelector('.aside-card');
-      if (first && first.nextSibling) side.insertBefore(sc, first.nextSibling); else side.appendChild(sc);
-      awayFromQuestions(sc);
-    }
-    var spot = !testPage && pickSpot(art);
-    if (spot && !art.querySelector('.mf')) {
-      var ic = card('article', 'inline');
-      if (!side) ic.classList.add('mf-solo');
-      spot.parentNode.insertBefore(ic, spot);
-    }
   }
 
   /* -------------------------- trainer home menu --------------------------- */
@@ -230,6 +166,11 @@
     sitePages();
   }
 
-  g.MF_PROMO = { allowed: allowed, trainerHome: function (root) { if (allowed()) { injectCSS(); trainerHome(root); } } };
+  g.MF_PROMO = {
+    allowed: allowed,
+    ok: function () { return allowed() && !dismissed(); },               // a card may be shown now
+    card: function (place, extra) { injectCSS(); return card(place, extra); },
+    trainerHome: function (root) { if (allowed()) { injectCSS(); trainerHome(root); } }
+  };
   if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', run); else run();
 })(window);

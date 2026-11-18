@@ -18,37 +18,38 @@
     });
   }
 
-  /* Arabic cross-promotion for our quiz game "Lammat Al-Ma'rifa" (assets/maarifa-promo.js) */
+  /* promo cards (assets/promos.js): the ECL app, italki and, for Arabic speakers, Lammat Al-Ma'rifa take turns */
   (function () {
     var me = doc.currentScript || doc.querySelector('script[src*="assets/site.js"]');
-    if (!me || !me.src || doc.querySelector('script[src*="maarifa-promo.js"]')) return;
+    if (!me || !me.src || doc.querySelector('script[src*="promos.js"]')) return;
     var s = doc.createElement('script');
-    s.src = me.src.replace(/site\.js(\?.*)?$/, 'maarifa-promo.js'); s.defer = true;
+    s.src = me.src.replace(/site\.js(\?.*)?$/, 'promos.js');
     (doc.head || html).appendChild(s);
   })();
 
-  /* italki banner: comes alive the first time half of it is on screen (CSS .is-live), counted as italki_view;
-     the button over the drawn x hides every italki banner for 30 days */
+  /* italki banner (static on some pages, added by promos.js on others): it comes alive the first time half of it is
+     on screen (CSS .is-live), counted as italki_view; the button over the drawn x hides every italki banner for 30 days */
   (function () {
-    var cards = doc.querySelectorAll('[data-tutor]');
-    if (!cards.length) return;
-    var KEY = 'promo_hide_italki', t = 0;
-    try { t = +localStorage.getItem(KEY) || 0; } catch (e) { }
-    if (t > 0 && Date.now() - t < 30 * 864e5) { cards.forEach(function (c) { c.hidden = true; }); return; }
-    cards.forEach(function (c) {
-      var x = c.querySelector('[data-promo-close]');
-      if (x) x.addEventListener('click', function () {
-        try { localStorage.setItem(KEY, String(Date.now())); } catch (e) { }
-        cards.forEach(function (b) { b.hidden = true; });
-        if (window.ECL_TRACK) window.ECL_TRACK('italki_hide', { page: location.pathname });
-      });
-    });
+    var KEY = 'promo_hide_italki';
+    function hidden() {
+      var t = 0; try { t = +localStorage.getItem(KEY) || 0; } catch (e) { }
+      return t > 0 && Date.now() - t < 30 * 864e5;
+    }
     function live(c) { c.classList.add('is-live'); if (window.ECL_TRACK) window.ECL_TRACK('italki_view', { page: location.pathname }); }
-    if (!('IntersectionObserver' in window)) { cards.forEach(live); return; }
-    var io = new IntersectionObserver(function (es) {
+    var io = 'IntersectionObserver' in window ? new IntersectionObserver(function (es) {
       es.forEach(function (e) { if (e.isIntersecting) { io.unobserve(e.target); live(e.target); } });
-    }, { threshold: 0.5 });
-    cards.forEach(function (c) { io.observe(c); });
+    }, { threshold: 0.5 }) : null;
+    function watch(c) { if (io) io.observe(c); else live(c); }
+    window.ECL_ITALKI = { hidden: hidden, watch: watch };
+    var cards = doc.querySelectorAll('[data-tutor]');
+    cards.forEach(function (c) { if (hidden()) c.hidden = true; else watch(c); });
+    doc.addEventListener('click', function (e) {
+      var x = e.target.closest ? e.target.closest('[data-tutor] [data-promo-close]') : null;
+      if (!x) return;
+      try { localStorage.setItem(KEY, String(Date.now())); } catch (err) { }
+      doc.querySelectorAll('[data-tutor]').forEach(function (b) { b.hidden = true; });
+      if (window.ECL_TRACK) window.ECL_TRACK('italki_hide', { page: location.pathname });
+    });
   })();
 
   /* italki tutor button: its own GA4 event, so clicks show by name in Reports > Engagement > Events */
