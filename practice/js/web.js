@@ -6,9 +6,11 @@
      . texts that only made sense on Android are adapted
      . AdSense units in the right column and on the results screen, once
        their numbers are filled in assets/config.js
-     . on Android phones only: one card for the free Android app on the
-       results screen, under the buttons (never during a quiz); the x hides
-       it for 30 days
+     . one promo card that takes turns between the tutor partners (italki,
+       Preply when its link is in config.js) and the free Android app
+       (Android phones only): on the results screen, and after every 10th
+       answered question of a PRACTICE set, under the Next button. Never in
+       timed tests or exams. At most 6 a day; the x hides the one on screen
    ========================================================================== */
 (function (g) {
   'use strict';
@@ -174,31 +176,93 @@
     };
   }
 
-  /* ------------------ the Android app, after a finished set ----------------
-     Android phones only (the app is not on iPhone, and a computer cannot
-     install it in one tap). Shown under the result buttons, never during a
-     quiz and never between a question and its answers. */
+  /* ------------- promo card: tutor partners and the Android app -------------
+     Takes turns in a fixed order. Shown under the buttons, never between a
+     question and its answers, never during a timed test or an exam. */
   var APP_URL = 'https://play.google.com/store/apps/details?id=com.ecltrainer.english' +
-    '&referrer=utm_source%3Decl-alcpt-trainer.com%26utm_medium%3Dwebsite%26utm_campaign%3Dtrainer_result';
+    '&referrer=utm_source%3Decl-alcpt-trainer.com%26utm_medium%3Dwebsite%26utm_campaign%3Dtrainer_';
+  var P = C.partners || {};
+  var isAndroid = /Android/i.test(ua);
+  var EVERY = 10, DAILY = 6;
   function track(name, params) { try { if (g.ECL_TRACK) g.ECL_TRACK(name, params || {}); } catch (e) { } }
-  function appCard(after) {
-    if (!/Android/i.test(ua)) return null;
-    var hid = +(ls('app_hide') || 0);
-    if (hid && Date.now() - hid < 30 * 864e5) return null;
+  function ok(u) { return typeof u === 'string' && /^https:\/\//.test(u); }
+  var PROMOS = {
+    italki: function () {
+      return ok(P.italki) && { cls: 'tutor', title: 'Speak English with a real tutor',
+        text: 'One-to-one video lessons on italki, at the times you choose. Pay per lesson.',
+        cta: 'Find a tutor on italki', url: P.italki, rel: 'sponsored nofollow noopener' };
+    },
+    preply: function () {
+      return ok(P.preply) && { cls: 'tutor', title: 'Practice speaking with a tutor',
+        text: 'One-to-one English lessons on Preply, online, at the times you choose.',
+        cta: 'Find a tutor on Preply', url: P.preply, rel: 'sponsored nofollow noopener' };
+    },
+    app: function (place) {
+      return isAndroid && { cls: 'app', title: 'Keep practicing offline',
+        text: 'The free Android app has the same questions, works without internet and reads each question aloud.',
+        cta: 'Get the free app', url: APP_URL + place, rel: 'noopener' };
+    }
+  };
+  var ORDER = ['italki', 'app', 'preply'];
+  function today() { var d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+  function quota() {
+    var q = {}; try { q = JSON.parse(ls('promo_day') || '{}'); } catch (e) { }
+    if (q.d !== today()) q = { d: today(), n: 0 };
+    return q;
+  }
+  function nextPromo(place) {
+    var start = +(ls('promo_turn') || 0);
+    for (var k = 0; k < ORDER.length; k++) {
+      var idx = (start + k) % ORDER.length, p = PROMOS[ORDER[idx]](place);
+      if (p) { ls('promo_turn', String(idx + 1)); p.kind = ORDER[idx]; return p; }
+    }
+    return null;
+  }
+  var TUTOR_ICO = '<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="24" fill="#FFD9E0"/>' +
+    '<path d="M11 44c2-9 7-13 13-13s11 4 13 13z" fill="#C8102E"/><circle cx="24" cy="21" r="8" fill="#F2C9A5"/>' +
+    '<path d="M16 20c0-6 4-9 8-9s8 3 8 8c-2-2-5-3-8-3s-6 2-8 4z" fill="#3A2A22"/>' +
+    '<path d="M15 21a9 9 0 0 1 18 0" stroke="#14243D" stroke-width="2" fill="none"/><rect x="13" y="19" width="4" height="6" rx="2" fill="#14243D"/></svg>';
+  function promoCard(place, after) {
+    var q = quota();
+    if (q.n >= DAILY) return null;
+    var p = nextPromo(place);
+    if (!p) return null;
+    q.n++; ls('promo_day', JSON.stringify(q));
     var c = doc.createElement('div');
-    c.className = 'w-appres';
+    c.className = 'w-promo w-promo-' + p.cls;
     c.setAttribute('role', 'complementary');
-    c.setAttribute('aria-label', 'Android app');
-    c.innerHTML = '<img src="../assets/img/logo-128.webp" alt="" width="44" height="44">' +
-      '<div class="w-appres-t"><b>Keep practicing offline</b><span>The free Android app has the same questions, ' +
-      'works without internet and reads each question aloud.</span></div>' +
-      '<a class="w-appres-go" data-google-vignette="false" target="_blank" rel="noopener" href="' + APP_URL + '">Get the free app</a>' +
-      '<button type="button" class="w-appres-x" aria-label="Hide for 30 days">&times;</button>';
-    c.querySelector('.w-appres-go').addEventListener('click', function () { track('app_card_click', { placement: 'trainer_result' }); });
-    c.querySelector('.w-appres-x').addEventListener('click', function () { ls('app_hide', String(Date.now())); c.remove(); });
+    c.setAttribute('aria-label', p.kind === 'app' ? 'Android app' : 'Tutor partner');
+    c.innerHTML = (p.cls === 'app' ? '<img src="../assets/img/logo-128.webp" alt="" width="44" height="44">' : TUTOR_ICO) +
+      '<div class="w-promo-t"><b>' + p.title + '</b><span>' + p.text + '</span></div>' +
+      '<a class="w-promo-go" data-google-vignette="false" target="_blank" rel="' + p.rel + '" href="' + p.url + '">' + p.cta + '</a>' +
+      '<button type="button" class="w-promo-x" aria-label="Close">&times;</button>';
+    c.querySelector('.w-promo-go').addEventListener('click', function () {
+      track('promo_click', { kind: p.kind, placement: place });
+      if (p.kind === 'italki') track('italki_click', { page: '/practice/' });
+    });
+    c.querySelector('.w-promo-x').addEventListener('click', function () { c.remove(); });
     after.insertAdjacentElement('afterend', c);
-    track('app_card_view', { placement: 'trainer_result' });
+    track('promo_view', { kind: p.kind, placement: place });
     return c;
+  }
+
+  /* every 10th answered question of a practice set (not timed tests, not exams) */
+  var appPick = g.pick;
+  if (typeof appPick === 'function') {
+    g.pick = function () {
+      var was = g.S && g.S.locked;
+      var r = appPick.apply(this, arguments);
+      var S = g.S;
+      if (S && S.view === 'quiz' && !S.sim && !S.exam && !was && S.locked) {
+        var n = +(ls('promo_answers') || 0) + 1;
+        ls('promo_answers', String(n));
+        if (n % EVERY === 0 && S.idx < S.pool.length - 1 && !root.querySelector('.w-promo')) {   // last question: the results card comes next
+          var nav = root.querySelector('.navrow');
+          if (nav) setTimeout(function () { if (g.S.view === 'quiz' && nav.isConnected) promoCard('quiz', nav); }, 700);
+        }
+      }
+      return r;
+    };
   }
 
   /* ---------------------------- per screen ------------------------------- */
@@ -214,12 +278,12 @@
         nav.insertAdjacentElement('afterend', h);
       }
     }
-    if (v === 'result' && !root.querySelector('.w-adres, .w-appres')) {
+    if (v === 'result' && !root.querySelector('.w-adres, .w-promo')) {
       var after = null;
       root.querySelectorAll('.navrow').forEach(function (n) {
         if (n.querySelector('button[onclick*="goTab(\'home\')"]')) after = n;
       });
-      var card = after ? appCard(after) : null;
+      var card = after ? promoCard('result', after) : null;
       if (after && (C.slots || {}).results) {
         var box = doc.createElement('div'); box.className = 'w-adres';
         (card || after).insertAdjacentElement('afterend', box);

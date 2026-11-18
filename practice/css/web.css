@@ -88,17 +88,29 @@ ins.adsbygoogle[data-ad-status="unfilled"]{display:none!important}
 .w-adres{margin:40px 0 24px}
 .w-adres:empty{display:none}
 
-/* Android app card on the results screen (web.js, Android phones only) */
-.w-appres{position:relative;display:grid;grid-template-columns:44px 1fr;gap:10px 12px;align-items:center;margin:28px 0 8px;
-  padding:16px 44px 16px 16px;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--sheetShadow)}
-.w-appres img{width:44px;height:44px;border-radius:10px}
-.w-appres-t b{display:block;font:700 17px/1.2 var(--display);color:var(--ink)}
-.w-appres-t span{display:block;margin-top:3px;font-size:14px;line-height:1.4;color:var(--mut)}
-.w-appres-go{grid-column:1 / -1;display:flex;align-items:center;justify-content:center;min-height:46px;border-radius:10px;
-  background:var(--brass);color:var(--onBrass);font:600 16px var(--display);text-decoration:none}
-.w-appres-go:focus-visible,.w-appres-x:focus-visible{outline:3px solid var(--accentText);outline-offset:2px}
-.w-appres-x{position:absolute;top:6px;right:6px;width:36px;height:36px;border:0;border-radius:50%;background:transparent;
+/* promo card (web.js): tutor partners and the Android app, under the buttons; pops in, the button shines
+   3 times, then everything stays still; no animation for visitors who ask for reduced motion */
+.w-promo{position:relative;display:grid;grid-template-columns:44px 1fr;gap:10px 12px;align-items:center;margin:22px 0 8px;
+  padding:16px 44px 16px 16px;border-radius:16px;border:1px solid var(--line);background:var(--card);box-shadow:var(--sheetShadow);
+  animation:wPromoIn .45s cubic-bezier(.2,1.3,.4,1) both}
+.w-promo-tutor{border-color:#5E2536;background:linear-gradient(135deg,#3D1622,#25101A)}
+body.t-paper .w-promo-tutor{border-color:#F3C3CC;background:linear-gradient(135deg,#FFF4F6,#FFE2E8)}
+.w-promo img,.w-promo>svg{width:44px;height:44px;border-radius:10px}
+.w-promo-t b{display:block;font:700 17px/1.2 var(--display);color:var(--ink)}
+.w-promo-t span{display:block;margin-top:3px;font-size:14px;line-height:1.4;color:var(--mut)}
+.w-promo-go{position:relative;overflow:hidden;isolation:isolate;grid-column:1 / -1;display:flex;align-items:center;justify-content:center;
+  min-height:46px;border-radius:10px;background:var(--brass);color:var(--onBrass);font:600 16px var(--display);text-decoration:none;
+  animation:wPromoPulse 2.4s ease-in-out .6s 3}
+.w-promo-tutor .w-promo-go{background:#C8102E;color:#FFFFFF}
+.w-promo-go::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:45%;pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-20deg);animation:wPromoShine 2.4s ease-in-out .6s 3}
+.w-promo-go:focus-visible,.w-promo-x:focus-visible{outline:3px solid var(--accentText);outline-offset:2px}
+.w-promo-x{position:absolute;top:6px;right:6px;width:36px;height:36px;border:0;border-radius:50%;background:transparent;
   color:var(--mut);font-size:24px;line-height:1;cursor:pointer}
+@keyframes wPromoIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes wPromoPulse{0%,50%,100%{transform:scale(1)}25%{transform:scale(1.04)}}
+@keyframes wPromoShine{0%{left:-60%}55%,100%{left:130%}}
+@media (prefers-reduced-motion:reduce){.w-promo,.w-promo *,.w-promo *::after{animation:none!important}}
 
 /* --------------------------- keyboard help ----------------------------- */
 .w-keys{display:none}
