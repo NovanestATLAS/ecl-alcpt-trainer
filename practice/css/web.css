@@ -107,6 +107,16 @@ body.t-paper .w-promo-tutor{border-color:#F3C3CC;background:linear-gradient(135d
 .w-promo-go:focus-visible,.w-promo-x:focus-visible{outline:3px solid var(--accentText);outline-offset:2px}
 .w-promo-x{position:absolute;top:6px;right:6px;width:36px;height:36px;border:0;border-radius:50%;background:transparent;
   color:var(--mut);font-size:24px;line-height:1;cursor:pointer}
+/* picture banner (italki): no frame, the picture is the card; the x button sits over the x drawn in the picture */
+.w-promo-pic{display:block;padding:0;border:0;background:#FFFFFF;line-height:0;max-width:680px;margin:22px auto 8px;
+  border-radius:4.1%/9.5%;overflow:hidden;isolation:isolate;box-shadow:0 14px 34px rgba(0,0,0,.40)}
+body.t-paper .w-promo-pic{box-shadow:0 2px 4px rgba(20,36,61,.08),0 14px 32px rgba(20,36,61,.16)}
+.w-promo-pic .w-promo-go{display:block;min-height:0;border-radius:inherit;background:none;animation:none;line-height:0}
+.w-promo-pic .w-promo-go img{display:block;width:100%;height:auto;border-radius:0}
+.w-promo-pic .w-promo-go:focus-visible{outline-offset:-3px}
+.w-promo-pic .w-promo-go::after{width:35%;animation:wPromoShine 2.6s ease-in-out .5s 3}
+.w-promo-pic .w-promo-x{top:0;right:0;width:11%;height:22%;min-width:36px;min-height:36px;font-size:0}
+.w-promo-pic .w-promo-x:focus-visible{outline-offset:-6px}
 @keyframes wPromoIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
 @keyframes wPromoPulse{0%,50%,100%{transform:scale(1)}25%{transform:scale(1.04)}}
 @keyframes wPromoShine{0%{left:-60%}55%,100%{left:130%}}

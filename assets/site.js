@@ -27,10 +27,22 @@
     (doc.head || html).appendChild(s);
   })();
 
-  /* italki tutor card: comes alive the first time half of it is on screen (CSS .is-live), counted as italki_view */
+  /* italki banner: comes alive the first time half of it is on screen (CSS .is-live), counted as italki_view;
+     the button over the drawn x hides every italki banner for 30 days */
   (function () {
     var cards = doc.querySelectorAll('[data-tutor]');
     if (!cards.length) return;
+    var KEY = 'promo_hide_italki', t = 0;
+    try { t = +localStorage.getItem(KEY) || 0; } catch (e) { }
+    if (t > 0 && Date.now() - t < 30 * 864e5) { cards.forEach(function (c) { c.hidden = true; }); return; }
+    cards.forEach(function (c) {
+      var x = c.querySelector('[data-promo-close]');
+      if (x) x.addEventListener('click', function () {
+        try { localStorage.setItem(KEY, String(Date.now())); } catch (e) { }
+        cards.forEach(function (b) { b.hidden = true; });
+        if (window.ECL_TRACK) window.ECL_TRACK('italki_hide', { page: location.pathname });
+      });
+    });
     function live(c) { c.classList.add('is-live'); if (window.ECL_TRACK) window.ECL_TRACK('italki_view', { page: location.pathname }); }
     if (!('IntersectionObserver' in window)) { cards.forEach(live); return; }
     var io = new IntersectionObserver(function (es) {

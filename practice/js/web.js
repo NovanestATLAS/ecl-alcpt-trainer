@@ -190,7 +190,8 @@
     italki: function () {
       return ok(P.italki) && { cls: 'tutor', title: 'Speak English with a real tutor',
         text: 'One-to-one video lessons on italki, at the times you choose. Pay per lesson.',
-        cta: 'Find a tutor on italki', url: P.italki, rel: 'sponsored nofollow noopener' };
+        cta: 'Find a tutor on italki', url: P.italki, rel: 'sponsored nofollow noopener',
+        img: '../assets/img/promo/italki-tutor-', imgW: 1400, imgH: 606 };
     },
     preply: function () {
       return ok(P.preply) && { cls: 'tutor', title: 'Practice speaking with a tutor',
@@ -232,7 +233,15 @@
     c.className = 'w-promo w-promo-' + p.cls;
     c.setAttribute('role', 'complementary');
     c.setAttribute('aria-label', p.kind === 'app' ? 'Android app' : 'Tutor partner');
-    c.innerHTML = (p.cls === 'app' ? '<img src="../assets/img/logo-128.webp" alt="" width="44" height="44">' : TUTOR_ICO) +
+    if (p.img) {                    // picture banner: the whole picture is the link, the button covers its drawn x
+      c.className = 'w-promo w-promo-pic';
+      c.setAttribute('lang', 'en'); c.setAttribute('dir', 'ltr');
+      c.innerHTML = '<a class="w-promo-go" data-google-vignette="false" target="_blank" rel="' + p.rel + '" href="' + p.url + '">' +
+        '<img src="' + p.img + '800.webp" srcset="' + p.img + '800.webp 800w, ' + p.img + '1400.webp 1400w" ' +
+        'sizes="(max-width: 760px) calc(100vw - 32px), 680px" width="' + p.imgW + '" height="' + p.imgH + '" decoding="async" ' +
+        'alt="' + p.title + '. ' + p.text + ' ' + p.cta + '"></a>' +
+        '<button type="button" class="w-promo-x" aria-label="Close" title="Close"></button>';
+    } else c.innerHTML = (p.cls === 'app' ? '<img src="../assets/img/logo-128.webp" alt="" width="44" height="44">' : TUTOR_ICO) +
       '<div class="w-promo-t"><b>' + p.title + '</b><span>' + p.text + '</span></div>' +
       '<a class="w-promo-go" data-google-vignette="false" target="_blank" rel="' + p.rel + '" href="' + p.url + '">' + p.cta + '</a>' +
       '<button type="button" class="w-promo-x" aria-label="Close">&times;</button>';

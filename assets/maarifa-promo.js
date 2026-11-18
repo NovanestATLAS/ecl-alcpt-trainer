@@ -63,70 +63,26 @@
   /* ------------------------------- styles -------------------------------- */
   var CSS = [
     '@font-face{font-family:"MF Kufi";src:url("' + BASE + 'fonts/reemkufi-maarifa.woff2") format("woff2");font-weight:400 700;font-display:swap}',
-    '.mf{--mf-bg:linear-gradient(135deg,#FFF9EC 0%,#F6EBD2 100%);--mf-line:#E6D3A6;--mf-ink:#1F2350;--mf-ink2:#4A4E73;',
-    '--mf-title:#1F2350;--mf-chip:#FFFFFF;--mf-chip-ink:#5B430E;--mf-kick:#8A5F14;',
-    '--mf-shadow:0 1px 2px rgba(31,35,80,.06),0 12px 30px rgba(31,35,80,.10)}',
-    '.mf.mf-dark{--mf-bg:linear-gradient(135deg,#2A2570 0%,#17134A 100%);--mf-line:rgba(255,255,255,.10);--mf-ink:#F1EFFF;',
-    '--mf-ink2:#C9C5F0;--mf-title:#F6B73C;--mf-chip:rgba(255,255,255,.09);--mf-chip-ink:#F1EFFF;',
-    '--mf-kick:#F6B73C;--mf-shadow:0 14px 34px rgba(0,0,0,.35)}',
-    '@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .mf:not(.mf-light){--mf-bg:linear-gradient(135deg,#2A2570 0%,#17134A 100%);',
-    '--mf-line:rgba(255,255,255,.10);--mf-ink:#F1EFFF;--mf-ink2:#C9C5F0;--mf-title:#F6B73C;--mf-chip:rgba(255,255,255,.09);',
-    '--mf-chip-ink:#F1EFFF;--mf-kick:#F6B73C;--mf-shadow:0 14px 34px rgba(0,0,0,.35)}}',
-    ':root[data-theme="dark"] .mf:not(.mf-light){--mf-bg:linear-gradient(135deg,#2A2570 0%,#17134A 100%);--mf-line:rgba(255,255,255,.10);',
-    '--mf-ink:#F1EFFF;--mf-ink2:#C9C5F0;--mf-title:#F6B73C;--mf-chip:rgba(255,255,255,.09);--mf-chip-ink:#F1EFFF;',
-    '--mf-kick:#F6B73C;--mf-shadow:0 14px 34px rgba(0,0,0,.35)}',
-
-    '.mf{position:relative;box-sizing:border-box;direction:rtl;text-align:right;color:var(--mf-ink);background:var(--mf-bg);',
-    'border:1px solid var(--mf-line);border-radius:18px;box-shadow:var(--mf-shadow);overflow:hidden;isolation:isolate;',
-    'font-family:"Segoe UI",Tahoma,"Noto Sans Arabic","Noto Naskh Arabic",system-ui,sans-serif;line-height:1.5}',
-    '.mf *{box-sizing:border-box}',
-    '.mf::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background-image:',
-    'url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2756%27 height=%2756%27%3E%3Cg fill=%27none%27 stroke=%27%23000%27 stroke-width=%271%27%3E%3Cpath d=%27M28 4 34 22 52 28 34 34 28 52 22 34 4 28 22 22Z%27/%3E%3Crect x=%2718%27 y=%2718%27 width=%2720%27 height=%2720%27 transform=%27rotate(45 28 28)%27/%3E%3C/g%3E%3C/svg%3E");',
-    'opacity:.07}',
-    '.mf.mf-dark::before{filter:invert(1)}',
-    '@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .mf:not(.mf-light)::before{filter:invert(1)}}',
-    ':root[data-theme="dark"] .mf:not(.mf-light)::before{filter:invert(1)}',
-    '.mf p,.mf ul,.mf li{margin:0;padding:0}.mf ul{list-style:none}.mf li::before,.mf li::marker{content:none}',
-    '.mf-x{position:absolute;top:8px;left:8px;z-index:2;width:30px;height:30px;border:0;border-radius:50%;cursor:pointer;',
-    'background:transparent;color:var(--mf-ink2);font:400 22px/30px system-ui,sans-serif;padding:0;text-align:center}',
-    '.mf-x:hover{background:var(--mf-chip)}.mf-x:focus-visible,.mf-cta:focus-visible,.mf-nav:focus-visible{outline:3px solid #F6B73C;outline-offset:2px}',
-    '.mf-kick{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;font-size:.8rem;font-weight:700;color:var(--mf-kick);padding-left:30px}',
-    '.mf-kick span{display:inline-block;padding:2px 10px;border-radius:99px;background:var(--mf-chip);border:1px solid var(--mf-line)}',
-    '.mf-title{display:flex;align-items:center;gap:10px;margin:8px 0 2px!important;font-family:"MF Kufi","Segoe UI",Tahoma,sans-serif;',
-    'font-weight:700;font-size:2.15rem;line-height:1.15;color:var(--mf-title);letter-spacing:0}',
-    '.mf-title svg{width:30px;height:30px;flex:none}',
-    '.mf-tag{font-size:1rem;color:var(--mf-ink);font-weight:600}',
-    '.mf-pts{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 14px!important}',
-    '.mf-pts li{font-size:.82rem;font-weight:700;padding:4px 10px;border-radius:10px;background:var(--mf-chip);color:var(--mf-chip-ink);border:1px solid var(--mf-line)}',
-    'a.mf-cta{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:10px 20px;border-radius:14px;',
-    'background:linear-gradient(180deg,#F8C453,#EFA92A);color:#1D1846!important;text-decoration:none!important;font-weight:800;font-size:1rem;',
-    'box-shadow:0 3px 0 #B9801A,0 8px 18px rgba(239,169,42,.28);transition:transform .1s}',
-    'a.mf-cta:hover{transform:translateY(-1px)}a.mf-cta:active{transform:translateY(1px);box-shadow:0 1px 0 #B9801A}',
-    'a.mf-cta svg{width:20px;height:20px;flex:none}',
-    '.mf-fine{margin-top:8px!important;font-size:.74rem;color:var(--mf-ink2)}',
-    /* decorative question card */
-    '.mf-art{display:flex;align-items:center;justify-content:center}',
-    '.mf-q{width:100%;max-width:230px;background:#fff;color:#1D1846;border-radius:16px;padding:12px;transform:rotate(-3deg);',
-    'box-shadow:0 10px 26px rgba(20,16,70,.25);border:4px solid rgba(255,255,255,.65)}',
-    '.mf-cat{display:inline-block;font-size:.7rem;font-weight:800;color:#8A5410;background:#FBE7C6;border-radius:99px;padding:2px 9px}',
-    '.mf-q b{display:block;margin:7px 0 9px;font-size:.98rem;font-weight:800;line-height:1.35}',
-    '.mf-opts{display:grid;grid-template-columns:1fr 1fr;gap:6px}',
-    '.mf-opts i{font-style:normal;font-size:.82rem;font-weight:700;text-align:center;padding:6px 4px;border-radius:9px;border:1.5px solid #E3E1F0;color:#2B2760}',
-    '.mf-opts i.ok{background:#1E8A4C;border-color:#1E8A4C;color:#fff}',
+    /* the card is the picture (img/promo/lammat-almaarifa-*.webp): the whole picture is the Google Play link,
+       the button over the drawn x (top left) hides the cards for 30 days */
+    '.mf{position:relative;display:block;box-sizing:border-box;width:100%;max-width:400px;margin:2.2em auto;line-height:0;',
+    'border-radius:5.2%/4.15%;overflow:hidden;isolation:isolate;background:#1D1846;box-shadow:0 14px 34px rgba(23,19,74,.35);transition:transform .15s}',
+    '.mf:hover{transform:translateY(-2px)}',
+    '.mf-pic{display:block;border-radius:inherit}.mf-pic img{display:block;width:100%;height:auto}',
+    '.mf-pic::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:35%;pointer-events:none;',
+    'background:linear-gradient(100deg,transparent,rgba(255,255,255,.45),transparent);transform:skewX(-20deg)}',
+    '.mf-x{position:absolute;top:0;left:0;z-index:2;width:15%;aspect-ratio:1;min-width:36px;min-height:36px;padding:0;border:0;',
+    'border-radius:50%;background:transparent;cursor:pointer}',
+    '.mf-x:focus-visible{outline:3px solid #F6B73C;outline-offset:-6px}.mf-pic:focus-visible{outline:3px solid #F6B73C;outline-offset:-4px}',
     /* placements */
-    '.mf--inline{display:grid;grid-template-columns:minmax(0,1fr) 210px;gap:18px;align-items:center;padding:20px 22px;margin:2.2em 0}',
-    '.mf-slot:empty{display:none}.mf-slot .mf--inline{margin:1.6em 0}',
-    '.mf--aside{display:grid;gap:12px;padding:18px;transition:opacity .25s,visibility .25s}',
-    '.mf--aside .mf-art{order:-1;padding:6px 0 4px}.mf--aside .mf-title{font-size:1.9rem}',
-    '.mf--aside a.mf-cta{width:100%;padding:10px 12px;gap:8px;font-size:.92rem;white-space:nowrap}.mf--aside .mf-pts li{font-size:.78rem}',
-    '.mf--aside.mf-away{opacity:0;visibility:hidden}',
-    '.mf--trainer{display:grid;grid-template-columns:minmax(0,1fr) 190px;gap:16px;align-items:center;padding:18px;margin:18px 0 6px}',
+    '.mf-slot:empty{display:none}.mf-slot .mf{margin:1.6em auto}',
+    '.mf--aside{max-width:none;margin:16px 0;transition:opacity .25s,visibility .25s}.mf--aside.mf-away{opacity:0;visibility:hidden}',
     '@media (max-width:980px){.mf--aside{display:none}}',
-    '@media (max-width:600px){.mf--inline,.mf--trainer{grid-template-columns:1fr;gap:10px;padding:14px 14px 16px}',
-    '.mf--inline .mf-art,.mf--trainer .mf-art{order:-1}.mf-q{max-width:230px;padding:9px 10px;transform:rotate(-2deg)}',
-    '.mf-q b{font-size:.88rem;margin:5px 0 7px}.mf-opts{gap:5px}.mf-opts i{font-size:.76rem;padding:4px 3px}',
-    '.mf-title{font-size:1.75rem;margin-top:4px!important}.mf-tag{font-size:.95rem}.mf-pts{margin:9px 0 12px!important}',
-    '.mf-pts li{font-size:.76rem;padding:3px 8px}a.mf-cta{width:100%}}',
+    '.mf--trainer{margin:18px auto 6px}',
+    /* motion: the first time it is on screen it bobs and shines 3 times, then keeps still */
+    '.mf-anim.mf-live{animation:mfBob 2.6s ease-in-out .3s 3}.mf-anim.mf-live .mf-pic::after{animation:mfShine 2.6s ease-in-out .3s 3}',
+    '@keyframes mfBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}',
+    '@keyframes mfShine{0%{left:-60%}55%,100%{left:130%}}',
     /* mobile menu line */
     'a.mf-nav{display:none}',
     '@media (max-width:1139px){a.mf-nav{display:flex;align-items:center;gap:12px;margin:10px 0 0;padding:10px 12px!important;border-radius:14px;',
@@ -136,24 +92,7 @@
     'a.mf-nav b{font-family:"MF Kufi","Segoe UI",Tahoma,sans-serif;font-size:1.25rem;color:#F6B73C;font-weight:700}',
     'a.mf-nav small{font-size:.8rem;color:#C9C5F0}a.mf-nav em{font-style:normal;font-weight:800;font-size:.8rem;color:#1D1846;',
     'background:#F6B73C;border-radius:10px;padding:6px 10px;white-space:nowrap}}',
-    'a.mf-cta{position:relative;overflow:hidden;isolation:isolate}',
-    'a.mf-cta::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:45%;pointer-events:none;',
-    'background:linear-gradient(100deg,transparent,rgba(255,255,255,.6),transparent);transform:skewX(-20deg)}',
-    '.mf-anim:not(.mf-live) .mf-opts i.ok{background:transparent;border-color:#E3E1F0;color:#2B2760}',
-    '.mf-anim:not(.mf-live) .mf-tick{opacity:0}',
-    '.mf-anim.mf-live .mf-opts i.ok{animation:mfPick .55s cubic-bezier(.2,1.5,.4,1) 1.1s both}',
-    '.mf-anim.mf-live .mf-tick{display:inline-block;animation:mfTick .35s ease-out 1.5s both}',
-    '.mf-anim.mf-live .mf-q{animation:mfFloat 2.6s ease-in-out .2s 3}',
-    '.mf-anim.mf-live a.mf-cta{animation:mfPulse 2.4s ease-in-out 1.8s 3}',
-    '.mf-anim.mf-live a.mf-cta::after{animation:mfShine 2.4s ease-in-out 1.8s 3}',
-    '.mf-anim.mf-live .mf-title svg{animation:mfSpin .9s ease-out .3s both}',
-    '@keyframes mfPick{0%{background:transparent;color:#2B2760;border-color:#E3E1F0;transform:scale(1)}',
-    '60%{transform:scale(1.14)}100%{background:#1E8A4C;border-color:#1E8A4C;color:#fff;transform:scale(1)}}',
-    '@keyframes mfTick{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:scale(1)}}',
-    '@keyframes mfFloat{0%,100%{transform:rotate(-3deg) translateY(0)}50%{transform:rotate(-3deg) translateY(-7px)}}',
-    '@keyframes mfPulse{0%,50%,100%{transform:scale(1)}25%{transform:scale(1.05)}}',
-    '@keyframes mfShine{0%{left:-60%}55%,100%{left:130%}}',
-    '@keyframes mfSpin{from{transform:rotate(-120deg) scale(.5)}to{transform:rotate(0) scale(1)}}',
+    'a.mf-nav:focus-visible{outline:3px solid #F6B73C;outline-offset:2px}',
     '@media (prefers-reduced-motion:reduce){.mf,.mf *,.mf *::after{transition:none!important;animation:none!important}}',
     '@media print{.mf,.mf-nav{display:none!important}}'
   ].join('');
@@ -168,31 +107,27 @@
   var STAR = '<svg viewBox="0 0 40 40" aria-hidden="true"><g fill="#F6B73C"><rect x="8" y="8" width="24" height="24" rx="2.5"/>' +
     '<rect x="8" y="8" width="24" height="24" rx="2.5" transform="rotate(45 20 20)"/></g>' +
     '<circle cx="20" cy="20" r="6" fill="none" stroke="#FFF6DD" stroke-width="2.4"/></svg>';
-  var PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#1D1846" d="M5 3.6v16.8c0 .7.8 1.2 1.4.8l14-8.4c.6-.4.6-1.2 0-1.6l-14-8.4C5.8 2.4 5 2.9 5 3.6z"/></svg>';
 
+  var IMG = BASE + 'img/promo/lammat-almaarifa-';
+  var ALT = 'لمة المعرفة: لعبة أسئلة ومعلومات عربية للعائلة والأصدقاء، مجانية على أندرويد. أكثر من 1400 سؤال، ' +
+    'اللعب الفردي بدون إنترنت، تحدٍّ حتى 5 لاعبين. حمّلها مجانًا من Google Play';
   function card(place, extra) {
     var el = doc.createElement('aside');
-    el.className = 'mf mf-dark mf--' + (extra || 'inline');
+    el.className = 'mf mf--' + (extra || 'inline');
     if (!REDUCED) el.classList.add('mf-anim');
     el.setAttribute('dir', 'rtl'); el.setAttribute('lang', 'ar'); el.setAttribute('translate', 'no');
     el.setAttribute('data-tr-skip', ''); el.setAttribute('aria-label', 'لمة المعرفة: لعبة أسئلة عربية مجانية');
     el.innerHTML =
-      '<button type="button" class="mf-x" aria-label="إخفاء هذا الإعلان لمدة 30 يومًا" title="إخفاء">&times;</button>' +
-      '<div class="mf-body">' +
-        '<p class="mf-kick"><span>من تطبيقاتنا</span>مجانية على أندرويد</p>' +
-        '<p class="mf-title">' + STAR + 'لمة المعرفة</p>' +
-        '<p class="mf-tag">لعبة أسئلة ومعلومات عربية للعائلة والأصدقاء</p>' +
-        '<ul class="mf-pts"><li>أكثر من 1400 سؤال</li><li>اللعب الفردي بدون إنترنت</li><li>تحدٍّ حتى 5 لاعبين</li></ul>' +
-        '<a class="mf-cta" href="' + playUrl(place) + '" target="_blank" rel="noopener">' + PLAY + 'حمّلها مجانًا من Google Play</a>' +
-      '</div>' +
-      '<div class="mf-art" aria-hidden="true"><div class="mf-q"><span class="mf-cat">العالم العربي</span>' +
-        '<b>ما عاصمة سلطنة عُمان؟</b><span class="mf-opts"><i>الدوحة</i><i class="ok">مسقط <span class="mf-tick">✓</span></i><i>المنامة</i><i>صلالة</i></span></div></div>';
+      '<a class="mf-pic" href="' + playUrl(place) + '" target="_blank" rel="noopener">' +
+        '<img src="' + IMG + '480.webp" srcset="' + IMG + '480.webp 480w, ' + IMG + '840.webp 840w" ' +
+        'sizes="(max-width: 600px) calc(100vw - 32px), 400px" width="840" height="1049" loading="lazy" decoding="async" alt="' + ALT + '"></a>' +
+      '<button type="button" class="mf-x" aria-label="إخفاء هذا الإعلان لمدة 30 يومًا" title="إخفاء"></button>';
     el.querySelector('.mf-x').addEventListener('click', function () {
       set(KEY, String(Date.now()));
       doc.querySelectorAll('aside.mf').forEach(function (c) { c.remove(); });
       track('maarifa_promo_hide', place);
     });
-    el.querySelector('.mf-cta').addEventListener('click', function () { track('maarifa_promo_click', place); });
+    el.querySelector('.mf-pic').addEventListener('click', function () { track('maarifa_promo_click', place); });
     watchView(el, place);
     return el;
   }
@@ -286,9 +221,7 @@
   function trainerHome(root) {
     if (!root || !allowed() || dismissed()) return;
     if (root.querySelector('.mf')) return;
-    var c = card('trainer_home', 'trainer');
-    c.classList.add('mf-dark');
-    root.appendChild(c);
+    root.appendChild(card('trainer_home', 'trainer'));
   }
 
   function run() {
