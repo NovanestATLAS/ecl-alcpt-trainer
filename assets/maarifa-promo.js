@@ -10,6 +10,10 @@
        middle of the article, and on desktop also one in the side column
        under "Practice now"; never next to an ad, a question or an answer
        button, and the side card steps aside while questions are on screen;
+     . the most visited pages (home, tests hub, lessons hub, the ALCPT
+       practice test and the ECL practice questions): one card in the place
+       the page marks with <div class="mf-slot" data-mf-place="...">, and
+       no other card on that page;
      . the mobile menu: one compact line at the bottom;
      . the trainer: one card at the bottom of the home menu, never during
        a quiz.
@@ -110,6 +114,7 @@
     '.mf-opts i.ok{background:#1E8A4C;border-color:#1E8A4C;color:#fff}',
     /* placements */
     '.mf--inline{display:grid;grid-template-columns:minmax(0,1fr) 210px;gap:18px;align-items:center;padding:20px 22px;margin:2.2em 0}',
+    '.mf-slot:empty{display:none}.mf-slot .mf--inline{margin:1.6em 0}',
     '.mf--aside{display:grid;gap:12px;padding:18px;transition:opacity .25s,visibility .25s}',
     '.mf--aside .mf-art{order:-1;padding:6px 0 4px}.mf--aside .mf-title{font-size:1.9rem}',
     '.mf--aside a.mf-cta{width:100%;padding:10px 12px;gap:8px;font-size:.92rem;white-space:nowrap}.mf--aside .mf-pts li{font-size:.78rem}',
@@ -232,6 +237,14 @@
     var nav = doc.getElementById('nav');
     if (nav && !nav.querySelector('.mf-nav')) nav.appendChild(navItem());
     if (dismissed()) return;
+    var slots = doc.querySelectorAll('.mf-slot');
+    if (slots.length) {                                        // the page chose its place: one card, there only
+      slots.forEach(function (s, i) {
+        if (i > 0 || s.querySelector('.mf')) return;
+        s.appendChild(card(s.getAttribute('data-mf-place') || 'page', 'inline'));
+      });
+      return;
+    }
     var art = doc.querySelector('main article.prose'), side = doc.querySelector('main .aside');
     if (!art) return;
     var testPage = !!art.querySelector('.qc[data-mode="test"]');

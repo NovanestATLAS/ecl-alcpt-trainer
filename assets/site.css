@@ -714,3 +714,6 @@ html[lang="ar"] h1,html[lang="ar"] h2,html[lang="ar"] h3{line-height:1.4}
 .app-bar .btn svg{width:20px;height:20px;flex:none}
 .app-bar .btn:focus-visible{outline:3px solid var(--on-navy);outline-offset:3px}
 @media print{.app-bar{display:none}}
+
+/* Lammat Al-Ma'rifa card place (assets/maarifa-promo.js); empty for visitors who do not get the card */
+.mf-slot:empty{display:none}
