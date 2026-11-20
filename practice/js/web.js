@@ -182,13 +182,14 @@
   var APP_URL = 'https://play.google.com/store/apps/details?id=com.ecltrainer.english' +
     '&referrer=utm_source%3Decl-alcpt-trainer.com%26utm_medium%3Dwebsite%26utm_campaign%3Dtrainer_';
   var P = C.partners || {};
+  var MON = g.ECL_MONETIZATION || {};                  // assets/monetization-config.js: italki "enabled": false hides the card
   var isAndroid = /Android/i.test(ua);
   var EVERY = 10, DAILY = 6;
   function track(name, params) { try { if (g.ECL_TRACK) g.ECL_TRACK(name, params || {}); } catch (e) { } }
   function ok(u) { return typeof u === 'string' && /^https:\/\//.test(u); }
   var PROMOS = {
     italki: function () {
-      return ok(P.italki) && { cls: 'tutor', title: 'Speak English with a real tutor',
+      return ok(P.italki) && !(MON.italki && MON.italki.enabled === false) && { cls: 'tutor', title: 'Speak English with a real tutor',
         text: 'One-to-one video lessons on italki, at the times you choose. Pay per lesson.',
         cta: 'Find a tutor on italki', url: P.italki, rel: 'sponsored nofollow noopener',
         img: '../assets/img/promo/italki-tutor-', imgW: 1400, imgH: 606 };
@@ -299,6 +300,7 @@
         adUnit(box, 'results');
       }
     }
+    if (v === 'result' && g.ECL_MON) g.ECL_MON.trainerResult(root);   // "Recommended Study Resources", after the buttons
     if (v === 'settings') patchSettings();
   }
 

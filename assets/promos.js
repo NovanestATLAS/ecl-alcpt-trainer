@@ -116,7 +116,7 @@
   }
 
   /* ------------------------ where it goes in an article ------------------ */
-  var BAD = '.ad-slot, .qc, .qlist, .faq, .cta-box, .related, .pager, .howto, .bands, .promo-banner, .app-card';
+  var BAD = '.ad-slot, .qc, .qlist, .faq, .cta-box, .related, .pager, .howto, .bands, .promo-banner, .app-card, .mon-res';
   function isBad(el) { return !!el && (el.matches(BAD) || !!el.querySelector('.qc, .qlist, .bub, .ad-slot')); }
   function middleSpot(art) {
     var kids = [].slice.call(art.children), cands = [];
@@ -134,7 +134,7 @@
     return kids[best];
   }
   /* end of the article: before the closing FAQ, sources, related links or pager; never right under questions */
-  var TAIL = '.faq, .sources, .related, .pager, .mf-slot, .note-box';
+  var TAIL = '.faq, .sources, .related, .pager, .mf-slot, .note-box, .mon-res';
   function endSpot(art) {
     var kids = [].slice.call(art.children), i = kids.length;
     while (i > 0 && kids[i - 1].matches(TAIL)) i--;

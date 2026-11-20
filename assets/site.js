@@ -27,11 +27,23 @@
     (doc.head || html).appendChild(s);
   })();
 
+  /* study-resources section and Adcash zones (assets/monetization.js), all switched in assets/monetization-config.js */
+  (function () {
+    var me = doc.currentScript || doc.querySelector('script[src*="assets/site.js"]');
+    if (!window.ECL_MONETIZATION || !me || !me.src || doc.querySelector('script[src*="monetization.js"]')) return;
+    var s = doc.createElement('script');
+    s.async = true;
+    s.src = me.src.replace(/site\.js(\?.*)?$/, 'monetization.js');
+    (doc.head || html).appendChild(s);
+  })();
+
   /* italki banner (static on some pages, added by promos.js on others): it comes alive the first time half of it is
      on screen (CSS .is-live), counted as italki_view; the button over the drawn x hides every italki banner for 30 days */
   (function () {
     var KEY = 'promo_hide_italki';
     function hidden() {
+      var M = window.ECL_MONETIZATION;
+      if (M && M.italki && M.italki.enabled === false) return true;   // switched off in assets/monetization-config.js
       var t = 0; try { t = +localStorage.getItem(KEY) || 0; } catch (e) { }
       return t > 0 && Date.now() - t < 30 * 864e5;
     }
