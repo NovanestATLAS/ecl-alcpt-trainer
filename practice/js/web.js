@@ -300,7 +300,6 @@
       }
     }
     if (v === 'settings') patchSettings();
-    if (v === 'home' && g.MF_PROMO) g.MF_PROMO.trainerHome(root);   // Arabic cross-promotion, bottom of the menu
   }
 
   /* --------------------- browser Back inside the trainer ------------------ */

@@ -717,7 +717,7 @@ html[lang="ar"] h1,html[lang="ar"] h2,html[lang="ar"] h3{line-height:1.4}
 @media (max-width:340px){.app-bar .wrap{padding:0 12px}.app-bar .btn{padding:0 16px;font-size:.95rem}.app-bar .btn svg{width:22px;height:22px}}
 @media print{.app-bar{display:none}}
 
-/* Lammat Al-Ma'rifa card place (assets/maarifa-promo.js); empty for visitors who do not get the card */
+/* promo card place (assets/promos.js); empty when no card is shown there */
 .mf-slot:empty{display:none}
 
 /* italki banner (assets/img/promo/italki-tutor-*.webp, the same English picture on every page): the whole picture is the

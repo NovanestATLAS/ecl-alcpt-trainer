@@ -18,7 +18,7 @@
     });
   }
 
-  /* promo cards (assets/promos.js): the ECL app, italki and, for Arabic speakers, Lammat Al-Ma'rifa take turns */
+  /* promo cards (assets/promos.js): the ECL app and italki take turns */
   (function () {
     var me = doc.currentScript || doc.querySelector('script[src*="assets/site.js"]');
     if (!me || !me.src || doc.querySelector('script[src*="promos.js"]')) return;

@@ -2,21 +2,19 @@
    promos.js - where the promo cards go on the website (not in /practice/,
    which has its own rotating card in practice/js/web.js).
    --------------------------------------------------------------------------
-   Three cards take turns, one more page view at a time:
+   Two cards take turns, one more page view at a time:
      . the ECL & ALCPT English Trainer Android app (our app; not on iPhone/iPad);
-     . the italki banner (partner link);
-     . Lammat Al-Ma'rifa, our Arabic quiz game, for Arabic speakers only
-       (assets/maarifa-promo.js decides who; never on iPhone/iPad).
+     . the italki banner (partner link).
    Article pages (lessons, topics, guides, tests):
-     . middle of the article: the ECL app or Lammat Al-Ma'rifa, taking turns;
+     . middle of the article: the ECL app;
      . end of the article: the italki banner, unless the page already has one;
-     . desktop side column: the ECL app when the middle card is Lammat.
+     . desktop side column: the ECL app, when the middle card is not the app.
    Pages with <div class="mf-slot"> (home, hubs, two test pages): one card in
-   the slot, taking turns between italki, the app and Lammat.
+   the slot, taking turns between italki and the app.
    Never next to an ad, a question or an answer button; the side card steps
    aside while questions are on screen. Each card's x hides it for 30 days.
    GA4 (when analytics is on): promo_view / promo_click with kind and placement.
-   Test: ?promo=app, ?promo=italki or ?promo=lammat forces the middle/slot card.
+   Test: ?promo=app or ?promo=italki forces the middle/slot card.
    ========================================================================== */
 (function (g) {
   'use strict';
@@ -30,7 +28,7 @@
   var LANG = /^ar/i.test(html.lang) ? 'ar' : /^fr/i.test(html.lang) ? 'fr' : 'en';
   var DAYS = 30, APP_KEY = 'promo_hide_app';
   var ITALKI = 'https://www.italki.com/affshare?ref=af34425454';
-  var FORCE = (/[?&]promo=(app|italki|lammat)\b/.exec(location.search) || [])[1] || '';
+  var FORCE = (/[?&]promo=(app|italki)\b/.exec(location.search) || [])[1] || '';
 
   function get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function set(k, v) { try { localStorage.setItem(k, v); } catch (e) { } }
@@ -103,12 +101,11 @@
   /* ------------------------------ who gets what -------------------------- */
   function canApp() { return FORCE === 'app' || (!IOS && !recent(APP_KEY)); }
   function canItalki() { return FORCE === 'italki' || !(g.ECL_ITALKI && g.ECL_ITALKI.hidden()); }
-  function canLammat() { return FORCE === 'lammat' || !!(g.MF_PROMO && g.MF_PROMO.ok()); }
   function hasItalki() { return !!doc.querySelector('[data-tutor]:not([hidden])'); }
-  function make(kind, place, extra) {
+  function make(kind, place) {
     if (kind === 'app') return appCard(place);
     if (kind === 'italki') return italkiBanner(place);
-    return g.MF_PROMO ? g.MF_PROMO.card(place, extra || 'inline') : null;
+    return null;
   }
 
   /* one more page view: the turn moves on, so the cards take turns */
@@ -119,7 +116,7 @@
   }
 
   /* ------------------------ where it goes in an article ------------------ */
-  var BAD = '.ad-slot, .qc, .qlist, .faq, .cta-box, .related, .pager, .howto, .bands, .promo-banner, .app-card, .mf';
+  var BAD = '.ad-slot, .qc, .qlist, .faq, .cta-box, .related, .pager, .howto, .bands, .promo-banner, .app-card';
   function isBad(el) { return !!el && (el.matches(BAD) || !!el.querySelector('.qc, .qlist, .bub, .ad-slot')); }
   function middleSpot(art) {
     var kids = [].slice.call(art.children), cands = [];
@@ -173,7 +170,6 @@
       var kinds = [];
       if (canItalki() && !hasItalki()) kinds.push('italki');
       if (canApp() && !appBar) kinds.push('app');
-      if (canLammat()) kinds.push('lammat');
       var k = pick(kinds), c = k && make(k, slot.getAttribute('data-mf-place') || 'slot');
       if (c) slot.appendChild(c);
       if (art && k !== 'italki' && canItalki() && !hasItalki()) put(italkiBanner('article_end'), endSpot(art));
@@ -184,7 +180,6 @@
     if (!testPage) {
       var spot = middleSpot(art), list = [];
       if (canApp()) list.push('app');
-      if (canLammat()) list.push('lammat');
       mid = spot && pick(list);
       if (mid) put(make(mid, 'article'), { before: spot });
     }
@@ -196,10 +191,5 @@
     }
   }
 
-  function start() { if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', run); else run(); }
-  if (IOS || g.MF_PROMO) { start(); return; }                       // Lammat is Android only: no need to load it on iOS
-  var s = doc.createElement('script');
-  s.src = BASE + 'maarifa-promo.js';
-  s.onload = s.onerror = start;
-  (doc.head || html).appendChild(s);
+  if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', run); else run();
 })(window);
