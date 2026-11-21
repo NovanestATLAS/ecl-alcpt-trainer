@@ -10,7 +10,7 @@
      . Themes, confort de lecture, export / import des donnees
    =========================================================================== */
 
-var APP_VERSION = '5.9.36';
+var APP_VERSION = '5.9.37';
 
 /* v5.9.26
      . Ecoute : 155 questions (js/listening-data.js), une voix d'homme et une
@@ -956,6 +956,9 @@ VIEWS.home = function () {
         'Idioms and corrected drills',
         IDIOMS_LIB.length + DRILLS.reduce(function (a, d) { return a + d.items.length; }, 0)) +
     '</div>';
+  h += '<div class="note" style="margin:14px 0 4px;padding:10px 12px;font-size:13px;line-height:1.45">' + independentNotice() +
+    ' Official information: ' + extLink(OFFICIAL_SOURCES[0][0], OFFICIAL_SOURCES[0][1]) + ' &middot; ' +
+    extLink(OFFICIAL_SOURCES[1][0], OFFICIAL_SOURCES[1][1]) + '.</div>';
 
   root.innerHTML = L(h + tabbar('home'));
 };
@@ -2668,6 +2671,9 @@ VIEWS.settings = function () {
 
   h += '<div class="gcard"><h3>About</h3><p class="fr">ECL English Trainer, <span onclick="devTap()">version ' + APP_VERSION + '</span>.<br>' +
     'Focused ECL and ALCPT preparation with US audio, adaptive review, reference material and timed tests.</p>' +
+    '<p class="fr"><b>' + independentNotice() + '</b></p>' +
+    '<p class="fr">Official sources for the tests: ' +
+      OFFICIAL_SOURCES.map(function (o) { return extLink(o[0], o[1]); }).join(' &middot; ') + '.</p>' +
     /* v5.9.28 : mise a jour depuis Google Play (js/update.js, application seulement) */
     (window.AppUpdate && AppUpdate.available() ? '<button class="btn ghost block" onclick="AppUpdate.check(true)">Check for updates</button>' : '') +
     '</div>';
@@ -2676,6 +2682,23 @@ VIEWS.settings = function () {
   root.innerHTML = L(h + tabbar('settings'));
   if (ok) setTimeout(renderVoiceBox, 0);
 };
+
+/* ----------- Independent-app notice and official sources (v5.9.37) -------
+   Google Play (Misleading Claims policy): an app about a government test
+   must say it does not represent a government entity and link the official
+   sources. Used on the home screen and in Settings > About.               */
+var OFFICIAL_SOURCES = [
+  ['ECL test (DLIELC)', 'https://dlielc.edu/ecl-testing/'],
+  ['ALCPT test (DLIELC)', 'https://dlielc.edu/testing/alcpt_test.php'],
+  ['ALCPT handbook, PDF (DLIELC)', 'https://dlielc.edu/testing/ALCPT_Handbook_2025.pdf']
+];
+function extLink(label, url) {
+  return '<a href="' + url + '" target="_blank" rel="noopener">' + label + '</a>';
+}
+function independentNotice() {
+  return 'Independent app. It does not represent DLIELC, the U.S. Department of Defense or any government entity. ' +
+    'All questions are original practice material, not official test items.';
+}
 
 /* ------------------------- selecteur de voix ---------------------------- */
 /* Every voice of the phone (or of the browser), not only the US ones.
