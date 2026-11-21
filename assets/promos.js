@@ -108,6 +108,9 @@
     return null;
   }
 
+  /* the same app card under the results of a graded test (assets/monetization.js) */
+  g.ECL_APP_CARD = function (place) { return canApp() ? appCard(place) : null; };
+
   /* one more page view: the turn moves on, so the cards take turns */
   var turn = (+get('promo_turn_site') || 0); set('promo_turn_site', String(turn + 1));
   function pick(list) {
