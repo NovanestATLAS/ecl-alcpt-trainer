@@ -92,7 +92,7 @@ window.ECL_MONETIZATION = {
         enabled: true,
         format: 'banner',                 // 'banner' or 'native' only
         placement: 'footer',              // 'footer' or 'sidebar'
-        pages: ['home'],                  // add 'article' and/or 'other' to show it on more pages
+        pages: ['home', 'article', 'other'],   // where it may appear (the trainer never shows Adcash)
         width: 300,                       // the zone's size in pixels, as set in Adcash
         height: 100,
         /* official zone code, exactly as Adcash gives it */

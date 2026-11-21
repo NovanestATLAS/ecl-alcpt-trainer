@@ -271,7 +271,10 @@
     } catch (e) { m.root.hidden = true; return; }
     setTimeout(function () {                                           // nothing drawn: no empty box left behind
       var drawn = [].slice.call(m.slot.children).some(function (c) { return c.nodeName !== 'SCRIPT'; });
-      if (!drawn) m.root.hidden = true;
+      if (!drawn) {
+        m.root.hidden = true;
+        if (/[?&]mon=check/.test(location.search) && g.console) console.log('Adcash zone ' + m.z.id + ' drew no ad: the zone is not approved or has no ad to show yet, or an ad blocker is on. The library did load.');
+      }
     }, 6000);
   }
   var mounted = [];
