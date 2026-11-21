@@ -152,6 +152,15 @@
     var anchor = main.querySelector('section.study-band') || main.querySelector('section:last-of-type');
     if (anchor) anchor.insertAdjacentElement('afterend', band); else main.appendChild(band);
   }
+  /* section pages (tests, lessons, guides): the study resources before the end of the page */
+  function mountHub() {
+    var main = doc.querySelector('main');
+    if (!main || main.querySelector('.hero, article.prose, [data-mon="study-resources"]') || !main.querySelector('.hub-sec')) return;
+    var s = buildSection('hub'); if (!s) return;
+    var wrap = el('div', 'wrap mon-hub'); wrap.appendChild(s);
+    var b = main.querySelector(':scope > .adz[data-adz="B"]');
+    if (b) main.insertBefore(wrap, b); else main.appendChild(wrap);
+  }
   function mountArticle() {
     var art = doc.querySelector('main article.prose');
     if (!art || art.querySelector('[data-mon="study-resources"]')) return;
@@ -222,7 +231,7 @@
   g.ECL_MON = { verify: verify, items: items, trainerResult: trainerResult };
   function run() {
     if (PRACTICE) return;
-    mountHome(); mountArticle(); watchResults();
+    mountHome(); mountArticle(); mountHub(); watchResults();
   }
   if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', run); else run();
   if (/[?&]mon=check\b/.test(location.search)) afterLoad(function () { setTimeout(verify, 1500); });
