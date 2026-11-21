@@ -66,7 +66,14 @@ window.ECL_MONETIZATION = {
       { id: 'preply', enabled: true, name: 'Preply',
         url: 'https://preply.sjv.io/qWdQEb',
         image: '', description: 'Online one-on-one English lessons with a tutor.',
-        cta: 'Visit Preply' }
+        cta: 'Visit Preply',
+        /* official Preply banners from Impact.com (Ads > Get code), shown exactly as Preply made them;
+           each has its own tracking link. The site picks the size that fits: 728x90 on wide spots,
+           300x250 elsewhere. Remove a line to stop using that banner. */
+        banners: [
+          { width: 728, height: 90,  url: 'https://preply.sjv.io/c/8265862/4125140/24422', image: 'https://a.impactradius-go.com/display-ad/24422-4125140' },
+          { width: 300, height: 250, url: 'https://preply.sjv.io/c/8265862/4125135/24422', image: 'https://a.impactradius-go.com/display-ad/24422-4125135' }
+        ] }
     ]
   },
 
