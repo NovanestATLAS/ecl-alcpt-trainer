@@ -108,6 +108,9 @@
     return null;
   }
 
+  /* the same app card under the results of a graded test (assets/monetization.js) */
+  g.ECL_APP_CARD = function (place) { return canApp() ? appCard(place) : null; };
+
   /* one more page view: the turn moves on, so the cards take turns */
   var turn = (+get('promo_turn_site') || 0); set('promo_turn_site', String(turn + 1));
   function pick(list) {
@@ -116,8 +119,8 @@
   }
 
   /* ------------------------ where it goes in an article ------------------ */
-  var BAD = '.ad-slot, .qc, .qlist, .faq, .cta-box, .related, .pager, .howto, .bands, .promo-banner, .app-card, .mon-res';
-  function isBad(el) { return !!el && (el.matches(BAD) || !!el.querySelector('.qc, .qlist, .bub, .ad-slot')); }
+  var BAD = '.adz, .ad-slot, .qc, .qlist, .faq, .cta-box, .related, .pager, .howto, .bands, .promo-banner, .app-card, .mon-res';
+  function isBad(el) { return !!el && (el.matches(BAD) || !!el.querySelector('.qc, .qlist, .bub, .adz, .ad-slot')); }
   function middleSpot(art) {
     var kids = [].slice.call(art.children), cands = [];
     kids.forEach(function (el, i) {
@@ -134,11 +137,11 @@
     return kids[best];
   }
   /* end of the article: before the closing FAQ, sources, related links or pager; never right under questions */
-  var TAIL = '.faq, .sources, .related, .pager, .mf-slot, .note-box, .mon-res';
+  var TAIL = '.faq, .sources, .related, .pager, .mf-slot, .note-box, .mon-res, .adz';
   function endSpot(art) {
     var kids = [].slice.call(art.children), i = kids.length;
     while (i > 0 && kids[i - 1].matches(TAIL)) i--;
-    while (i > 0 && i < kids.length && kids[i - 1].matches('.qc, .qlist, .ad-slot')) i++;   // step past a question block
+    while (i > 0 && i < kids.length && kids[i - 1].matches('.qc, .qlist, .adz, .ad-slot')) i++;   // step past a question block
     if (!kids.length || (i > 0 && kids[i - 1].matches('.qc, .qlist, .ad-slot'))) return null;
     return i < kids.length ? { before: kids[i] } : { after: kids[kids.length - 1] };
   }
