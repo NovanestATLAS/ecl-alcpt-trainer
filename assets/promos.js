@@ -4,10 +4,7 @@
    --------------------------------------------------------------------------
    Two cards take turns, one more page view at a time:
      . the ECL & ALCPT English Trainer Android app (our app; not on iPhone/iPad);
-     . the italki banner (partner link);
-     . the Preply banner (Impact.com partner link), switched with its entry in
-       assets/monetization-config.js (studyResources.items, id 'preply').
-   The italki and Preply banners take turns at the end of articles.
+     . the italki banner (partner link).
    Article pages (lessons, topics, guides, tests):
      . middle of the article: the ECL app;
      . end of the article: the italki banner, unless the page already has one;
@@ -31,7 +28,7 @@
   var LANG = /^ar/i.test(html.lang) ? 'ar' : /^fr/i.test(html.lang) ? 'fr' : 'en';
   var DAYS = 30, APP_KEY = 'promo_hide_app';
   var ITALKI = 'https://www.italki.com/affshare?ref=af34425454';
-  var FORCE = (/[?&]promo=(app|italki|preply)\b/.exec(location.search) || [])[1] || '';
+  var FORCE = (/[?&]promo=(app|italki)\b/.exec(location.search) || [])[1] || '';
 
   function get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function set(k, v) { try { localStorage.setItem(k, v); } catch (e) { } }
@@ -91,32 +88,6 @@
     return d;
   }
 
-  /* ---------------------------- Preply banner ---------------------------- */
-  var PREPLY_KEY = 'promo_hide_preply';
-  function preplyUrl() {
-    var M = g.ECL_MONETIZATION || {}, items = (M.studyResources || {}).items || [], u = '';
-    items.forEach(function (p) { if (p && p.id === 'preply' && p.enabled === true) u = p.url; });
-    return typeof u === 'string' && /^https:\/\//.test(u) ? u : '';
-  }
-  function preplyBanner(place) {
-    var i = BASE + 'img/promo/preply-tutor-', d = doc.createElement('div');
-    d.className = 'promo-banner'; d.setAttribute('data-preply', ''); d.setAttribute('lang', 'en'); d.setAttribute('dir', 'ltr');
-    d.setAttribute('data-tr-skip', '');
-    d.innerHTML = '<a class="pb-link" data-google-vignette="false" href="' + preplyUrl() + '" target="_blank" rel="sponsored nofollow noopener">' +
-      '<img src="' + i + '800.webp" srcset="' + i + '800.webp 800w, ' + i + '1400.webp 1400w" sizes="(max-width: 760px) calc(100vw - 32px), 720px" ' +
-      'width="1400" height="606" loading="lazy" decoding="async" alt="Preply: Practice speaking with a tutor. ' +
-      'Online one-on-one English lessons with a tutor. Visit Preply"></a>' +
-      '<button type="button" class="pb-close" aria-label="Close" title="Close"></button>';
-    d.querySelector('.pb-link').addEventListener('click', function () { track('promo_click', { kind: 'preply', placement: place }); });
-    d.querySelector('.pb-close').addEventListener('click', function () {
-      set(PREPLY_KEY, String(Date.now()));
-      doc.querySelectorAll('[data-preply]').forEach(function (b) { b.hidden = true; });
-      track('promo_hide', { kind: 'preply', placement: place });
-    });
-    seen(d, function () { track('promo_view', { kind: 'preply', placement: place }); });
-    return d;
-  }
-
   /* first time half of a card is on screen: .is-live (motion) and one view event */
   var io = null;
   function seen(el, cb) {
@@ -131,20 +102,10 @@
   function canApp() { return FORCE === 'app' || (!IOS && !recent(APP_KEY)); }
   function canItalki() { return FORCE === 'italki' || !(g.ECL_ITALKI && g.ECL_ITALKI.hidden()); }
   function hasItalki() { return !!doc.querySelector('[data-tutor]:not([hidden])'); }
-  function canPreply() { return !!preplyUrl() && (FORCE === 'preply' || !recent(PREPLY_KEY)); }
   function make(kind, place) {
     if (kind === 'app') return appCard(place);
     if (kind === 'italki') return italkiBanner(place);
-    if (kind === 'preply') return preplyBanner(place);
     return null;
-  }
-  /* end of an article: italki and Preply take turns */
-  function endBanner() {
-    var list = [];
-    if (canItalki() && !hasItalki()) list.push('italki');
-    if (canPreply()) list.push('preply');
-    var k = pick(list);
-    return k ? make(k, 'article_end') : null;
   }
 
   /* the same app card under the results of a graded test (assets/monetization.js) */
@@ -212,10 +173,9 @@
       var kinds = [];
       if (canItalki() && !hasItalki()) kinds.push('italki');
       if (canApp() && !appBar) kinds.push('app');
-      if (canPreply()) kinds.push('preply');
       var k = pick(kinds), c = k && make(k, slot.getAttribute('data-mf-place') || 'slot');
       if (c) slot.appendChild(c);
-      if (art && k !== 'italki' && k !== 'preply') put(endBanner(), endSpot(art));
+      if (art && k !== 'italki' && canItalki() && !hasItalki()) put(italkiBanner('article_end'), endSpot(art));
       return;
     }
     if (!art) return;
@@ -226,7 +186,7 @@
       mid = spot && pick(list);
       if (mid) put(make(mid, 'article'), { before: spot });
     }
-    put(endBanner(), endSpot(art));
+    if (canItalki() && !hasItalki()) put(italkiBanner('article_end'), endSpot(art));
     if (side && mid !== 'app' && canApp() && !side.querySelector('.app-card')) {
       var sc = appCard('sidebar', true), first = side.querySelector('.aside-card');
       if (first && first.nextSibling) side.insertBefore(sc, first.nextSibling); else side.appendChild(sc);

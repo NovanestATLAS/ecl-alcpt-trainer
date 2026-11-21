@@ -166,10 +166,9 @@
         img: '../assets/img/promo/italki-tutor-', imgW: 1400, imgH: 606 };
     },
     preply: function () {
-      return ok(P.preply) && { cls: 'tutor', title: 'Preply: Practice speaking with a tutor',
-        text: 'Online one-on-one English lessons with a tutor.',
-        cta: 'Visit Preply', url: P.preply, rel: 'sponsored nofollow noopener',
-        img: '../assets/img/promo/preply-tutor-', imgW: 1400, imgH: 606 };
+      return ok(P.preply) && { cls: 'tutor', title: 'Practice speaking with a tutor',
+        text: 'One-to-one English lessons on Preply, online, at the times you choose.',
+        cta: 'Find a tutor on Preply', url: P.preply, rel: 'sponsored nofollow noopener' };
     },
     app: function (place) {
       return isAndroid && { cls: 'app', title: 'Keep practicing offline',
