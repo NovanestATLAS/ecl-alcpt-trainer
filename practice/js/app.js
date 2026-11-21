@@ -2688,9 +2688,9 @@ VIEWS.settings = function () {
    must say it does not represent a government entity and link the official
    sources. Used on the home screen and in Settings > About.               */
 var OFFICIAL_SOURCES = [
+  ['DLIELC official website', 'https://dlielc.edu/'],
   ['ECL test (DLIELC)', 'https://dlielc.edu/ecl-testing/'],
-  ['ALCPT test (DLIELC)', 'https://dlielc.edu/testing/alcpt_test.php'],
-  ['ALCPT handbook, PDF (DLIELC)', 'https://dlielc.edu/testing/ALCPT_Handbook_2025.pdf']
+  ['ALCPT handbook, PDF (DLIELC)', 'https://dlielc.edu/wp-content/uploads/2026/01/ALCPT_Handbook_2025.pdf']
 ];
 function extLink(label, url) {
   return '<a href="' + url + '" target="_blank" rel="noopener">' + label + '</a>';
