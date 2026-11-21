@@ -4,10 +4,9 @@
    Turned on by the Measurement ID in assets/config.js (ga4: 'G-...'); with
    no ID, nothing is loaded and nothing is sent.
    Consent mode v2: in the European Economic Area, the United Kingdom and
-   Switzerland, no analytics or advertising cookie is used until the visitor
-   accepts Google's consent message (AdSense > Privacy & messaging); Google
-   Analytics then only receives cookieless, aggregated signals. Elsewhere,
-   measurement is on.
+   Switzerland, no analytics cookie is used (there is no consent message
+   since AdSense was removed): Google Analytics only receives cookieless,
+   aggregated signals there. Elsewhere, measurement is on.
    A few events say which features are used: exam_start, exam_complete,
    test_complete, listening_start, translate. No answer, no text typed and
    no personal information is ever sent.

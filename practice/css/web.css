@@ -82,9 +82,6 @@ html[data-view]:not([data-view="home"]) .w-about{display:none}
 .w-card a.w-play svg{width:18px;height:18px}
 .w-ad{margin-top:30px}
 .w-ad:empty{display:none}
-.w-ad .w-adlabel{display:block;font-size:11.5px;color:var(--mut);margin-bottom:4px;text-align:left}
-ins.adsbygoogle[data-ad-status="unfilled"]{display:none!important}
-.w-ad:has(ins[data-ad-status="unfilled"]){display:none}
 .w-adres{margin:40px 0 24px}
 .w-adres:empty{display:none}
 
@@ -197,3 +194,13 @@ html.no-listen .w-k-listen{display:none}
   .w-banner{display:none!important}
   html[data-screen="sim"] .w-ad{display:none}
 }
+
+/* Adcash banners of the trainer (assets/ads.js, placed by practice/js/web.js): a label and the zone's exact size,
+   32px from the buttons around them */
+.adz{display:none;clear:both;margin:32px auto;max-width:100%;overflow:hidden;text-align:center}
+.adz[data-ad-state]{display:block}
+.adz-label{height:16px;margin:0 0 6px;font:600 11px/16px inherit;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+.adz-box{margin:0 auto;max-width:100%;overflow:hidden;width:300px;min-height:100px}
+.adz[data-ad-zone="12477046"] .adz-box{width:300px;min-height:250px}
+.w-ad .adz{margin:0 auto}
+@media print{.adz{display:none!important}}
