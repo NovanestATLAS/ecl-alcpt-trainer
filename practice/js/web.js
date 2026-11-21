@@ -166,6 +166,13 @@
         img: '../assets/img/promo/italki-tutor-', imgW: 1400, imgH: 606 };
     },
     preply: function () {
+      /* the official 300x250 Preply banner (assets/monetization-config.js), else a text card */
+      var ad = null;
+      (((MON.studyResources || {}).items) || []).forEach(function (p) {
+        if (p && p.id === 'preply' && p.enabled === true) (p.banners || []).forEach(function (b) { if (b.width === 300 && ok(b.url) && ok(b.image)) ad = b; });
+      });
+      if (ad) return { cls: 'tutor', title: 'Preply', text: 'Find an online English tutor', cta: '', url: ad.url,
+        rel: 'sponsored nofollow noopener', src: ad.image, imgW: ad.width, imgH: ad.height };
       return ok(P.preply) && { cls: 'tutor', title: 'Practice speaking with a tutor',
         text: 'One-to-one English lessons on Preply, online, at the times you choose.',
         cta: 'Find a tutor on Preply', url: P.preply, rel: 'sponsored nofollow noopener' };
@@ -205,7 +212,12 @@
     c.className = 'w-promo w-promo-' + p.cls;
     c.setAttribute('role', 'complementary');
     c.setAttribute('aria-label', p.kind === 'app' ? 'Android app' : 'Tutor partner');
-    if (p.img) {                    // picture banner: the whole picture is the link, the button covers its drawn x
+    if (p.src) {                    // official partner banner, shown unchanged, with a visible x outside its corner
+      c.className = 'w-promo w-promo-ad';
+      c.innerHTML = '<a class="w-promo-go" data-google-vignette="false" target="_blank" rel="' + p.rel + '" href="' + p.url + '">' +
+        '<img src="' + p.src + '" width="' + p.imgW + '" height="' + p.imgH + '" decoding="async" alt="' + p.title + ': ' + p.text + '"></a>' +
+        '<button type="button" class="w-promo-x" aria-label="Close" title="Close">&times;</button>';
+    } else if (p.img) {             // picture banner: the whole picture is the link, the button covers its drawn x
       c.className = 'w-promo w-promo-pic';
       c.setAttribute('lang', 'en'); c.setAttribute('dir', 'ltr');
       c.innerHTML = '<a class="w-promo-go" data-google-vignette="false" target="_blank" rel="' + p.rel + '" href="' + p.url + '">' +

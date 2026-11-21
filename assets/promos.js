@@ -4,7 +4,10 @@
    --------------------------------------------------------------------------
    Two cards take turns, one more page view at a time:
      . the ECL & ALCPT English Trainer Android app (our app; not on iPhone/iPad);
-     . the italki banner (partner link).
+     . the italki banner (partner link);
+     . the official Preply banners (Impact.com), switched with the Preply entry
+       of assets/monetization-config.js (studyResources.items, id 'preply').
+   At the end of articles the italki and Preply banners take turns.
    Article pages (lessons, topics, guides, tests):
      . middle of the article: the ECL app;
      . end of the article: the italki banner, unless the page already has one;
@@ -28,7 +31,7 @@
   var LANG = /^ar/i.test(html.lang) ? 'ar' : /^fr/i.test(html.lang) ? 'fr' : 'en';
   var DAYS = 30, APP_KEY = 'promo_hide_app';
   var ITALKI = 'https://www.italki.com/affshare?ref=af34425454';
-  var FORCE = (/[?&]promo=(app|italki)\b/.exec(location.search) || [])[1] || '';
+  var FORCE = (/[?&]promo=(app|italki|preply)\b/.exec(location.search) || [])[1] || '';
 
   function get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function set(k, v) { try { localStorage.setItem(k, v); } catch (e) { } }
@@ -88,6 +91,48 @@
     return d;
   }
 
+  /* -------------------- Preply banner (official creative) ----------------- */
+  var PREPLY_KEY = 'promo_hide_preply';
+  function preplyBanners() {
+    var M = g.ECL_MONETIZATION || {}, out = [];
+    ((M.studyResources || {}).items || []).forEach(function (p) {
+      if (!p || p.id !== 'preply' || p.enabled !== true) return;
+      (p.banners || []).forEach(function (b) {
+        if (b && /^https:\/\//.test(b.url || '') && /^https:\/\//.test(b.image || '') && b.width > 0 && b.height > 0) out.push(b);
+      });
+    });
+    return out;
+  }
+  /* the widest banner that fits the room */
+  function fitBanner(room) {
+    var best = null;
+    preplyBanners().forEach(function (b) { if (b.width <= room && (!best || b.width > best.width)) best = b; });
+    return best;
+  }
+  function preplyBanner(place, room) {
+    var b = fitBanner(room || 300); if (!b) return null;
+    var d = doc.createElement('div');
+    d.className = 'promo-banner pb-ad'; d.setAttribute('data-preply', ''); d.setAttribute('data-tr-skip', '');
+    d.innerHTML = '<a class="pb-link" data-google-vignette="false" href="' + b.url + '" target="_blank" rel="sponsored nofollow noopener">' +
+      '<img src="' + b.image + '" width="' + b.width + '" height="' + b.height + '" loading="lazy" decoding="async" ' +
+      'alt="Preply: find an online English tutor"></a>' +
+      '<button type="button" class="pb-close" aria-label="Close" title="Close"></button>';
+    d.querySelector('.pb-link').addEventListener('click', function () { track('promo_click', { kind: 'preply', placement: place }); });
+    d.querySelector('.pb-close').addEventListener('click', function () {
+      set(PREPLY_KEY, String(Date.now()));
+      doc.querySelectorAll('[data-preply]').forEach(function (x) { x.hidden = true; });
+      track('promo_hide', { kind: 'preply', placement: place });
+    });
+    seen(d, function () { track('promo_view', { kind: 'preply', placement: place }); });
+    return d;
+  }
+  /* width available for a banner; an empty slot is hidden (display:none), so measure its parent minus the side padding */
+  function roomOf(el) {
+    if (!el) return 300;
+    var w = el.clientWidth || (el.parentNode ? el.parentNode.clientWidth - 48 : 0);
+    return Math.floor(w > 0 ? w : 300);
+  }
+
   /* first time half of a card is on screen: .is-live (motion) and one view event */
   var io = null;
   function seen(el, cb) {
@@ -102,10 +147,20 @@
   function canApp() { return FORCE === 'app' || (!IOS && !recent(APP_KEY)); }
   function canItalki() { return FORCE === 'italki' || !(g.ECL_ITALKI && g.ECL_ITALKI.hidden()); }
   function hasItalki() { return !!doc.querySelector('[data-tutor]:not([hidden])'); }
-  function make(kind, place) {
+  function canPreply() { return preplyBanners().length > 0 && (FORCE === 'preply' || !recent(PREPLY_KEY)); }
+  function make(kind, place, room) {
     if (kind === 'app') return appCard(place);
     if (kind === 'italki') return italkiBanner(place);
+    if (kind === 'preply') return preplyBanner(place, room);
     return null;
+  }
+  /* end of an article: italki and Preply take turns */
+  function endBanner(art) {
+    var list = [];
+    if (canItalki() && !hasItalki()) list.push('italki');
+    if (canPreply()) list.push('preply');
+    var k = pick(list);
+    return k ? make(k, 'article_end', roomOf(art)) : null;
   }
 
   /* the same app card under the results of a graded test (assets/monetization.js) */
@@ -173,9 +228,10 @@
       var kinds = [];
       if (canItalki() && !hasItalki()) kinds.push('italki');
       if (canApp() && !appBar) kinds.push('app');
-      var k = pick(kinds), c = k && make(k, slot.getAttribute('data-mf-place') || 'slot');
+      if (canPreply()) kinds.push('preply');
+      var k = pick(kinds), c = k && make(k, slot.getAttribute('data-mf-place') || 'slot', roomOf(slot));
       if (c) slot.appendChild(c);
-      if (art && k !== 'italki' && canItalki() && !hasItalki()) put(italkiBanner('article_end'), endSpot(art));
+      if (art && k !== 'italki' && k !== 'preply') put(endBanner(art), endSpot(art));
       return;
     }
     if (!art) return;
@@ -186,7 +242,7 @@
       mid = spot && pick(list);
       if (mid) put(make(mid, 'article'), { before: spot });
     }
-    if (canItalki() && !hasItalki()) put(italkiBanner('article_end'), endSpot(art));
+    put(endBanner(art), endSpot(art));
     if (side && mid !== 'app' && canApp() && !side.querySelector('.app-card')) {
       var sc = appCard('sidebar', true), first = side.querySelector('.aside-card');
       if (first && first.nextSibling) side.insertBefore(sc, first.nextSibling); else side.appendChild(sc);
