@@ -18,6 +18,6 @@ window.ECL_CONFIG = {
   contactKey: 'd5dd4775-3f49-4699-8e24-f912ad749d75',
   partners: {
     italki: 'https://www.italki.com/affshare?ref=af34425454',
-    preply: ''
+    preply: 'https://preply.sjv.io/qWdQEb'   // Preply through Impact.com (same link as in monetization-config.js)
   }
 };
