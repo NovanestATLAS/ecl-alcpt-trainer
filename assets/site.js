@@ -82,16 +82,6 @@
     }
   });
 
-  /* manual AdSense units, only once their slot number is filled in config.js */
-  var C = window.ECL_CONFIG || {};
-  doc.querySelectorAll('.ad-slot[data-slot]').forEach(function (box) {
-    var id = (C.slots || {})[box.getAttribute('data-slot')];
-    if (!id || !C.adsenseClient) return;
-    box.innerHTML = '<span class="ad-label">Advertisements</span><ins class="adsbygoogle" style="display:block" ' +
-      'data-ad-client="' + C.adsenseClient + '" data-ad-slot="' + id + '" data-ad-format="auto" data-full-width-responsive="true"></ins>';
-    try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (x) { }
-  });
-
   /* live filter for long lists (idioms, irregular verbs, phrasal verbs, vocabulary) */
   doc.querySelectorAll('[data-filter]').forEach(function (input) {
     var scope = doc.querySelector(input.getAttribute('data-filter'));

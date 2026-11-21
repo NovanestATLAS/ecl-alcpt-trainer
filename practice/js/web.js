@@ -4,8 +4,9 @@
      . links such as practice/?go=grammar or ?set=g_x_Modals open a section
      . keyboard: A-D or 1-4 to answer, Enter for next, L to listen
      . texts that only made sense on Android are adapted
-     . AdSense units in the right column and on the results screen, once
-       their numbers are filled in assets/config.js
+     . Adcash banners (assets/ads.js): right-hand column of wide screens,
+       after every 10th answered question of a practice set, on the break
+       between the two parts of an exam and on results screens
      . one promo card that takes turns between the tutor partners (italki,
        Preply when its link is in config.js) and the free Android app
        (Android phones only): on the results screen, and after every 10th
@@ -29,48 +30,18 @@
     return null;
   }
 
-  /* ----------------------------- ad units ------------------------------- */
-  function adUnit(box, slotName) {
-    var id = (C.slots || {})[slotName];
-    if (!box || !id || !C.adsenseClient || box.getAttribute('data-filled')) return;
-    box.setAttribute('data-filled', '1');
-    box.innerHTML = '<span class="w-adlabel">Advertisements</span><ins class="adsbygoogle" style="display:block" ' +
-      'data-ad-client="' + C.adsenseClient + '" data-ad-slot="' + id + '" data-ad-format="auto" ' +
-      'data-full-width-responsive="true"></ins>';
-    try { (g.adsbygoogle = g.adsbygoogle || []).push({}); } catch (e) { }
-  }
+  /* ------------------------------ Adcash -------------------------------- */
+  /* a new banner after el (assets/ads.js); never inside a question or during a timed question */
+  function adAfter(el, slot) { return g.ECL_ADS && el ? g.ECL_ADS.fresh(el, slot || 'T') : null; }
+  function timedQuestion() { return !!(g.S && g.S.view === 'quiz' && (g.S.sim || g.S.exam) && !root.querySelector('.exam-break')); }
+  /* right-hand column (1280px and wider): one banner, taken away during timed questions */
   function railAd() {
-    if (g.matchMedia && g.matchMedia('(min-width:1280px)').matches) adUnit(doc.getElementById('railAd'), 'rail');
+    var r = doc.getElementById('railAd');
+    if (!r || !g.ECL_ADS || !(g.matchMedia && g.matchMedia('(min-width:1280px)').matches)) return;
+    var cur = r.querySelector('.adz');
+    if (timedQuestion()) { if (cur) cur.remove(); return; }
+    if (!cur) { var mark = doc.createElement('span'); r.appendChild(mark); adAfter(mark); mark.remove(); }
   }
-  railAd();
-  if (g.matchMedia) {
-    var mq = g.matchMedia('(min-width:1280px)');
-    if (mq.addEventListener) mq.addEventListener('change', railAd);
-  }
-
-  /* ------------- Auto ads: an anchor ad never hides the tab bar -------------
-     A bottom anchor ad (AdSense Auto ads, phones and tablets) is drawn over
-     the page. Its height goes into --adh, the variable the app's style.css
-     already uses for the banner of the Android app: the tab bar, the toast
-     and the end of the page move up above the ad, and back down when it is
-     closed. */
-  var lastAnchor = -1;
-  function anchorAd() {
-    var h = 0, vh = g.innerHeight || html.clientHeight;
-    doc.querySelectorAll('ins.adsbygoogle[data-anchor-status], ins.adsbygoogle[data-anchor-shown]').forEach(function (a) {
-      var st = a.getAttribute('data-anchor-status');
-      if (st && st !== 'displayed') return;
-      var r = a.getBoundingClientRect();
-      if (r.height > 0 && r.top > vh / 2 && r.bottom >= vh - 4) h = Math.max(h, Math.round(vh - r.top));
-    });
-    if (h !== lastAnchor) {
-      lastAnchor = h;
-      html.style.setProperty('--adh', h + 'px');
-      html.classList.toggle('w-anchor', h > 0);
-    }
-  }
-  setInterval(anchorAd, 1200);
-  g.addEventListener('resize', anchorAd);
 
   /* ---------------------------- privacy link ----------------------------- */
   doc.addEventListener('click', function (e) {
@@ -266,9 +237,13 @@
       if (S && S.view === 'quiz' && !S.sim && !S.exam && !was && S.locked) {
         var n = +(ls('promo_answers') || 0) + 1;
         ls('promo_answers', String(n));
-        if (n % EVERY === 0 && S.idx < S.pool.length - 1 && !root.querySelector('.w-promo')) {   // last question: the results card comes next
+        if (n % EVERY === 0 && S.idx < S.pool.length - 1 && !root.querySelector('.w-promo, .adz')) {   // last question: the results card comes next
           var nav = root.querySelector('.navrow');
-          if (nav) setTimeout(function () { if (g.S.view === 'quiz' && nav.isConnected) promoCard('quiz', nav); }, 700);
+          if (nav) setTimeout(function () {
+            if (g.S.view !== 'quiz' || !nav.isConnected) return;
+            var card = promoCard('quiz', nav);
+            adAfter(card || nav);
+          }, 700);
         }
       }
       return r;
@@ -294,12 +269,16 @@
         if (n.querySelector('button[onclick*="goTab(\'home\')"]')) after = n;
       });
       var card = after ? promoCard('result', after) : null;
-      if (after && (C.slots || {}).results) {
-        var box = doc.createElement('div'); box.className = 'w-adres';
-        (card || after).insertAdjacentElement('afterend', box);
-        adUnit(box, 'results');
+      if (after && !root.querySelector('.adz')) {
+        var ad = adAfter(card || after);                                  // the study resources go between the card and the ad
+        if (g.ECL_ADS && g.ECL_ADS.on('B')) adAfter(ad || card || after, 'B');
       }
     }
+    if (v === 'quiz' && !root.querySelector('.adz')) {                  // the break between the two parts of an exam
+      var brk = root.querySelector('.exam-break');
+      if (brk) adAfter(brk);
+    }
+    railAd();
     if (v === 'result' && g.ECL_MON) g.ECL_MON.trainerResult(root);   // "Recommended Study Resources", after the buttons
     if (v === 'settings') patchSettings();
   }
