@@ -129,7 +129,7 @@
     s.setAttribute('data-tr-skip', ''); s.setAttribute('aria-labelledby', hid);
     var h = el('h2', 'mon-res-h', t(SR.heading, UI.heading)); h.id = hid;
     s.appendChild(h);
-    s.appendChild(el('p', 'mon-res-note', t(SR.disclosure, UI.disclosure)));
+    if (SR.showDisclosure !== false) s.appendChild(el('p', 'mon-res-note', t(SR.disclosure, UI.disclosure)));   // the sentence under the heading; the "Affiliate" tag on each link stays
     var ul = el('ul', 'mon-res-grid');
     list.forEach(function (p) {
       var li = el('li', 'mon-card');

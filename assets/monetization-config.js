@@ -118,6 +118,8 @@ window.ECL_MONETIZATION = {
        true: it waits until at least one Impact.com partner is live */
     requireImpactPartner: false,
     heading: { en: 'Recommended Study Resources', fr: 'Ressources d’étude recommandées', ar: 'موارد دراسة موصى بها' },
+    /* false: hides the sentence under the heading (set to true to show it again). Each affiliate link keeps its "Affiliate" tag. */
+    showDisclosure: false,
     disclosure: {
       en: 'Some links are affiliate links that help keep this site free at no extra cost to you.',
       fr: 'Certains liens sont des liens d’affiliation : ils aident à garder ce site gratuit, sans frais supplémentaires pour vous.',
