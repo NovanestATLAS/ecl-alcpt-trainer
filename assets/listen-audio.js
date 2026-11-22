@@ -183,10 +183,11 @@
   function stopMine() { if (cur) { var c = cur; cur = null; c.stop(); } }
   var quiet = { stop: function () { } };   // tts.js speak() without its own stop() (and its 'end' event)
   function isArr(x) { return Object.prototype.toString.call(x) === '[object Array]'; }
-  /* Website only: listening lines play one step slower than the trainer
-     asks. Play now has the former "Slower" speed, and Slower goes one step
-     below it. app.js and tts.js, shared with the Android app, are unchanged. */
-  var LISTEN_MUL = 0.8;
+  /* Website only: extra speed factor for listening lines. 1 = the natural
+     speed of the recordings (Play), the trainer's "Slower" gives 0.8.
+     (It was 0.8, which played everything too slowly.) app.js and tts.js,
+     shared with the Android app, are unchanged. */
+  var LISTEN_MUL = 1;
 
   S.on = function (n, fn) { (subs[n] = subs[n] || []).push(fn); return raw.on.apply(S, arguments); };
   S.off = function (n) { subs[n] = []; return raw.off.apply(S, arguments); };

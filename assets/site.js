@@ -193,7 +193,7 @@
   function listenRate() {
     var r = 0.92;
     try { r = parseFloat(localStorage.getItem('et_rate')) || 0.92; } catch (e) { }
-    r = Math.min(r, 0.78);
+    r = Math.min(r, 0.92);                         // 0.92 = the natural speed of the recordings
     if (html.classList.contains('slow-voice')) r *= 0.85;
     return Math.min(1.4, Math.max(0.6, r));
   }
