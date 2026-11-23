@@ -249,11 +249,13 @@
       if (S && S.view === 'quiz' && !S.sim && !S.exam && !was && S.locked) {
         var n = +(ls('promo_answers') || 0) + 1;
         ls('promo_answers', String(n));
-        if (n % EVERY === 0 && S.idx < S.pool.length - 1 && !root.querySelector('.w-promo, .adz')) {   // last question: the results card comes next
-          var nav = root.querySelector('.navrow');
+        /* every 5th answer, ads and partners take turns: an ad after the 5th, 15th..., the promo card (tutor
+           partners, the Android app) and an ad after the 10th, 20th...; never after the last question */
+        if (n % (EVERY / 2) === 0 && S.idx < S.pool.length - 1 && !root.querySelector('.w-promo, .adz')) {
+          var nav = root.querySelector('.navrow'), partner = n % EVERY === 0;
           if (nav) setTimeout(function () {
             if (g.S.view !== 'quiz' || !nav.isConnected) return;
-            var card = promoCard('quiz', nav);
+            var card = partner ? promoCard('quiz', nav) : null;
             adAfter(card || nav);
           }, 700);
         }
