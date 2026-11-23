@@ -7,27 +7,27 @@
    nothing at all (no script, no box, no "Advertisement" label, no space).
 
    Slots, placed in the pages' HTML as <div class="adz" data-adz="X">...</div>:
-     A  below the top of the page (once): 728x90 from 768px wide up, 320x50 below;
-     N  native banner (once): a small grid of 3-4 content cards, right before A,
-        the first thing on the page - the earning priority over plain banners;
-     M  300x250, between sections of guides, lessons and topic pages (off: see MAX.M);
-     Q  300x250, between sets of questions in long practice tests (1 at most);
-     B  300x250, near the footer and under test results.
-   The web trainer (/practice/) asks for its ads itself (practice/js/web.js):
-     T  320x50, at the top of the trainer on phones and tablets, after answers
-        of a practice set, every 10th question of timed tests, on the exam
-        break and on results screens;
-     B  300x250, under results and in the right-hand column of wide screens;
-     N  native banner, on results screens only.
-   This file is loaded in <head>: it decides, once, which banner each slot
-   uses, so that the CSS reserves the exact space at first paint. Banners
-   load after the page's load event. Each banner runs in its own small frame
-   with Adsterra's code exactly as given, so several banners can share a page.
-   A native banner is not framed (Adsterra's script fills a container div by
-   its id directly on the page); only one may exist on a page at a time.
-   Ads never run inside a question or between a question and its answers.
-   Without the ad server (ad blocker, slow network) slots stay empty and
-   nothing else changes.
+     N  the native banner (once): a grid of content cards, right after the page
+        header, the first ad on every page. Adsterra pays it per impression;
+        its plain banners pay per click, so N carries the site.
+     B  300x250, near the footer and under test results: the one plain banner left.
+     A, M, Q  plain banners (top, between sections, between question sets): off,
+        see SLOTS_OFF. Their boxes stay in the HTML and render nothing.
+   The web trainer (/practice/) places its ads itself (practice/js/web.js):
+     N  on phones and tablets, at the top of the trainer on the home and results
+        screens (it steps aside while a question is on screen, so questions keep
+        their place); on wide screens, in the right-hand column.
+     T, B  plain banners: off.
+   Adsterra allows each native code once per page: a second N is never added
+   while one is on the page. Up to 2 more native codes can be asked from
+   Adsterra support; each would get its own line in UNITS.
+   This file is loaded in <head>: it decides, once, what each slot shows, so
+   the CSS reserves the space at first paint. Ads load after the page's load
+   event. Plain banners run in their own small frame (Adsterra's atOptions code
+   is global); the native banner runs on the page itself, as Adsterra gives it,
+   and waits until its box is on show. Ads never run inside a question or
+   between a question and its answers. Without the ad server (ad blocker, slow
+   network) a native box goes away and nothing else changes.
 
    Helpers:  ECL_ADS.mount(element, 'B')   adds a slot at the end of element
              ECL_ADS.fresh(element, 'T')   trainer: adds a new banner after element
@@ -48,6 +48,8 @@
   var SERVER = 'https://bauval.org/22/', NATIVE = 'https://bauval.org/21/';
   var MAX_BANNERS = 8, MAX = { Q: 1, M: 0 }, WIDE = '(min-width: 768px)';   // the native unit (slot N) carries most of each page now
   var LABEL = { en: 'Advertisement', fr: 'Publicité', ar: 'إعلان' };
+  /* plain-banner slots switched off (Adsterra pays plain banners per click): remove a letter to switch it back on */
+  var SLOTS_OFF = { pages: { A: 1, M: 1, Q: 1 }, trainer: { T: 1, B: 1 } };
   /* ---------------------------------------------------------------------- */
 
   if (g.ECL_ADS) return;
@@ -59,8 +61,10 @@
 
   /* decided once, now: the banner of each slot for this screen width */
   var wide = !!(g.matchMedia && g.matchMedia(WIDE).matches);
-  var PLAN = TRAINER ? { T: unit('mobile'), B: unit('rect'), N: unit('native') }
-    : { A: unit(wide ? 'leader' : 'mobile'), M: unit('rect'), Q: unit('rect'), B: unit('rect'), N: unit('native') };
+  var OFF = SLOTS_OFF[TRAINER ? 'trainer' : 'pages'];
+  function slot(k, name) { return OFF[k] ? null : unit(name); }
+  var PLAN = TRAINER ? { T: slot('T', 'mobile'), B: slot('B', 'rect'), N: slot('N', 'native') }
+    : { A: slot('A', wide ? 'leader' : 'mobile'), M: slot('M', 'rect'), Q: slot('Q', 'rect'), B: slot('B', 'rect'), N: slot('N', 'native') };
   Object.keys(PLAN).forEach(function (k) { if (PLAN[k]) html.classList.add('adz-on-' + k); });   // the CSS shows and sizes the slots
 
   var banners = 0, used = {}, queue = [], loaded = false;
@@ -105,13 +109,30 @@
       var s = doc.createElement('script');
       s.async = true; s.setAttribute('data-cfasync', 'false'); s.setAttribute('fetchpriority', 'high');
       s.src = NATIVE + u.key;
+      s.onerror = function () { var li = box.closest('.qc-adbreak'); (li || box).remove(); log('native script did not load: slot removed'); };
       holder.appendChild(s);
       box.setAttribute('data-ad-state', 'run');
       foldIfEmptyNative(box, div);
       log('slot ' + box.getAttribute('data-adz') + ': native banner ' + u.key);
     } catch (e) { box.setAttribute('data-ad-state', 'failed'); }
   }
-  function start(box, u) { if (!loaded) queue.push({ box: box, u: u }); else run(box, u); }
+  function shown(box) { return box.isConnected && box.getClientRects().length > 0; }
+  function start(box, u) {
+    if (!loaded) { queue.push({ box: box, u: u }); return; }
+    if (u.kind === 'native' && !shown(box)) { whenShown(box, u); return; }
+    run(box, u);
+  }
+  /* the trainer hides its top box while a question is on screen (html[data-view=quiz]): the native ad starts when it shows */
+  function whenShown(box, u) {
+    if (!g.MutationObserver) return;
+    var mo = new MutationObserver(function () {
+      if (!box.isConnected) { mo.disconnect(); return; }
+      if (shown(box)) { mo.disconnect(); run(box, u); }
+    });
+    mo.observe(html, { attributes: true, attributeFilter: ['class', 'data-view'] });
+  }
+  /* Adsterra: one native code once per page */
+  function nativeTaken() { return !!doc.querySelector('.adz[data-ad-zone="native"]'); }
   /* claims a page slot: A and B once per page, M and Q up to MAX, MAX_BANNERS in all */
   function claim(box) {
     var slot = box.getAttribute('data-adz'), u = PLAN[slot];
@@ -125,8 +146,9 @@
 
   /* trainer: the slot at the top of the page (phones and tablets; wide screens have the right-hand column) */
   function trainerStatic(box) {
-    var u = PLAN.T;
-    if (!u || box.getAttribute('data-adz') !== 'T' || (g.matchMedia && g.matchMedia('(min-width: 1280px)').matches)) return null;
+    var k = box.getAttribute('data-adz'), u = PLAN[k];
+    if (!u || (k !== 'T' && k !== 'N') || (g.matchMedia && g.matchMedia('(min-width: 1280px)').matches)) return null;
+    if (u.kind === 'native' && nativeTaken()) return null;
     box.setAttribute('data-ad-state', 'waiting'); box.setAttribute('data-ad-zone', u.name);
     return u;
   }
@@ -177,17 +199,19 @@
     mount: function (el, slot) {
       try {
         if (TRAINER || !el || !PLAN[slot]) return null;
+        if (PLAN[slot].kind === 'native' && nativeTaken()) return null;
         var box = build(slot), u = claim(box);
         if (!u) return null;
         el.appendChild(box); start(box, u);
         return box;
       } catch (e) { return null; }
     },
-    /* trainer: a new banner right after el, each time a new screen asks for one */
+    /* trainer: a new ad right after el, each time a new screen asks for one (never a second native unit) */
     fresh: function (el, slot) {
       try {
         var u = PLAN[slot];
         if (!TRAINER || !el || !u || !el.parentNode) return null;
+        if (u.kind === 'native' && nativeTaken()) return null;
         var box = build(slot);
         box.setAttribute('data-ad-state', 'waiting'); box.setAttribute('data-ad-zone', u.name);
         el.insertAdjacentElement('afterend', box); start(box, u);
