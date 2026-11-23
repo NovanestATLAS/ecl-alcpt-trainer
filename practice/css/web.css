@@ -203,7 +203,6 @@ html.no-listen .w-k-listen{display:none}
   .w-rail{display:block;position:fixed;top:calc(var(--w-head) + 22px);width:var(--w-rail);
     left:calc(var(--w-x) + var(--w-col) + var(--w-gap));max-height:calc(100vh - var(--w-head) - 40px);overflow:auto}
   .w-banner{display:none!important}
-  html[data-screen="sim"] .w-ad{display:none}
 }
 
 /* Adcash banners of the trainer (assets/ads.js, placed by practice/js/web.js): a label and the zone's exact size,
