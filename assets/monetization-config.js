@@ -1,7 +1,7 @@
 /* ==========================================================================
    MONETIZATION SETTINGS - affiliate cards and the italki offer
    --------------------------------------------------------------------------
-   Adcash banners are NOT set here: their zone switches are at the top of
+   Adsterra banners are NOT set here: their switches are at the top of
    assets/ads.js.
 
      italki          : the tutor offer you already have. Its tracking link

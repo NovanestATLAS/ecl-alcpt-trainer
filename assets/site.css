@@ -806,20 +806,21 @@ html[lang="ar"] h1,html[lang="ar"] h2,html[lang="ar"] h3{line-height:1.4}
 @media (prefers-reduced-motion:reduce){.app-card,.app-card *,.app-card *::after{animation:none!important;transition:none!important}}
 @media print{.app-card{display:none}}
 
-/* Adcash slots (assets/ads.js). A slot shows only when its zone is switched on (html.adz-on-A, html.adz-on-B,
-   set in <head>), with its exact space reserved from the first paint; once a zone runs, the box keeps that zone's
-   size. 32px around each slot keeps it apart from every card, button and link. */
+/* Ad slots (assets/ads.js, Adsterra banners). A slot shows only when its banner is switched on (html.adz-on-A,
+   html.adz-on-B..., set in <head>), with its exact space reserved from the first paint; once a banner runs, the box
+   keeps that banner's size. 32px around each slot keeps it apart from every card, button and link. */
 .adz{display:none;clear:both;margin:32px auto;max-width:100%;overflow:hidden;text-align:center}
 html.adz-on-A .adz[data-adz="A"],html.adz-on-B .adz[data-adz="B"],html.adz-on-M .adz[data-adz="M"],html.adz-on-Q .adz[data-adz="Q"],.adz[data-ad-state]{display:block}
 .adz-label{height:16px;margin:0 0 6px;font:600 .7rem/16px var(--text,inherit);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
 [dir="rtl"] .adz-label{letter-spacing:0}
 .adz-box{margin:0 auto;max-width:100%;overflow:hidden}
-.adz[data-adz="A"] .adz-box{width:300px;min-height:100px}
+.adz-frame{display:block;margin:0 auto;border:0;max-width:none}
+.adz[data-adz="A"] .adz-box{width:320px;min-height:50px}
 @media (min-width:768px){.adz[data-adz="A"] .adz-box{width:728px;min-height:90px}}
-.adz[data-ad-zone="12471518"] .adz-box{width:300px;min-height:100px}
-.adz[data-ad-zone="12477038"] .adz-box{width:728px;min-height:90px}
-.adz[data-adz="B"] .adz-box{width:300px;min-height:250px}
-.adz[data-adz="M"] .adz-box,.adz[data-adz="Q"] .adz-box{width:300px;min-height:100px}
+.adz[data-adz="B"] .adz-box,.adz[data-adz="M"] .adz-box,.adz[data-adz="Q"] .adz-box{width:300px;min-height:250px}
+.adz[data-ad-zone="mobile"] .adz-box{width:320px;min-height:50px}
+.adz[data-ad-zone="leader"] .adz-box{width:728px;min-height:90px}
+.adz[data-ad-zone="rect"] .adz-box{width:300px;min-height:250px}
 .qc-adbreak{list-style:none;margin:0;padding:0}.qc-adbreak .adz{margin:40px auto}
 .qc-affbreak{margin:40px 0}.qc-affbreak .promo-banner{margin:0 auto}
 .disclaimer.aff-note{border-top:0;margin-top:8px;padding-top:0}

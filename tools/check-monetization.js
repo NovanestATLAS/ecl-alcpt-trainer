@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* Offline check of assets/monetization-config.js and the Adcash zone switches of assets/ads.js (no browser needed).
+/* Offline check of assets/monetization-config.js and the Adsterra banner switches of assets/ads.js (no browser needed).
    Usage:  node tools/check-monetization.js
    Exit code 1 when something an enabled provider needs is wrong; providers that are off are not checked. */
 'use strict';
@@ -55,12 +55,15 @@ else {
   if (!live) out('INFO', 'studyResources: no item enabled, nothing renders');
 }
 
-/* Adcash: the zone switches at the top of assets/ads.js */
+/* Adsterra: the banner switches at the top of assets/ads.js */
 const ads = fs.readFileSync(A('ads.js'), 'utf8');
-const zones = [...ads.matchAll(/\{ id: '(\d+)', enabled: (true|false),\s+width: (\d+),\s+height: (\d+) \}/g)];
-if (zones.length !== 3) out('ERROR', 'assets/ads.js: expected 3 zone switches, found ' + zones.length);
-zones.forEach((z) => out(z[2] === 'true' ? 'OK' : 'OFF', 'adcash zone ' + z[1] + ' (' + z[3] + 'x' + z[4] + ')' + (z[2] === 'true' ? ' on' : ' off')));
-if (!/src: '\/\/acscdn\.com\/script\/aclib\.js'/.test(ads)) out('ERROR', 'assets/ads.js: the aclib library address is missing');
+const units = [...ads.matchAll(/(\w+):\s+\{ key: '([^']*)', enabled: (true|false), width: (\d+), height: (\d+) \}/g)];
+if (units.length !== 3) out('ERROR', 'assets/ads.js: expected 3 banner switches, found ' + units.length);
+units.forEach((u) => {
+  if (u[3] === 'true' && !/^[0-9a-f]{32}$/.test(u[2])) return out('ERROR', 'adsterra ' + u[1] + ': the key must be the 32-character key from Adsterra');
+  out(u[3] === 'true' ? 'OK' : 'OFF', 'adsterra ' + u[1] + ' (' + u[4] + 'x' + u[5] + ')' + (u[3] === 'true' ? ' on' : ' off'));
+});
+if (!/var SERVER = 'https:\/\/[a-z0-9.-]+\/[^']*\/';/.test(ads)) out('ERROR', 'assets/ads.js: the Adsterra script address (SERVER) is missing');
 
 console.log('\n' + (errors ? errors + ' error(s)' : 'No errors') + (warns ? ', ' + warns + ' warning(s)' : '') + '.');
 process.exit(errors ? 1 : 0);

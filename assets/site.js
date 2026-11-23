@@ -27,7 +27,7 @@
     (doc.head || html).appendChild(s);
   })();
 
-  /* study-resources section (assets/monetization.js), switched in assets/monetization-config.js; Adcash slots: assets/ads.js */
+  /* study-resources section (assets/monetization.js), switched in assets/monetization-config.js; Adsterra banners: assets/ads.js */
   (function () {
     var me = doc.currentScript || doc.querySelector('script[src*="assets/site.js"]');
     if (!window.ECL_MONETIZATION || !me || !me.src || doc.querySelector('script[src*="monetization.js"]')) return;

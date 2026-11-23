@@ -19,9 +19,10 @@ Permanent rules for every session.
   apps or books. Never claim "real", "official" or "actual test" questions.
 - Keep the disclaimer: not affiliated with DLIELC, the U.S. Department of Defense or any government. No seals,
   insignia or government-style design.
-- Display ads are Adcash only (no AdSense on the site): zone switches at the top of `assets/ads.js`, affiliate
+- Display ads are Adsterra banners only (no AdSense, no pop-unders, no Social Bar; Adcash rejected the site in
+  Nov 2026): banner switches at the top of `assets/ads.js`, affiliate
   cards in `assets/monetization-config.js`. `app-ads.txt` keeps the Google line so AdMob can verify the ECL app
-  (com.ecltrainer.english); `ads.txt` keeps it too. Never edit `28fc7a4d852c88a8b0254c868dad5615.txt` (Adcash
+  (com.ecltrainer.english); `ads.txt` keeps it too. Never edit `28fc7a4d852c88a8b0254c868dad5615.txt` (old Adcash
   verification). Ads never sit inside a question, between a question and its answers, or next to answer buttons.
 
 ## Question counts

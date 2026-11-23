@@ -205,13 +205,14 @@ html.no-listen .w-k-listen{display:none}
   .w-banner{display:none!important}
 }
 
-/* Adcash banners of the trainer (assets/ads.js, placed by practice/js/web.js): a label and the zone's exact size,
+/* ad banners of the trainer (assets/ads.js, Adsterra, placed by practice/js/web.js): a label and the banner's exact size,
    32px from the buttons around them */
 .adz{display:none;clear:both;margin:32px auto;max-width:100%;overflow:hidden;text-align:center}
 .adz[data-ad-state]{display:block}
 .adz-label{height:16px;margin:0 0 6px;font:600 11px/16px inherit;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
-.adz-box{margin:0 auto;max-width:100%;overflow:hidden;width:300px;min-height:100px}
-.adz[data-ad-zone="12477046"] .adz-box{width:300px;min-height:250px}
+.adz-box{margin:0 auto;max-width:100%;overflow:hidden;width:320px;min-height:50px}
+.adz-frame{display:block;margin:0 auto;border:0;max-width:none}
+.adz[data-ad-zone="rect"] .adz-box{width:300px;min-height:250px}
 .w-ad .adz{margin:0 auto}
 /* top of the trainer on phones and tablets: space reserved from the first paint when the zone is on */
 .w-topad{margin:12px auto 24px}

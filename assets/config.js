@@ -1,7 +1,7 @@
 /* ==========================================================================
    SITE SETTINGS
    --------------------------------------------------------------------------
-   (Display ads: Adcash, zone switches at the top of assets/ads.js.)
+   (Display ads: Adsterra, banner switches at the top of assets/ads.js.)
    ga4           : Google Analytics 4. Paste the "Measurement ID" of your web
                    data stream between the quotes, for example 'G-AB12CD34EF'
                    (Analytics > Admin > Data streams > ecl-alcpt-trainer.com).
