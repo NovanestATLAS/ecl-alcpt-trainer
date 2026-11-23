@@ -4,7 +4,7 @@
      . links such as practice/?go=grammar or ?set=g_x_Modals open a section
      . keyboard: A-D or 1-4 to answer, Enter for next, L to listen
      . texts that only made sense on Android are adapted
-     . Adcash banners (assets/ads.js): right-hand column of wide screens,
+     . Adsterra banners (assets/ads.js): right-hand column of wide screens,
        after every 10th answered question of a practice set, on the break
        between the two parts of an exam and on results screens
      . one promo card that takes turns between the tutor partners (italki,
@@ -30,7 +30,7 @@
     return null;
   }
 
-  /* ------------------------------ Adcash -------------------------------- */
+  /* ------------------------- ad banners (Adsterra) ------------------------ */
   /* a new banner after el (assets/ads.js); never inside a question or during a timed question */
   function adAfter(el, slot) { return g.ECL_ADS && el ? g.ECL_ADS.fresh(el, slot || 'T') : null; }
   function timedQuestion() { return !!(g.S && g.S.view === 'quiz' && (g.S.sim || g.S.exam) && !root.querySelector('.exam-break')); }
@@ -39,7 +39,7 @@
     var r = doc.getElementById('railAd');
     if (!r || !g.ECL_ADS || !(g.matchMedia && g.matchMedia('(min-width:1280px)').matches)) return;
     var cur = r.querySelector('.adz');
-    if (!cur) { var mark = doc.createElement('span'); r.appendChild(mark); adAfter(mark); mark.remove(); }
+    if (!cur) { var mark = doc.createElement('span'); r.appendChild(mark); adAfter(mark, 'B'); mark.remove(); }   // the column is 300px wide: the 300x250
   }
 
   /* ---------------------------- privacy link ----------------------------- */

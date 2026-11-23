@@ -5,7 +5,7 @@
    . "Recommended Study Resources": the italki offer plus every enabled
      Impact.com partner. It goes on the home page, below articles, and under a
      graded practice test or a trainer results screen. Never inside a quiz.
-   . Adcash banners: assets/ads.js (zone switches at its top). Here only the
+   . Adsterra banners: assets/ads.js (banner switches at its top). Here only the
      results screen of a graded practice test asks it for Slot B.
    . A provider that is off, or a zone / partner with nothing pasted in, adds
      no element, no style, no request and no console line.
@@ -168,7 +168,7 @@
     var s = buildSection('article'); if (s) art.appendChild(s);
   }
   /* Results of a graded practice test, right under the quiz block (the score
-     stays first): the Android app card, the study resources, then Adcash
+     stays first): the Android app card, the study resources, then Adsterra
      Slot B. Slot A (below the quiz) goes away for good. The app card and the
      study resources leave again if the test is restarted; Slot B runs once
      per page view and stays. */
@@ -221,7 +221,7 @@
       if (!https(p.url) || !t(p.title || p.name)) return row('resources', n, 'ERROR', 'needs a name and an https url (skipped, nothing renders)');
       row('resources', n, 'OK', p.url + ' (text card, new tab, rel="sponsored noopener")');
     });
-    if (g.ECL_ADS) row('adcash', 'plan', 'INFO', JSON.stringify(g.ECL_ADS.plan()) + ' (zone switches: assets/ads.js)');
+    if (g.ECL_ADS) row('adsterra', 'plan', 'INFO', JSON.stringify(g.ECL_ADS.plan()) + ' (banner switches: assets/ads.js)');
     var sec = doc.querySelectorAll('[data-mon="study-resources"]').length;
     row('section', 'Recommended Study Resources', sec ? 'OK' : 'SKIP', sec ? sec + ' on this page' : 'not on this page (none expected on tests until graded)');
     try { console.log('ECL monetization check, page type: ' + pt); console.table(rows); } catch (e) { }

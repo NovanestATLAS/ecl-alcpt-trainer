@@ -3,7 +3,7 @@
    The Android app uses native plugins (AdMob ads, Android share menu,
    Google Play review). On the web they are replaced here, so app.js runs
    unchanged:
-     . Ads      -> no full-screen ads; display ads come from Adcash (assets/ads.js, placed by web.js)
+     . Ads      -> no full-screen ads; display ads come from Adsterra (assets/ads.js, placed by web.js)
      . sharing  -> the browser's share sheet, or download + copy as fallback
      . review   -> not used (the web points people to the app instead)
    ========================================================================== */
@@ -119,7 +119,7 @@
     state: function () {
       return { plugin: false, ready: false, interstitialLoaded: false, launch: 0, answersPerAd: 0,
         answeredSinceAd: 0, adsShown: 0, secondsSinceLastAd: -1, graceLeftSeconds: 0, testMode: false,
-        holdLeftSeconds: 0, lastDecision: 'Website: no full-screen ads. Display ads come from Adcash.' };
+        holdLeftSeconds: 0, lastDecision: 'Website: no full-screen ads. Display ads come from Adsterra.' };
     }
   };
 
