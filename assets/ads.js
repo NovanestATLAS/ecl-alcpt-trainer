@@ -33,7 +33,7 @@
 
   /* --------------------------- zone switches ---------------------------- */
   var ZONES = [
-    { id: '12471518', enabled: true,  width: 300, height: 100 },  // 300x100: Slot A below 768px, M, Q, T
+    { id: '12471518', enabled: false, width: 300, height: 100 },  // 300x100: Slot A below 768px, M, Q, T (site rejected by Adcash, Nov 23 2026)
     { id: '12477038', enabled: false, width: 728, height: 90 },   // Slot A from 768px up: switch on after approval
     { id: '12477046', enabled: false, width: 300, height: 250 }   // Slot B, all screens: switch on after approval
   ];
