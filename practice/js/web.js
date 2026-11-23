@@ -34,12 +34,12 @@
   /* a new banner after el (assets/ads.js); never inside a question or during a timed question */
   function adAfter(el, slot) { return g.ECL_ADS && el ? g.ECL_ADS.fresh(el, slot || 'T') : null; }
   function timedQuestion() { return !!(g.S && g.S.view === 'quiz' && (g.S.sim || g.S.exam) && !root.querySelector('.exam-break')); }
-  /* right-hand column (1280px and wider): one banner, which also stays during timed tests */
+  /* right-hand column (1280px and wider): the native ad, which also stays during timed tests */
   function railAd() {
     var r = doc.getElementById('railAd');
     if (!r || !g.ECL_ADS || !(g.matchMedia && g.matchMedia('(min-width:1280px)').matches)) return;
     var cur = r.querySelector('.adz');
-    if (!cur) { var mark = doc.createElement('span'); r.appendChild(mark); adAfter(mark, 'B'); mark.remove(); }   // the column is 300px wide: the 300x250
+    if (!cur) { var mark = doc.createElement('span'); r.appendChild(mark); adAfter(mark, 'N'); mark.remove(); }   // the native ad, in the 300px column
   }
 
   /* ---------------------------- privacy link ----------------------------- */
