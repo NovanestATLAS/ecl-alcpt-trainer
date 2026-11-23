@@ -285,7 +285,8 @@
       var card = after ? promoCard('result', after) : null;
       if (after && !root.querySelector('.adz')) {
         var ad = adAfter(card || after);                                  // the study resources go between the card and the ad
-        if (g.ECL_ADS && g.ECL_ADS.on('B')) adAfter(ad || card || after, 'B');
+        if (g.ECL_ADS && g.ECL_ADS.on('B')) ad = adAfter(ad || card || after, 'B') || ad;
+        if (g.ECL_ADS && g.ECL_ADS.on('N')) adAfter(ad || card || after, 'N');   // a native banner, last on the results screen
       }
     }
     if (v === 'quiz' && !root.querySelector('.adz')) {                  // the break between the two parts of an exam

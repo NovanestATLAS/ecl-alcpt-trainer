@@ -213,6 +213,7 @@ html.no-listen .w-k-listen{display:none}
 .adz-box{margin:0 auto;max-width:100%;overflow:hidden;width:320px;min-height:50px}
 .adz-frame{display:block;margin:0 auto;border:0;max-width:none;color-scheme:normal;background:transparent}
 .adz[data-ad-zone="rect"] .adz-box{width:300px;min-height:250px}
+.adz[data-ad-zone="native"] .adz-box{width:100%;max-width:680px;min-height:0}
 .w-ad .adz{margin:0 auto}
 /* top of the trainer on phones and tablets: space reserved from the first paint when the zone is on */
 .w-topad{margin:12px auto 24px}
