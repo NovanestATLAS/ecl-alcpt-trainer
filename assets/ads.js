@@ -20,7 +20,7 @@
    This file is loaded in <head>: it decides, once, which zone each slot will
    use, so that the CSS reserves the exact space at first paint. The Adcash
    library loads once, after the page's load event. Ads never run inside a
-   question, between a question and its answers, or during a timed question.
+   question or between a question and its answers.
    Without the library (ad blocker, slow network) slots stay empty and
    nothing else changes.
 

@@ -34,12 +34,11 @@
   /* a new banner after el (assets/ads.js); never inside a question or during a timed question */
   function adAfter(el, slot) { return g.ECL_ADS && el ? g.ECL_ADS.fresh(el, slot || 'T') : null; }
   function timedQuestion() { return !!(g.S && g.S.view === 'quiz' && (g.S.sim || g.S.exam) && !root.querySelector('.exam-break')); }
-  /* right-hand column (1280px and wider): one banner, taken away during timed questions */
+  /* right-hand column (1280px and wider): one banner, which also stays during timed tests */
   function railAd() {
     var r = doc.getElementById('railAd');
     if (!r || !g.ECL_ADS || !(g.matchMedia && g.matchMedia('(min-width:1280px)').matches)) return;
     var cur = r.querySelector('.adz');
-    if (timedQuestion()) { if (cur) cur.remove(); return; }
     if (!cur) { var mark = doc.createElement('span'); r.appendChild(mark); adAfter(mark); mark.remove(); }
   }
 
@@ -149,7 +148,8 @@
 
   /* ------------- promo card: tutor partners and the Android app -------------
      Takes turns in a fixed order. Shown under the buttons, never between a
-     question and its answers, never during a timed test or an exam. */
+     question and its answers. Not during timed tests or exams, which have
+     their own ads (one under the buttons every 10th question). */
   var APP_URL = 'https://play.google.com/store/apps/details?id=com.ecltrainer.english' +
     '&referrer=utm_source%3Decl-alcpt-trainer.com%26utm_medium%3Dwebsite%26utm_campaign%3Dtrainer_';
   var P = C.partners || {};
@@ -291,6 +291,11 @@
     if (v === 'quiz' && !root.querySelector('.adz')) {                  // the break between the two parts of an exam
       var brk = root.querySelector('.exam-break');
       if (brk) adAfter(brk);
+      /* timed tests and exams: an ad under the buttons of every 10th question (never between a question and its answers) */
+      else if (timedQuestion() && g.S.idx > 0 && g.S.idx % 10 === 0) {
+        var rows = root.querySelectorAll('.navrow');
+        if (rows.length) adAfter(rows[rows.length - 1]);
+      }
     }
     railAd();
     if (v === 'result' && g.ECL_MON) g.ECL_MON.trainerResult(root);   // "Recommended Study Resources", after the buttons
