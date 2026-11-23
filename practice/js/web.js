@@ -249,13 +249,14 @@
       if (S && S.view === 'quiz' && !S.sim && !S.exam && !was && S.locked) {
         var n = +(ls('promo_answers') || 0) + 1;
         ls('promo_answers', String(n));
-        /* every 5th answer, ads and partners take turns: an ad after the 5th, 15th..., the promo card (tutor
-           partners, the Android app) and an ad after the 10th, 20th...; never after the last question */
-        if (n % (EVERY / 2) === 0 && S.idx < S.pool.length - 1 && !root.querySelector('.w-promo, .adz')) {
-          var nav = root.querySelector('.navrow'), partner = n % EVERY === 0;
+        /* every 10th answer: the promo card (tutor partners, the Android app) and a banner together;
+           never after the last question. The native unit already runs once on the results screen, so the
+           standalone banner that used to also fire at the 5th, 15th... is dropped here to favour native. */
+        if (n % EVERY === 0 && S.idx < S.pool.length - 1 && !root.querySelector('.w-promo, .adz')) {
+          var nav = root.querySelector('.navrow');
           if (nav) setTimeout(function () {
             if (g.S.view !== 'quiz' || !nav.isConnected) return;
-            var card = partner ? promoCard('quiz', nav) : null;
+            var card = promoCard('quiz', nav);
             adAfter(card || nav);
           }, 700);
         }
@@ -285,14 +286,16 @@
       var card = after ? promoCard('result', after) : null;
       if (after && !root.querySelector('.adz')) {
         var ad = adAfter(card || after);                                  // the study resources go between the card and the ad
-        if (g.ECL_ADS && g.ECL_ADS.on('B')) adAfter(ad || card || after, 'B');
+        if (g.ECL_ADS && g.ECL_ADS.on('B')) ad = adAfter(ad || card || after, 'B') || ad;
+        if (g.ECL_ADS && g.ECL_ADS.on('N')) adAfter(ad || card || after, 'N');   // a native banner, last on the results screen
       }
     }
     if (v === 'quiz' && !root.querySelector('.adz')) {                  // the break between the two parts of an exam
       var brk = root.querySelector('.exam-break');
       if (brk) adAfter(brk);
-      /* timed tests and exams: an ad under the buttons of every 10th question (never between a question and its answers) */
-      else if (timedQuestion() && g.S.idx > 0 && g.S.idx % 10 === 0) {
+      /* timed tests and exams: an ad under the buttons of every 20th question (never between a question and its answers);
+         halved from every 10th to favour the native unit on the results screen */
+      else if (timedQuestion() && g.S.idx > 0 && g.S.idx % 20 === 0) {
         var rows = root.querySelectorAll('.navrow');
         if (rows.length) adAfter(rows[rows.length - 1]);
       }

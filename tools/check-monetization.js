@@ -55,15 +55,21 @@ else {
   if (!live) out('INFO', 'studyResources: no item enabled, nothing renders');
 }
 
-/* Adsterra: the banner switches at the top of assets/ads.js */
+/* Adsterra: the banner and native-unit switches at the top of assets/ads.js */
 const ads = fs.readFileSync(A('ads.js'), 'utf8');
-const units = [...ads.matchAll(/(\w+):\s+\{ key: '([^']*)', enabled: (true|false), width: (\d+), height: (\d+) \}/g)];
-if (units.length !== 3) out('ERROR', 'assets/ads.js: expected 3 banner switches, found ' + units.length);
-units.forEach((u) => {
+const banners = [...ads.matchAll(/(\w+):\s+\{ key: '([^']*)', enabled: (true|false), width: (\d+), height: (\d+) \}/g)];
+const natives = [...ads.matchAll(/(\w+):\s+\{ key: '([^']*)', enabled: (true|false), kind: '(\w+)' \}/g)];
+if (banners.length !== 3) out('ERROR', 'assets/ads.js: expected 3 banner switches, found ' + banners.length);
+if (natives.length !== 1) out('ERROR', 'assets/ads.js: expected 1 native-unit switch, found ' + natives.length);
+banners.forEach((u) => {
   if (u[3] === 'true' && !/^[0-9a-f]{32}$/.test(u[2])) return out('ERROR', 'adsterra ' + u[1] + ': the key must be the 32-character key from Adsterra');
   out(u[3] === 'true' ? 'OK' : 'OFF', 'adsterra ' + u[1] + ' (' + u[4] + 'x' + u[5] + ')' + (u[3] === 'true' ? ' on' : ' off'));
 });
-if (!/var SERVER = 'https:\/\/[a-z0-9.-]+\/[^']*\/';/.test(ads)) out('ERROR', 'assets/ads.js: the Adsterra script address (SERVER) is missing');
+natives.forEach((u) => {
+  if (u[3] === 'true' && !/^[0-9a-f]{32}$/.test(u[2])) return out('ERROR', 'adsterra ' + u[1] + ': the key must be the 32-character key from Adsterra');
+  out(u[3] === 'true' ? 'OK' : 'OFF', 'adsterra ' + u[1] + ' (native)' + (u[3] === 'true' ? ' on' : ' off'));
+});
+if (!/var SERVER = 'https:\/\/[a-z0-9.-]+\/[^']*\/', NATIVE = 'https:\/\/[a-z0-9.-]+\/[^']*\/';/.test(ads)) out('ERROR', 'assets/ads.js: the Adsterra script addresses (SERVER, NATIVE) are missing');
 
 console.log('\n' + (errors ? errors + ' error(s)' : 'No errors') + (warns ? ', ' + warns + ' warning(s)' : '') + '.');
 process.exit(errors ? 1 : 0);
