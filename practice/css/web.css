@@ -211,7 +211,7 @@ html.no-listen .w-k-listen{display:none}
 .adz[data-ad-state]{display:block}
 .adz-label{height:16px;margin:0 0 6px;font:600 11px/16px inherit;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
 .adz-box{margin:0 auto;max-width:100%;overflow:hidden;width:320px;min-height:50px}
-.adz-frame{display:block;margin:0 auto;border:0;max-width:none}
+.adz-frame{display:block;margin:0 auto;border:0;max-width:none;color-scheme:normal;background:transparent}
 .adz[data-ad-zone="rect"] .adz-box{width:300px;min-height:250px}
 .w-ad .adz{margin:0 auto}
 /* top of the trainer on phones and tablets: space reserved from the first paint when the zone is on */

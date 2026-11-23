@@ -814,7 +814,7 @@ html.adz-on-A .adz[data-adz="A"],html.adz-on-B .adz[data-adz="B"],html.adz-on-M 
 .adz-label{height:16px;margin:0 0 6px;font:600 .7rem/16px var(--text,inherit);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
 [dir="rtl"] .adz-label{letter-spacing:0}
 .adz-box{margin:0 auto;max-width:100%;overflow:hidden}
-.adz-frame{display:block;margin:0 auto;border:0;max-width:none}
+.adz-frame{display:block;margin:0 auto;border:0;max-width:none;color-scheme:normal;background:transparent}
 .adz[data-adz="A"] .adz-box{width:320px;min-height:50px}
 @media (min-width:768px){.adz[data-adz="A"] .adz-box{width:728px;min-height:90px}}
 .adz[data-adz="B"] .adz-box,.adz[data-adz="M"] .adz-box,.adz[data-adz="Q"] .adz-box{width:300px;min-height:250px}

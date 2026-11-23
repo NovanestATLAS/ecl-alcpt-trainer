@@ -1,0 +1,48 @@
+# ECL & ALCPT English Trainer
+
+> Free practice for the ECL (English Comprehension Level) and ALCPT (American Language Course Placement Test) English tests: more than 4,300 explained grammar, vocabulary, idiom and phrasal-verb questions, more than 5,000 recorded listening questions in American English, 80 timed practice tests, grammar lessons and test guides. Free, no account, works in the browser and as an Android app. English, with guides in French and Arabic.
+
+Independent practice site published by Novanest ATLAS. It is not affiliated with, endorsed by or connected to the Defense Language Institute English Language Center (DLIELC), the U.S. Department of Defense or any government. All questions are original practice items written for this site, not real ECL or ALCPT test items. Official information about the tests: https://dlielc.edu/
+
+## Practice
+
+- [Online trainer](https://ecl-alcpt-trainer.com/practice/): all questions by topic, listening practice, a mistake box with spaced review, and 80 full timed tests (listening then reading, as on the real tests). Best starting point for daily practice.
+- [ALCPT practice test](https://ecl-alcpt-trainer.com/tests/alcpt-practice-test.html): 20 listening and 30 reading questions with an optional 30-minute timer and every answer explained.
+- [ECL practice questions](https://ecl-alcpt-trainer.com/tests/ecl-practice-questions.html): 40 questions (grammar, idioms, phrasal verbs, listening) with a full answer key.
+- [ECL listening practice](https://ecl-alcpt-trainer.com/tests/ecl-listening-practice.html): 30 recorded questions with transcripts.
+- [ALCPT listening practice](https://ecl-alcpt-trainer.com/tests/alcpt-listening-practice.html): 25 recorded questions with transcripts.
+- [ECL grammar practice](https://ecl-alcpt-trainer.com/tests/ecl-grammar-practice.html): 30 questions.
+- [ECL vocabulary practice](https://ecl-alcpt-trainer.com/tests/ecl-vocabulary-practice.html): 30 questions, military and everyday words.
+- [ALCPT vocabulary test](https://ecl-alcpt-trainer.com/tests/alcpt-vocabulary-test.html): 30 questions.
+- [All free tests](https://ecl-alcpt-trainer.com/tests/)
+
+## Guides
+
+- [The ECL test explained](https://ecl-alcpt-trainer.com/guides/ecl-test.html): what it measures, paper, online and adaptive versions, the 0 to 100 score, validity.
+- [The ALCPT test](https://ecl-alcpt-trainer.com/guides/alcpt-test.html): 100 questions, new 50/50 and older 66/34 forms, what the score means, a four-week plan.
+- [ECL scores and levels](https://ecl-alcpt-trainer.com/guides/ecl-score.html)
+- [ALCPT vs ECL](https://ecl-alcpt-trainer.com/guides/alcpt-vs-ecl.html)
+- [ECL test preparation](https://ecl-alcpt-trainer.com/guides/ecl-test-preparation.html)
+- [Four-week ECL study plan](https://ecl-alcpt-trainer.com/guides/ecl-study-plan.html)
+- [ECL and ALCPT FAQ](https://ecl-alcpt-trainer.com/guides/ecl-faq.html)
+- [Listening practice guide](https://ecl-alcpt-trainer.com/guides/listening-practice.html)
+- [Test-taking strategies](https://ecl-alcpt-trainer.com/guides/test-taking-strategies.html)
+
+## Lessons
+
+- [Grammar lessons](https://ecl-alcpt-trainer.com/lessons/): tenses, modals, conditionals, the passive, reported speech, prepositions and more, with examples.
+- [ECL vocabulary list](https://ecl-alcpt-trainer.com/lessons/ecl-vocabulary.html)
+- [Phrasal verbs](https://ecl-alcpt-trainer.com/lessons/phrasal-verbs.html)
+- [American idioms](https://ecl-alcpt-trainer.com/topics/american-idioms.html)
+- [Irregular verbs list](https://ecl-alcpt-trainer.com/topics/irregular-verbs.html)
+- [Practice by topic](https://ecl-alcpt-trainer.com/topics/)
+
+## Other languages
+
+- [Français : accueil](https://ecl-alcpt-trainer.com/fr/), [le test ECL](https://ecl-alcpt-trainer.com/fr/test-ecl.html), [le test ALCPT](https://ecl-alcpt-trainer.com/fr/test-alcpt.html)
+- [العربية: الصفحة الرئيسية](https://ecl-alcpt-trainer.com/ar/)، [اختبار ECL](https://ecl-alcpt-trainer.com/ar/ecl-test.html)، [اختبار ALCPT](https://ecl-alcpt-trainer.com/ar/alcpt-test.html)
+
+## Optional
+
+- [Android app](https://play.google.com/store/apps/details?id=com.ecltrainer.english): the same practice offline.
+- [About the site](https://ecl-alcpt-trainer.com/about.html)
