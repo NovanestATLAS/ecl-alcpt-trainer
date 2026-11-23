@@ -8,10 +8,10 @@
 
    Slots, placed in the pages' HTML as <div class="adz" data-adz="X">...</div>:
      A  below the top of the page (once): 728x90 from 768px wide up, 320x50 below;
-     M  300x250, between sections of guides, lessons and topic pages (3 at most);
-     Q  300x250, between sets of 10 questions in long practice tests (4 at most);
-     N  native banner (once): a small grid of 3-4 content cards, right after
-        the first M or Q break, or before B on pages with neither;
+     N  native banner (once): a small grid of 3-4 content cards, right before A,
+        the first thing on the page - the earning priority over plain banners;
+     M  300x250, between sections of guides, lessons and topic pages (off: see MAX.M);
+     Q  300x250, between sets of questions in long practice tests (1 at most);
      B  300x250, near the footer and under test results.
    The web trainer (/practice/) asks for its ads itself (practice/js/web.js):
      T  320x50, at the top of the trainer on phones and tablets, after answers
@@ -46,7 +46,7 @@
   /* Adsterra's script address, as in the code Adsterra gave (the key is added at the end).
      Banners and the native unit are served from different paths. */
   var SERVER = 'https://bauval.org/22/', NATIVE = 'https://bauval.org/21/';
-  var MAX_BANNERS = 8, MAX = { Q: 4, M: 3 }, WIDE = '(min-width: 768px)';
+  var MAX_BANNERS = 8, MAX = { Q: 1, M: 0 }, WIDE = '(min-width: 768px)';   // the native unit (slot N) carries most of each page now
   var LABEL = { en: 'Advertisement', fr: 'Publicité', ar: 'إعلان' };
   /* ---------------------------------------------------------------------- */
 
@@ -116,7 +116,7 @@
   function claim(box) {
     var slot = box.getAttribute('data-adz'), u = PLAN[slot];
     if (!u || box.getAttribute('data-ad-state') || banners >= MAX_BANNERS) return null;
-    if (MAX[slot] ? (used[slot] || 0) >= MAX[slot] : used[slot]) return null;
+    if ((slot in MAX) ? (used[slot] || 0) >= MAX[slot] : used[slot]) return null;   // a cap of 0 (e.g. MAX.M) must block every time, not read as "no cap"
     used[slot] = (used[slot] || 0) + 1; banners++;
     box.setAttribute('data-ad-state', 'waiting');
     box.setAttribute('data-ad-zone', u.name);                          // pins the box to this banner's size
