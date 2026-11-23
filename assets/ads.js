@@ -9,13 +9,14 @@
    Slots, placed in the pages' HTML as <div class="adz" data-adz="X">...</div>:
      A  leaderboard, below the top of the page: the 728x90 zone from 768px
         wide up, the 300x100 zone below (once per page);
-     M  300x100, in the middle of guides and topic pages (once per page);
+     M  300x100, between sections of guides, lessons and topic pages (3 at most);
      Q  300x100, between sets of 10 questions in long practice tests;
      B  300x250 rectangle, near the footer and under test results.
    The web trainer (/practice/) asks for its ads itself (practice/js/web.js):
-     T  300x100, after every 10th answered question of a practice set, on
-        the break between the two parts of an exam, on results screens and in
-        the right-hand column of wide screens.
+     T  300x100, at the top of the trainer on phones and tablets, after every
+        10th answered question of a practice set, on the break between the two
+        parts of an exam, on results screens and in the right-hand column of
+        wide screens.
    This file is loaded in <head>: it decides, once, which zone each slot will
    use, so that the CSS reserves the exact space at first paint. The Adcash
    library loads once, after the page's load event. Ads never run inside a
@@ -38,7 +39,7 @@
   ];
   /* the Adcash library, with the attributes Adcash gave */
   var LIBRARY = { id: 'aclib', type: 'text/javascript', src: '//acscdn.com/script/aclib.js' };
-  var MAX_BANNERS = 6, MAX_Q = 4, WAIT_MS = 10000, WIDE = '(min-width: 768px)';
+  var MAX_BANNERS = 8, MAX = { Q: 4, M: 3 }, WAIT_MS = 10000, WIDE = '(min-width: 768px)';
   var LABEL = { en: 'Advertisement', fr: 'Publicité', ar: 'إعلان' };
   /* ---------------------------------------------------------------------- */
 
@@ -91,23 +92,45 @@
       s.text = 'aclib.runBanner({ zoneId: \'' + z.id + '\' });';
       box.querySelector('.adz-box').appendChild(s);
       box.setAttribute('data-ad-state', 'run');
+      foldIfEmpty(box);
       log('slot ' + box.getAttribute('data-adz') + ': runBanner zone ' + z.id);
     } catch (e) { box.setAttribute('data-ad-state', 'failed'); }
   }
   function start(box, z) {
     if (!loaded) { queue.push({ box: box, z: z }); return; }
     loadLibrary().then(function () { run(box, z); },
-      function () { box.setAttribute('data-ad-state', 'failed'); log('Adcash library did not load: slots stay empty'); });
+      function () { box.setAttribute('data-ad-state', 'failed'); foldIfEmpty(box); log('Adcash library did not load: slots stay empty'); });
   }
   /* claims a page slot: A, M and B once per page, Q up to MAX_Q, MAX_BANNERS in all */
   function claim(box) {
     var slot = box.getAttribute('data-adz'), z = PLAN[slot];
     if (!z || box.getAttribute('data-ad-state') || banners >= MAX_BANNERS) return null;
-    if (slot === 'Q' ? (used.Q || 0) >= MAX_Q : used[slot]) return null;
+    if (MAX[slot] ? (used[slot] || 0) >= MAX[slot] : used[slot]) return null;
     used[slot] = (used[slot] || 0) + 1; banners++;
     box.setAttribute('data-ad-state', 'waiting');
     box.setAttribute('data-ad-zone', z.id);                            // pins the box to this zone's size
     return z;
+  }
+
+  /* trainer: the slot at the top of the page (phones and tablets; wide screens have the right-hand column) */
+  function trainerStatic(box) {
+    var z = PLAN.T;
+    if (!z || box.getAttribute('data-adz') !== 'T' || (g.matchMedia && g.matchMedia('(min-width: 1280px)').matches)) return null;
+    box.setAttribute('data-ad-state', 'waiting'); box.setAttribute('data-ad-zone', z.id);
+    return z;
+  }
+  /* no ad drawn after a while: an empty box that is still below the screen folds away (nothing on screen moves);
+     one on screen keeps its space */
+  function foldIfEmpty(box) {
+    setTimeout(function () {
+      try {
+        if (!box.isConnected) return;
+        var drawn = [].slice.call(box.querySelectorAll('.adz-box > *')).some(function (c) { return c.nodeName !== 'SCRIPT'; });
+        if (drawn) return;
+        var r = box.getBoundingClientRect(), vh = g.innerHeight || html.clientHeight;
+        if (r.top > vh + 50) { var li = box.closest('.qc-adbreak'); (li || box).remove(); log('empty slot ' + box.getAttribute('data-adz') + ' folded'); }
+      } catch (e) { }
+    }, 8000);
   }
 
   function onLoad() {
@@ -115,7 +138,7 @@
     try {
       [].slice.call(doc.querySelectorAll('.adz[data-adz]')).forEach(function (box) {
         if (box.getAttribute('data-ad-state')) return;
-        var z = TRAINER ? null : claim(box);
+        var z = TRAINER ? trainerStatic(box) : claim(box);
         if (!z) {                                                       // off or over the cap: nothing left behind
           var li = box.closest('.qc-adbreak'); (li || box).remove(); return;
         }

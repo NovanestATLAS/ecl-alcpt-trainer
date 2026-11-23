@@ -214,4 +214,7 @@ html.no-listen .w-k-listen{display:none}
 .adz-box{margin:0 auto;max-width:100%;overflow:hidden;width:300px;min-height:100px}
 .adz[data-ad-zone="12477046"] .adz-box{width:300px;min-height:250px}
 .w-ad .adz{margin:0 auto}
+/* top of the trainer on phones and tablets: space reserved from the first paint when the zone is on */
+.w-topad{margin:12px auto 24px}
+@media (max-width:1279px){html.adz-on-T .w-topad{display:block}}
 @media print{.adz{display:none!important}}

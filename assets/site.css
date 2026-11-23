@@ -821,5 +821,6 @@ html.adz-on-A .adz[data-adz="A"],html.adz-on-B .adz[data-adz="B"],html.adz-on-M 
 .adz[data-adz="B"] .adz-box{width:300px;min-height:250px}
 .adz[data-adz="M"] .adz-box,.adz[data-adz="Q"] .adz-box{width:300px;min-height:100px}
 .qc-adbreak{list-style:none;margin:0;padding:0}.qc-adbreak .adz{margin:40px auto}
+.qc-affbreak{margin:40px 0}.qc-affbreak .promo-banner{margin:0 auto}
 .disclaimer.aff-note{border-top:0;margin-top:8px;padding-top:0}
 @media print{.adz{display:none!important}}

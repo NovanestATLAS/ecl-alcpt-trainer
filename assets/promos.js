@@ -217,8 +217,20 @@
     qs.forEach(function (q) { o.observe(q); });
   }
 
+  /* long practice tests: every second break between question cards is an affiliate banner (italki and Preply take turns) */
+  function fillTestBreaks() {
+    [].slice.call(doc.querySelectorAll('[data-aff-break]')).forEach(function (b, i) {
+      var list = [];
+      if (canItalki()) list.push('italki');
+      if (canPreply()) list.push('preply');
+      var k = list.length ? list[(turn + i) % list.length] : null, c = k && make(k, 'test_break', roomOf(b));
+      if (c) b.appendChild(c); else b.remove();
+    });
+  }
+
   function run() {
     if (!doc.querySelector('main')) return;
+    fillTestBreaks();
     var slot = doc.querySelector('.mf-slot');
     var art = doc.querySelector('main article.prose'), side = doc.querySelector('main .aside');
     var testPage = !!(art && art.querySelector('.qc[data-mode="test"]'));
