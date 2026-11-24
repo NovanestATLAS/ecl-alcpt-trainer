@@ -37,11 +37,13 @@
   'use strict';
 
   /* -------------------------- banner switches --------------------------- */
+  /* All off since Nov 24, 2026, while Google AdSense reviews the site (Adsterra served gambling ads and paid
+     about $0.06 per 1,000 views). Set a unit back to true to show it again. */
   var UNITS = {
-    leader: { key: '73ac110bdc9f4469ea6cf692c606c99e', enabled: true, width: 728, height: 90 },   // Slot A from 768px up
-    rect:   { key: '99380d543d620d0d341032ae6b1158ff', enabled: true, width: 300, height: 250 },  // Slots M, Q, B; trainer B
-    mobile: { key: 'f0cc2c86a781c88af8be45889334df1e', enabled: true, width: 320, height: 50 },   // Slot A below 768px; trainer T
-    native: { key: '2c94e5ea8157043c58d27d6bfa882a46', enabled: true, kind: 'native' }            // Slot N; trainer N
+    leader: { key: '73ac110bdc9f4469ea6cf692c606c99e', enabled: false, width: 728, height: 90 },   // Slot A from 768px up
+    rect:   { key: '99380d543d620d0d341032ae6b1158ff', enabled: false, width: 300, height: 250 },  // Slots M, Q, B; trainer B
+    mobile: { key: 'f0cc2c86a781c88af8be45889334df1e', enabled: false, width: 320, height: 50 },   // Slot A below 768px; trainer T
+    native: { key: '2c94e5ea8157043c58d27d6bfa882a46', enabled: false, kind: 'native' }            // Slot N; trainer N
   };
   /* Adsterra's script address, as in the code Adsterra gave (the key is added at the end).
      Banners and the native unit are served from different paths. */
