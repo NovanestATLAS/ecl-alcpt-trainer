@@ -10,7 +10,7 @@
      . Themes, confort de lecture, export / import des donnees
    =========================================================================== */
 
-var APP_VERSION = '5.9.39';
+var APP_VERSION = '5.9.40';
 
 /* v5.9.26
      . Ecoute : 155 questions (js/listening-data.js), une voix d'homme et une
@@ -3088,6 +3088,14 @@ function adsDiagHtml() {
   var L = [];
   L.push('Ad plugin: ' + (!a.plugin ? 'not installed' : (a.ready ? 'ready' : 'starting')));
   L.push('Full-screen ad loaded: ' + (a.interstitialLoaded ? 'yes' : 'no'));
+  /* banner (v5.9.40): what Google answered, to find why its space stays empty */
+  if (a.banner) {
+    var bn = a.banner;
+    L.push('Banner: ' + (!a.bannerEnabled ? 'switched off' : bn.state) +
+      ' &middot; received ' + bn.loads + ' &middot; seen ' + bn.impressions + ' &middot; failed ' + bn.fails);
+    if (bn.err) L.push('Last banner problem: ' + esc(bn.err) + (bn.retrySeconds ? '. Next try in about ' + dur(bn.retrySeconds) : ''));
+    if (bn.heightPx) L.push('Banner height: ' + bn.heightPx + ' px, lifted by ' + bn.offsetPx + ' px above the navigation bar');
+  }
   if (a.lastLoadError) L.push('Last loading problem: ' + esc(a.lastLoadError) +
     (a.nextRetrySeconds ? '. Next try in about ' + dur(a.nextRetrySeconds) : ''));
   L.push('Launch number: ' + a.launch + ' (end of a set: one ad every ' + a.answersPerAd + ' answers)');
