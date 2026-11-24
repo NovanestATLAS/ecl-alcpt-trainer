@@ -239,7 +239,7 @@ function adLeave(from, fromArg, to, toArg) {
    Ads.rewarded (the website, an older app) nothing is ever locked.
      . Full practice sets 11 to 80: one video opens the set for 24 hours
        (sets 1 to 10 stay free). Offered BEFORE the set, never during it.
-     . Listening practice: 15 free questions a day, then one video for 15
+     . Listening practice: 20 free questions a day, then one video for 20
        more. Offered between two questions, never between a question and
        its answer; smart review and timed sets are not counted.
      . Streak saver: after one missed day, one video keeps the streak.
@@ -248,7 +248,7 @@ function adLeave(from, fromArg, to, toArg) {
    'unavailable': the reward is given anyway, so the app keeps working
    offline as its description says. No full-screen ad for 4 minutes after a
    video.                                                                  */
-var RW = { FREE_SETS: 10, SET_MS: 24 * 3600000, LISTEN_FREE: 15, LISTEN_MORE: 15, QUIET_MS: 4 * 60000,
+var RW = { FREE_SETS: 10, SET_MS: 24 * 3600000, LISTEN_FREE: 20, LISTEN_MORE: 20, QUIET_MS: 4 * 60000,
   last: 0, busy: false, ask: null };
 function rewardOn() { return !!(window.Ads && typeof Ads.rewarded === 'function'); }
 function rwRecent() { return !!RW.last && nowMs() - RW.last < RW.QUIET_MS; }
