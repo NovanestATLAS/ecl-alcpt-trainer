@@ -19,11 +19,12 @@ Permanent rules for every session.
   apps or books. Never claim "real", "official" or "actual test" questions.
 - Keep the disclaimer: not affiliated with DLIELC, the U.S. Department of Defense or any government. No seals,
   insignia or government-style design.
-- Display ads are Adsterra only (no AdSense, no pop-unders, no Social Bar; Adcash rejected the site in Nov 2026).
-  The native-banner unit (paid per impression) is the main ad: once per page, right after the page header, and
-  in the trainer (top on home/results screens on phones, right-hand column on wide screens). Plain banners are
-  paid per click: only slot B (footer, test results) stays on; the others are off in `SLOTS_OFF` in
-  `assets/ads.js`. Adsterra allows each native code once per page. Affiliate cards in
+- Display ads: Google AdSense is under review (Nov 2026: first answer "Low value content" and "Verify site
+  ownership"). Every page carries `<meta name="google-adsense-account" content="ca-pub-3709043100488694">`; no
+  AdSense ad code until the site is approved. Adsterra is switched off meanwhile (every unit `enabled: false` in
+  `assets/ads.js`: it paid about $0.06 per 1,000 views and leaked gambling ads); its slot code stays for a switch-
+  back. Its native unit (paid per impression) went once per page, after the page header; its plain banners are paid
+  per click. Adsterra allows each native code once per page. No pop-unders, no Social Bar. Affiliate cards in
   `assets/monetization-config.js`. Gambling, dating and adult categories are blocked in the Adsterra
   dashboard for every unit. `app-ads.txt` keeps the Google line so AdMob can verify the ECL app
   (com.ecltrainer.english); `ads.txt` keeps it too. Never edit `28fc7a4d852c88a8b0254c868dad5615.txt` (old Adcash
