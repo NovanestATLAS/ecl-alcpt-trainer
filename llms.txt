@@ -12,7 +12,6 @@ Independent practice site published by Novanest ATLAS. It is not affiliated with
 - [ECL listening practice](https://ecl-alcpt-trainer.com/tests/ecl-listening-practice.html): 30 recorded questions with transcripts.
 - [ALCPT listening practice](https://ecl-alcpt-trainer.com/tests/alcpt-listening-practice.html): 25 recorded questions with transcripts.
 - [ECL grammar practice](https://ecl-alcpt-trainer.com/tests/ecl-grammar-practice.html): 30 questions.
-- [ALCPT vocabulary test](https://ecl-alcpt-trainer.com/tests/alcpt-vocabulary-test.html): 30 questions.
 - [All free tests](https://ecl-alcpt-trainer.com/tests/)
 
 ## Guides
