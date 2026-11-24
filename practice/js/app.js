@@ -10,7 +10,7 @@
      . Themes, confort de lecture, export / import des donnees
    =========================================================================== */
 
-var APP_VERSION = '5.9.37';
+var APP_VERSION = '5.9.38';
 
 /* v5.9.26
      . Ecoute : 155 questions (js/listening-data.js), une voix d'homme et une
@@ -190,7 +190,7 @@ function adScreen(kind) {
 /* serie d'entrainement a l'ecoute (pas un examen) : regle propre dans ads.js */
 function listenRun() { return !!(S.pool && S.pool.length && S.pool[0] && S.pool[0].L && !S.exam && !S.sim); }
 function adAfterSeries() {
-  if (!window.Ads) return;
+  if (!window.Ads || rwRecent()) return;
   try { stopSpeak(); Ads.maybeInterstitial(listenRun() ? 'listen' : undefined); } catch (e) { }
 }
 /* Appele a chaque reponse d'un parcours d'entrainement. Sans cela, un
@@ -206,7 +206,7 @@ function adCountAnswer(n) {
   try { Ads.questionAnswered(n || 1); } catch (e) { }
 }
 function adDuringRun() {
-  if (!window.Ads || S.sim || S.exam) return;
+  if (!window.Ads || S.sim || S.exam || rwRecent()) return;
   /* questions encore a venir : une serie courte garde son annonce pour la
      fin (regle du temps d'utilisation, v5.9.27) */
   var left = Math.max(0, S.pool.length - S.idx - 1);
@@ -224,10 +224,130 @@ function adDuringRun() {
 var AD_READING = { lesson: 'a lesson', pverbs: 'the phrasal verbs', vwords: 'the ECL words', wcards: 'the flashcards',
   library: 'the idioms library', drills: 'the corrected drills' };
 function adLeave(from, fromArg, to, toArg) {
-  if (!window.Ads || typeof Ads.pausePoint !== 'function') return;
+  if (!window.Ads || typeof Ads.pausePoint !== 'function' || rwRecent()) return;
   if (!from || !AD_READING[from]) return;        // jamais depuis une serie, une epreuve, un examen
   if (from === to && fromArg === toArg) return;
   try { Ads.pausePoint(AD_READING[from]); } catch (e) { }
+}
+
+/* ===================== VIDEOS RECOMPENSEES (v5.9.38) ======================
+   Optional rewarded videos (AdMob), in the Android app only. js/ads.js must
+   provide Ads.rewarded(placement, cb) and call cb exactly once with
+   'earned' (video watched to the end), 'unavailable' (no connection, no
+   video, error: give up after about 10 s) or 'skipped' (closed before the
+   end), and call adOpening/adClosed like the full-screen ads. Without
+   Ads.rewarded (the website, an older app) nothing is ever locked.
+     . Full practice sets 11 to 80: one video opens the set for 24 hours
+       (sets 1 to 10 stay free). Offered BEFORE the set, never during it.
+     . Listening practice: 10 free questions a day, then one video for 10
+       more. Offered between two questions, never between a question and
+       its answer; smart review and timed sets are not counted.
+     . Streak saver: after one missed day, one video keeps the streak.
+     . Mistake box: when nothing is due today, one video opens a round now.
+   Every video is the user's choice ("Not now" is always there).
+   'unavailable': the reward is given anyway, so the app keeps working
+   offline as its description says. No full-screen ad for 4 minutes after a
+   video.                                                                  */
+var RW = { FREE_SETS: 10, SET_MS: 24 * 3600000, LISTEN_FREE: 10, LISTEN_MORE: 10, QUIET_MS: 4 * 60000,
+  last: 0, busy: false, ask: null };
+function rewardOn() { return !!(window.Ads && typeof Ads.rewarded === 'function'); }
+function rwRecent() { return !!RW.last && nowMs() - RW.last < RW.QUIET_MS; }
+function adReward(placement, grant, skipped) {
+  if (RW.busy) return;
+  var over = false;
+  function end(r) {
+    if (over) return;
+    over = true; RW.busy = false;
+    if (r === 'skipped') { toast('Video closed before the end: nothing unlocked'); if (skipped) skipped(); return; }
+    if (r === 'earned') RW.last = nowMs();
+    else toast('No video available right now: unlocked anyway');
+    grant();
+  }
+  if (!rewardOn()) { end('unavailable'); return; }
+  RW.busy = true; stopSpeak();
+  try { Ads.rewarded(placement, end); } catch (e) { end('unavailable'); return; }
+  /* safety net: nothing opened after 20 s (very slow network) */
+  setTimeout(function () { if (!over && !AD_OPEN) end('unavailable'); }, 20000);
+}
+/* the offer screen: watch a video, or not now */
+function rwAsk(o) {
+  if (S.view !== 'quiz' && S.view !== 'reward') RW.from = { v: S.view, a: S.viewArg };
+  RW.ask = o; S.view = 'reward'; stopSpeak();
+  root.innerHTML = L(bar(o.bar || 'Bonus', '', 'rwLater()') +
+    '<div class="resumebox">' + ico(o.ico || 'zap', 'ri') + '<h3>' + esc(o.title) + '</h3>' +
+    '<p>' + o.text + '</p>' +
+    '<button class="btn block" id="rwGo" onclick="rwGo()">' + esc(o.cta || 'Watch a short video') + '</button>' +
+    '<button class="btn ghost block" onclick="rwLater()">' + esc(o.laterLabel || 'Not now') + '</button></div>');
+  window.scrollTo(0, 0);
+}
+function rwGo() {
+  var o = RW.ask, b = document.getElementById('rwGo');
+  if (!o || RW.busy) return;
+  if (b) { b.disabled = true; b.textContent = 'Loading the video…'; }
+  adReward(o.place, function () { RW.ask = null; o.grant(); },
+    function () { if (b) { b.disabled = false; b.textContent = o.cta || 'Watch a short video'; } });
+}
+function rwLater() {
+  var o = RW.ask;
+  if (RW.busy) return;
+  RW.ask = null;
+  if (o && o.later) o.later(); else goTab('home');
+}
+/* back to the screen the offer came from */
+function rwBack() {
+  var f = RW.from;
+  if (f && VIEWS[f.v]) { S.view = f.v; S.viewArg = f.a; safeRender(VIEWS[f.v], f.a, f.v); window.scrollTo(0, 0); }
+  else goTab('home');
+}
+/* full practice sets 11 to 80 */
+function setLocked(f) {
+  if (!rewardOn() || typeof f !== 'number' || f < RW.FREE_SETS) return false;
+  return (LSget('rw_sets', {})[f] || 0) <= nowMs();
+}
+function setUnlock(f) {
+  var u = LSget('rw_sets', {}), t = nowMs();
+  Object.keys(u).forEach(function (k) { if (u[k] <= t) delete u[k]; });
+  u[f] = t + RW.SET_MS; LSset('rw_sets', u);
+}
+/* listening practice: free questions per day */
+function rwListenLog() { var o = LSget('rw_listen', null); return (o && o.d === today()) ? o : { d: today(), used: 0, more: 0 }; }
+function listenLeft() { var o = rwListenLog(); return RW.LISTEN_FREE + o.more - o.used; }
+function listenCount() { var o = rwListenLog(); o.used++; LSset('rw_listen', o); }
+function listenGate() { return !!S.rwL && rewardOn() && listenLeft() <= 0; }
+function rwListenAsk(resume) {
+  if (S.view === 'quiz') saveRun();
+  rwAsk({ ico: 'headset', bar: 'Listening', place: 'listening', title: 'More listening today',
+    text: 'You have finished today\'s free listening questions. Watch a short video for ' + RW.LISTEN_MORE +
+      ' more, or come back tomorrow.',
+    grant: function () { var o = rwListenLog(); o.more += RW.LISTEN_MORE; LSset('rw_listen', o); S.view = 'quiz'; resume(); },
+    later: function () { goTab('home'); } });
+}
+/* streak saver */
+function streakSavable() {
+  if (!rewardOn() || LSget('streak_skip', '') === today()) return 0;
+  var s = LSget('streak', { last: '', n: 0 }), l = LSget('streak_lost', null);
+  if (s.last === dayKey(2) && (s.n || 0) >= 2) return s.n;          // nothing done yet today
+  if (l && l.d === today() && s.last === today()) return l.n;       // lost earlier today
+  return 0;
+}
+function rwStreak() {
+  var n = streakSavable(); if (!n) return;
+  rwAsk({ ico: 'flame', bar: 'Streak', place: 'streak', title: 'Keep your ' + n + '-day streak',
+    text: 'You missed yesterday. Watch a short video and your streak goes on.',
+    grant: function () {
+      var s = LSget('streak', { last: '', n: 0 }), l = LSget('streak_lost', null);
+      if (s.last === dayKey(2)) s.last = dayKey(1);
+      else if (l && l.d === today()) { s.n = (l.n || 0) + 1; s.last = today(); }
+      LSset('streak', s); LSdel('streak_lost');
+      toast('Streak saved'); goTab('home');
+    },
+    later: function () { LSset('streak_skip', today()); goTab('home'); } });
+}
+/* mistake box: the next mistakes, soonest first */
+function boxNext(n) {
+  var bx = box();
+  return Object.keys(bx).map(function (k) { return bx[k]; })
+    .sort(function (a, b) { return (a.due || 0) - (b.due || 0); }).slice(0, n);
 }
 /* --- Annonce plein ecran : silence complet (v5.9.20) ---------------------
    Sur un parcours long, l'annonce etait demandee au passage a la question
@@ -260,8 +380,11 @@ function adClosed() {
    bouton « Start Part 2 ». Sans annonce chargee, le test continue aussitot. */
 var EXAM_AD_EVERY = 15;
 var EXAM_AD = { hold: false };
+/* v5.9.38: off. The Play description promises no ad during a timed test; the
+   optional video for sets 11 to 80 comes before the set instead. */
+var EXAM_ADS_ON = false;
 function examAdDue(done) {        // done = questions d'ecoute terminees
-  return !!(S.exam && done > 0 && (done % EXAM_AD_EVERY === 0 || done === S.exam.nL));
+  return !!(EXAM_ADS_ON && S.exam && done > 0 && (done % EXAM_AD_EVERY === 0 || done === S.exam.nL));
 }
 function examAdBreak(done) {
   if (!window.Ads || typeof Ads.examBreak !== 'function') return false;
@@ -724,6 +847,7 @@ function touchStreak() {
   var s = LSget('streak', { last: '', n: 0 }), t = today();
   if (s.last === t) return s;
   var y = dayKey(1);
+  if (s.last === dayKey(2) && (s.n || 0) >= 2) LSset('streak_lost', { d: t, n: s.n });   // video streak saver
   s.n = (s.last === y) ? (s.n || 0) + 1 : 1;
   s.last = t; LSset('streak', s); return s;
 }
@@ -895,6 +1019,13 @@ VIEWS.home = function () {
       : 'Start your streak') + '</div>' +
     '</div></section>';
 
+  /* video streak saver (v5.9.38) */
+  var sv = streakSavable();
+  if (sv) {
+    h += '<button class="resume" onclick="rwStreak()">' +
+      '<span class="rt">' + ico('flame', 'inl') + ' Keep your ' + sv + '-day streak</span>' +
+      '<span class="rl">You missed yesterday: one short video saves it.</span></button>';
+  }
   /* Reprise d'une serie interrompue : passe avant tout le reste. */
   var r = anyRun();
   if (r) {
@@ -1310,10 +1441,17 @@ function quickMix() { launch(null, 'Mixed practice', makePool(allQuestions()).sl
 function startSmartReview() {
   var due = boxDue();
   if (!due.length) {
+    if (boxCount() && rewardOn()) {
+      rwAsk({ ico: 'revise', bar: 'Smart review', place: 'review', title: 'Nothing due today',
+        text: 'Your mistakes come back on their review days. Watch a short video to review the next ones now.',
+        grant: function () { S.reviewMode = true; S.rwReview = true; launch(null, 'Smart review', makePool(boxNext(30)), false); },
+        later: rwBack });
+      return;
+    }
     if (boxCount()) { toast('Nothing to review today. Come back tomorrow.'); return; }
     toast('No mistake recorded. Complete a set first.'); return;
   }
-  S.reviewMode = true;
+  S.reviewMode = true; S.rwReview = true;
   launch(null, 'Smart review', makePool(due).slice(0, 30), false);
 }
 function startFavouritetes() {
@@ -1377,10 +1515,13 @@ function launch(key, title, pool, sim, exam) {
   S.exam = exam || null; // examen chronometre ECL / ALCPT (v5.9.26)
   S.partScore = { L: 0, R: 0 };
   S.lrev = {};           // textes d'ecoute affiches avant la reponse
+  /* listening practice counted for the daily free questions (v5.9.38) */
+  S.rwL = !sim && !exam && !S.rwReview && !!(pool[0] && pool[0].L); S.rwReview = false;
   if (VIEWS[S.view]) NAV.push({ v: S.view, a: S.viewArg });
   S.view = 'quiz';
   adScreen(sim ? 'sim' : 'normal');
   if (!sim && pool[0] && pool[0].L) track('listening_start', { set: String(title || '').slice(0, 60) });
+  if (listenGate()) { rwListenAsk(function () { renderQ(); window.scrollTo(0, 0); }); return; }
   renderQ();
   window.scrollTo(0, 0);
 }
@@ -1494,6 +1635,13 @@ function formMark(t, f, pctDone) {
 function startExam(t, f) {
   var c = EXAMS[t]; if (!c) return;
   if (!LISTEN.length) { toast('The listening questions are missing'); return; }
+  if (formsOn() && setLocked(f)) {
+    rwAsk({ ico: 'target', bar: c.title, place: 'set', title: 'Set ' + (f + 1),
+      text: 'Sets 1 to ' + RW.FREE_SETS + ' are free. Watch a short video to open set ' + (f + 1) + ' for 24 hours.',
+      grant: function () { setUnlock(f); startExam(t, f); },
+      later: function () { go('exam', t, true); } });
+    return;
+  }
   var Lp, Rp, title = c.title, form = (typeof f === 'number' && formsOn()) ? f : undefined;
   if (form !== undefined) {
     var fp = formPool(c.t, form, c.nL, c.nR);
@@ -1512,13 +1660,13 @@ function formsGrid(t) {
     '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px">';
   for (var f = 0; f < FORMS_N; f++) {
     var r = log[f], done = r && r.p !== undefined, cur = f === nx;
-    h += '<button onclick="startExam(\'' + t + '\',' + f + ')" aria-label="Set ' + (f + 1) + '" style="' +
+    h += '<button onclick="startExam(\'' + t + '\',' + f + ')" aria-label="Set ' + (f + 1) + (setLocked(f) ? ', opens with a short video' : '') + '" style="' +
       'min-height:54px;border-radius:12px;font:inherit;cursor:pointer;padding:4px 2px;line-height:1.15;' +
       'background:' + (done ? 'var(--card2)' : 'var(--card)') + ';color:var(--ink);' +
       'border:' + (cur ? '2px solid var(--gold)' : '1px solid var(--line)') + '">' +
       '<b style="display:block;font-size:17px">' + (f + 1) + '</b>' +
       '<small style="display:block;font-size:11px;color:' + (done ? 'var(--ok)' : 'var(--mut)') + '">' +
-      (done ? r.p + '%' : (r ? 'started' : (cur ? 'next' : '&nbsp;'))) + '</small></button>';
+      (done ? r.p + '%' : (r ? 'started' : (setLocked(f) ? '&#9654; video' : (cur ? 'next' : '&nbsp;')))) + '</small></button>';
   }
   return h + '</div>';
 }
@@ -1876,6 +2024,7 @@ function pick(i) {
   if (good) { S.score++; buzz(10); }
   else { S.wrongs.push(wrongOf(q, q.o[i])); buzz([18, 60, 18]); }
   adCountAnswer(1);
+  if (S.rwL && q.L && rewardOn()) listenCount();
   boxPromote(q.q, good, q.id);
   if (!good) boxAdd(q.q, [q.c].concat(q.o.filter(function (o) { return o !== q.c; })), 0, q.e, q);
   addAnswered(1);
@@ -1966,6 +2115,7 @@ function nextQ() {
   if (S.sim) { examStop(); simGrade(q); }
   stopSpeak();
   if (S.idx >= S.pool.length - 1) { finish(false); return; }
+  if (listenGate() && !(S.answers && S.answers[S.idx + 1])) { rwListenAsk(function () { nextQ(); }); return; }
   if (!reviewDuringRun()) adDuringRun();   // fenetre d'avis OU annonce, jamais les deux
   S.idx++;
   S.listenUsed = false;                                   // remise a zero par question
@@ -3206,6 +3356,7 @@ document.addEventListener('backbutton', function (e) {
   if (window.AppTr && AppTr.dismiss && AppTr.dismiss()) return;
   if (S.view === 'home' || S.view === 'welcome') { if (navigator.app) navigator.app.exitApp(); }
   else if (S.view === 'quiz') quitQuiz();
+  else if (S.view === 'reward') rwLater();
   else back();
 }, false);
 
