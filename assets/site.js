@@ -38,14 +38,11 @@
   })();
 
   /* italki banner (static on some pages, added by promos.js on others): it comes alive the first time half of it is
-     on screen (CSS .is-live), counted as italki_view; the button over the drawn x hides every italki banner for 30 days */
+     on screen (CSS .is-live), counted as italki_view; no close button (owner's decision, Nov 2026) */
   (function () {
-    var KEY = 'promo_hide_italki';
     function hidden() {
       var M = window.ECL_MONETIZATION;
-      if (M && M.italki && M.italki.enabled === false) return true;   // switched off in assets/monetization-config.js
-      var t = 0; try { t = +localStorage.getItem(KEY) || 0; } catch (e) { }
-      return t > 0 && Date.now() - t < 30 * 864e5;
+      return !!(M && M.italki && M.italki.enabled === false);          // switched off in assets/monetization-config.js
     }
     function live(c) { c.classList.add('is-live'); if (window.ECL_TRACK) window.ECL_TRACK('italki_view', { page: location.pathname }); }
     var io = 'IntersectionObserver' in window ? new IntersectionObserver(function (es) {
@@ -55,13 +52,6 @@
     window.ECL_ITALKI = { hidden: hidden, watch: watch };
     var cards = doc.querySelectorAll('[data-tutor]');
     cards.forEach(function (c) { if (hidden()) c.hidden = true; else watch(c); });
-    doc.addEventListener('click', function (e) {
-      var x = e.target.closest ? e.target.closest('[data-tutor] [data-promo-close]') : null;
-      if (!x) return;
-      try { localStorage.setItem(KEY, String(Date.now())); } catch (err) { }
-      doc.querySelectorAll('[data-tutor]').forEach(function (b) { b.hidden = true; });
-      if (window.ECL_TRACK) window.ECL_TRACK('italki_hide', { page: location.pathname });
-    });
   })();
 
   /* italki tutor button: its own GA4 event, so clicks show by name in Reports > Engagement > Events */
