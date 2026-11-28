@@ -212,28 +212,24 @@
     c.className = 'w-promo w-promo-' + p.cls;
     c.setAttribute('role', 'complementary');
     c.setAttribute('aria-label', p.kind === 'app' ? 'Android app' : 'Tutor partner');
-    if (p.src) {                    // official partner banner, shown unchanged, with a visible x outside its corner
+    if (p.src) {                    // official partner banner, shown unchanged (no close button)
       c.className = 'w-promo w-promo-ad';
       c.innerHTML = '<a class="w-promo-go" data-google-vignette="false" target="_blank" rel="' + p.rel + '" href="' + p.url + '">' +
-        '<img src="' + p.src + '" width="' + p.imgW + '" height="' + p.imgH + '" decoding="async" alt="' + p.title + ': ' + p.text + '"></a>' +
-        '<button type="button" class="w-promo-x" aria-label="Close" title="Close">&times;</button>';
-    } else if (p.img) {             // picture banner: the whole picture is the link, the button covers its drawn x
+        '<img src="' + p.src + '" width="' + p.imgW + '" height="' + p.imgH + '" decoding="async" alt="' + p.title + ': ' + p.text + '"></a>';
+    } else if (p.img) {             // picture banner: the whole picture is the link
       c.className = 'w-promo w-promo-pic';
       c.setAttribute('lang', 'en'); c.setAttribute('dir', 'ltr');
       c.innerHTML = '<a class="w-promo-go" data-google-vignette="false" target="_blank" rel="' + p.rel + '" href="' + p.url + '">' +
         '<img src="' + p.img + '800.webp" srcset="' + p.img + '800.webp 800w, ' + p.img + '1400.webp 1400w" ' +
         'sizes="(max-width: 760px) calc(100vw - 32px), 680px" width="' + p.imgW + '" height="' + p.imgH + '" decoding="async" ' +
-        'alt="' + p.title + '. ' + p.text + ' ' + p.cta + '"></a>' +
-        '<button type="button" class="w-promo-x" aria-label="Close" title="Close"></button>';
+        'alt="' + p.title + '. ' + p.text + ' ' + p.cta + '"></a>';
     } else c.innerHTML = (p.cls === 'app' ? '<img src="../assets/img/logo-128.webp" alt="" width="44" height="44">' : TUTOR_ICO) +
       '<div class="w-promo-t"><b>' + p.title + '</b><span>' + p.text + '</span></div>' +
-      '<a class="w-promo-go" data-google-vignette="false" target="_blank" rel="' + p.rel + '" href="' + p.url + '">' + p.cta + '</a>' +
-      '<button type="button" class="w-promo-x" aria-label="Close">&times;</button>';
+      '<a class="w-promo-go" data-google-vignette="false" target="_blank" rel="' + p.rel + '" href="' + p.url + '">' + p.cta + '</a>';
     c.querySelector('.w-promo-go').addEventListener('click', function () {
       track('promo_click', { kind: p.kind, placement: place });
       if (p.kind === 'italki') track('italki_click', { page: '/practice/' });
     });
-    c.querySelector('.w-promo-x').addEventListener('click', function () { c.remove(); });
     after.insertAdjacentElement('afterend', c);
     track('promo_view', { kind: p.kind, placement: place });
     return c;

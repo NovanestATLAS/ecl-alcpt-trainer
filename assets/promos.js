@@ -15,7 +15,7 @@
    Pages with <div class="mf-slot"> (home, hubs, two test pages): one card in
    the slot, taking turns between italki and the app.
    Never next to an ad, a question or an answer button; the side card steps
-   aside while questions are on screen. Each card's x hides it for 30 days.
+   aside while questions are on screen. No close button (owner's decision, Nov 2026).
    GA4 (when analytics is on): promo_view / promo_click with kind and placement.
    Test: ?promo=app or ?promo=italki forces the middle/slot card.
    ========================================================================== */
@@ -29,26 +29,24 @@
   var ua = navigator.userAgent || '';
   var IOS = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   var LANG = /^ar/i.test(html.lang) ? 'ar' : /^fr/i.test(html.lang) ? 'fr' : 'en';
-  var DAYS = 30, APP_KEY = 'promo_hide_app';
   var ITALKI = 'https://www.italki.com/affshare?ref=af34425454';
   var FORCE = (/[?&]promo=(app|italki|preply)\b/.exec(location.search) || [])[1] || '';
 
   function get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function set(k, v) { try { localStorage.setItem(k, v); } catch (e) { } }
   function track(name, p) { try { if (g.ECL_TRACK) g.ECL_TRACK(name, p); } catch (e) { } }
-  function recent(k) { var t = +get(k) || 0; return t > 0 && Date.now() - t < DAYS * 864e5; }
 
   /* --------------------------- ECL app card ------------------------------ */
   var T = {
     en: { kick: 'Free Android app', tag: 'Practice anywhere, even offline.',
       pts: ['Same questions as the site', 'Works without internet', 'Reads each question aloud'],
-      cta: 'Get it free on Google Play', x: 'Hide for 30 days', label: 'Our free Android app' },
+      cta: 'Get it free on Google Play', label: 'Our free Android app' },
     fr: { kick: 'Application Android gratuite', tag: 'Entraînez-vous partout, même hors ligne.',
       pts: ['Les mêmes questions que le site', 'Fonctionne sans internet', 'Lit chaque question à voix haute'],
-      cta: 'Téléchargez-la gratuitement sur Google Play', x: 'Masquer pendant 30 jours', label: 'Notre application Android gratuite' },
+      cta: 'Téléchargez-la gratuitement sur Google Play', label: 'Notre application Android gratuite' },
     ar: { kick: 'تطبيق أندرويد مجاني', tag: 'تدرّب في أي مكان، حتى دون إنترنت.',
       pts: ['نفس أسئلة الموقع', 'يعمل دون إنترنت', 'يقرأ كل سؤال بصوت مسموع'],
-      cta: 'حمّله مجانًا من Google Play', x: 'إخفاء لمدة 30 يومًا', label: 'تطبيقنا المجاني على أندرويد' }
+      cta: 'حمّله مجانًا من Google Play', label: 'تطبيقنا المجاني على أندرويد' }
   }[LANG];
   var PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 3.6v16.8c0 .7.8 1.2 1.4.8l13.4-8.4c.6-.4.6-1.2 0-1.6L7.4 2.8C6.8 2.4 6 2.9 6 3.6z"/></svg>';
   function playUrl(place) {
@@ -60,17 +58,11 @@
     c.className = 'app-card' + (side ? ' app-card--side' : '');
     c.setAttribute('aria-label', T.label); c.setAttribute('data-tr-skip', '');
     c.innerHTML =
-      '<button type="button" class="ac-x" aria-label="' + T.x + '" title="' + T.x + '">&times;</button>' +
       '<img class="ac-icon" src="' + BASE + 'img/logo-128.webp" width="128" height="128" alt="" loading="lazy" decoding="async">' +
       '<div class="ac-body"><p class="ac-kick">' + T.kick + '</p>' +
       '<p class="ac-title" lang="en" dir="ltr">ECL &amp; ALCPT English Trainer</p><p class="ac-tag">' + T.tag + '</p>' +
       '<ul class="ac-pts"><li>' + T.pts.join('</li><li>') + '</li></ul>' +
       '<a class="ac-cta" data-google-vignette="false" href="' + playUrl(place) + '" target="_blank" rel="noopener">' + PLAY + T.cta + '</a></div>';
-    c.querySelector('.ac-x').addEventListener('click', function () {
-      set(APP_KEY, String(Date.now()));
-      doc.querySelectorAll('.app-card').forEach(function (a) { a.remove(); });
-      track('promo_hide', { kind: 'app', placement: place });
-    });
     c.querySelector('.ac-cta').addEventListener('click', function () { track('promo_click', { kind: 'app', placement: place }); });
     seen(c, function () { track('promo_view', { kind: 'app', placement: place }); });
     return c;
@@ -84,15 +76,13 @@
     d.innerHTML = '<a class="pb-link" data-google-vignette="false" href="' + ITALKI + '" target="_blank" rel="sponsored nofollow noopener">' +
       '<img src="' + i + '800.webp" srcset="' + i + '800.webp 800w, ' + i + '1400.webp 1400w" sizes="(max-width: 760px) calc(100vw - 32px), 720px" ' +
       'width="1400" height="606" loading="lazy" decoding="async" alt="italki: Speak English with a real tutor. One-to-one video lessons on italki, ' +
-      'at the times you choose. Pay per lesson. Find a tutor on italki"></a>' +
-      '<button type="button" class="pb-close" data-promo-close aria-label="Close" title="Close"></button>';
+      'at the times you choose. Pay per lesson. Find a tutor on italki"></a>';
     d.querySelector('.pb-link').addEventListener('click', function () { track('promo_click', { kind: 'italki', placement: place }); });
     if (g.ECL_ITALKI) g.ECL_ITALKI.watch(d); else d.classList.add('is-live');
     return d;
   }
 
   /* -------------------- Preply banner (official creative) ----------------- */
-  var PREPLY_KEY = 'promo_hide_preply';
   function preplyBanners() {
     var M = g.ECL_MONETIZATION || {}, out = [];
     ((M.studyResources || {}).items || []).forEach(function (p) {
@@ -115,14 +105,8 @@
     d.className = 'promo-banner pb-ad'; d.setAttribute('data-preply', ''); d.setAttribute('data-tr-skip', '');
     d.innerHTML = '<a class="pb-link" data-google-vignette="false" href="' + b.url + '" target="_blank" rel="sponsored nofollow noopener">' +
       '<img src="' + b.image + '" width="' + b.width + '" height="' + b.height + '" loading="lazy" decoding="async" ' +
-      'alt="Preply: find an online English tutor"></a>' +
-      '<button type="button" class="pb-close" aria-label="Close" title="Close"></button>';
+      'alt="Preply: find an online English tutor"></a>';
     d.querySelector('.pb-link').addEventListener('click', function () { track('promo_click', { kind: 'preply', placement: place }); });
-    d.querySelector('.pb-close').addEventListener('click', function () {
-      set(PREPLY_KEY, String(Date.now()));
-      doc.querySelectorAll('[data-preply]').forEach(function (x) { x.hidden = true; });
-      track('promo_hide', { kind: 'preply', placement: place });
-    });
     seen(d, function () { track('promo_view', { kind: 'preply', placement: place }); });
     return d;
   }
@@ -144,10 +128,10 @@
   }
 
   /* ------------------------------ who gets what -------------------------- */
-  function canApp() { return FORCE === 'app' || (!IOS && !recent(APP_KEY)); }
+  function canApp() { return FORCE === 'app' || !IOS; }
   function canItalki() { return FORCE === 'italki' || !(g.ECL_ITALKI && g.ECL_ITALKI.hidden()); }
   function hasItalki() { return !!doc.querySelector('[data-tutor]:not([hidden])'); }
-  function canPreply() { return preplyBanners().length > 0 && (FORCE === 'preply' || !recent(PREPLY_KEY)); }
+  function canPreply() { return preplyBanners().length > 0; }
   function make(kind, place, room) {
     if (kind === 'app') return appCard(place);
     if (kind === 'italki') return italkiBanner(place);

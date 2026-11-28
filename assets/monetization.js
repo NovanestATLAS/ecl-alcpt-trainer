@@ -19,7 +19,7 @@
   var doc = document, html = doc.documentElement;
   var LANG = /^ar/i.test(html.lang) ? 'ar' : /^fr/i.test(html.lang) ? 'fr' : 'en';
   var PRACTICE = /\/practice(\/|$)/.test(location.pathname);
-  var DAYS = 30, uid = 0;
+  var uid = 0;
   var UI = {
     heading: { en: 'Recommended English Study Resources', fr: 'Ressources recommandées pour apprendre l’anglais', ar: 'موارد موصى بها لتعلّم الإنجليزية' },
     disclosure: { en: 'Affiliate links: we may earn a commission at no extra cost to you.' },
@@ -42,10 +42,6 @@
     if (cls) e.className = cls;
     if (txt != null) e.textContent = txt;
     return e;
-  }
-  function italkiHidden() {                       // same 30-day "x" as the italki banners
-    var v = 0; try { v = +localStorage.getItem('promo_hide_italki') || 0; } catch (e) { }
-    return v > 0 && Date.now() - v < DAYS * 864e5;
   }
   function afterLoad(fn) {
     function go() { if ('requestIdleCallback' in g) g.requestIdleCallback(fn, { timeout: 3000 }); else setTimeout(fn, 1200); }
@@ -97,7 +93,7 @@
       var r;
       if (p.id === 'italki') {                                         // its link stays in assets/config.js
         var I = CFG.italki, url = ((g.ECL_CONFIG || {}).partners || {}).italki;
-        if (skipItalki || !I || I.enabled === false || italkiHidden() || !https(url)) return;
+        if (skipItalki || !I || I.enabled === false || !https(url)) return;
         r = { id: 'italki', title: t(p.title || (I.card || {}).title || p.name), description: t(p.description || (I.card || {}).description),
           ctaText: t(p.cta || (I.card || {}).ctaText, UI.more), url: String(url).trim() };
       } else {
